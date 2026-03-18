@@ -601,34 +601,10 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
             cursorY += 1.5;
         };
 
-        const addParagraphs = (content: string) => {
-            const htmlToPlainText = (value: string) => {
-                if (!value) return '';
-                if (typeof window === 'undefined') return value;
-                const container = document.createElement('div');
-                container.innerHTML = value;
-                container.querySelectorAll('li').forEach(li => {
-                    const parent = li.parentElement;
-                    const isOrdered = parent?.tagName === 'OL';
-                    const index = parent ? Array.from(parent.children).indexOf(li) + 1 : 0;
-                    const prefix = isOrdered ? `${index}. ` : '• ';
-                    const text = li.innerText.trim();
-                    if (text.startsWith(prefix.trim())) return;
-                    li.insertAdjacentText('afterbegin', prefix);
-                });
-                return container.innerText;
-            };
+        const pxToMm = (px: number) => (px * 25.4) / 96;
 
-            const plainText = htmlToPlainText(content);
-            const paragraphs = plainText
-                .split(/\r?\n+/)
-                .map(paragraph => paragraph.trim())
-                .filter(Boolean);
-
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(11);
-
-            if (paragraphs.length === 0) {
+        const addParagraphs = async (content: string) => {
+            if (!content || typeof window === 'undefined') {
                 ensureSpace(lineHeight * 1.2);
                 pdf.setFont('helvetica', 'italic');
                 pdf.text('Sin contenido registrado.', marginX, cursorY);
@@ -637,18 +613,134 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
                 return;
             }
 
-            paragraphs.forEach((paragraph, index) => {
-                const lines = pdf.splitTextToSize(paragraph, contentWidth);
-                ensureSpace(lineHeight * lines.length + 1);
-                lines.forEach(line => {
-                    pdf.text(line, marginX, cursorY);
-                    cursorY += lineHeight;
-                });
-                if (index < paragraphs.length - 1) {
-                    cursorY += 1.5;
-                }
+            type Block = { type: 'text'; text: string } | { type: 'image'; src: string; widthPx?: number };
+            const container = document.createElement('div');
+            container.innerHTML = content;
+            container.querySelectorAll('li').forEach(li => {
+                const parent = li.parentElement;
+                const isOrdered = parent?.tagName === 'OL';
+                const index = parent ? Array.from(parent.children).indexOf(li) + 1 : 0;
+                const prefix = isOrdered ? `${index}. ` : '• ';
+                const text = li.innerText.trim();
+                if (text.startsWith(prefix.trim())) return;
+                li.insertAdjacentText('afterbegin', prefix);
             });
-            cursorY += 2;
+
+            const blocks: Block[] = [];
+            let textBuffer = '';
+            const blockLevelTags = new Set(['P', 'DIV', 'SECTION', 'ARTICLE', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
+            const flushTextBuffer = () => {
+                const normalized = textBuffer.replace(/\u00A0/g, ' ');
+                if (normalized.trim()) {
+                    blocks.push({ type: 'text', text: normalized });
+                }
+                textBuffer = '';
+            };
+
+            const walkNode = (node: Node) => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    textBuffer += node.textContent || '';
+                    return;
+                }
+                if (!(node instanceof HTMLElement)) return;
+                if (node.tagName === 'IMG') {
+                    const imageNode = node as HTMLImageElement;
+                    flushTextBuffer();
+                    blocks.push({
+                        type: 'image',
+                        src: imageNode.currentSrc || imageNode.src,
+                        widthPx: imageNode.clientWidth || imageNode.naturalWidth || undefined,
+                    });
+                    return;
+                }
+                if (node.tagName === 'BR') {
+                    textBuffer += '\n';
+                    return;
+                }
+                node.childNodes.forEach(child => walkNode(child));
+                if (blockLevelTags.has(node.tagName)) {
+                    textBuffer += '\n';
+                }
+            };
+
+            container.childNodes.forEach(node => walkNode(node));
+            flushTextBuffer();
+
+            const hasRenderableContent = blocks.length > 0;
+            if (!hasRenderableContent) {
+                ensureSpace(lineHeight * 1.2);
+                pdf.setFont('helvetica', 'italic');
+                pdf.text('Sin contenido registrado.', marginX, cursorY);
+                pdf.setFont('helvetica', 'normal');
+                cursorY += lineHeight + 1.5;
+                return;
+            }
+
+            const resolveImageSource = async (source: string): Promise<string | null> => {
+                if (!source) return null;
+                if (source.startsWith('data:image/')) return source;
+                try {
+                    const response = await fetch(source);
+                    const blob = await response.blob();
+                    return await new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+                        reader.onerror = () => reject(reader.error);
+                        reader.readAsDataURL(blob);
+                    });
+                } catch (error) {
+                    console.warn('No se pudo convertir la imagen para PDF', error);
+                    return null;
+                }
+            };
+
+            const addTextBlock = (text: string) => {
+                const paragraphs = text
+                    .split(/\r?\n+/)
+                    .map(paragraph => paragraph.trim())
+                    .filter(Boolean);
+
+                if (paragraphs.length === 0) return;
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(11);
+                paragraphs.forEach((paragraph, index) => {
+                    const lines = pdf.splitTextToSize(paragraph, contentWidth);
+                    ensureSpace(lineHeight * lines.length + 1);
+                    lines.forEach(line => {
+                        pdf.text(line, marginX, cursorY);
+                        cursorY += lineHeight;
+                    });
+                    if (index < paragraphs.length - 1) {
+                        cursorY += 1.5;
+                    }
+                });
+                cursorY += 2;
+            };
+
+            const addImageBlock = async (src: string, widthPx?: number) => {
+                const resolvedSource = await resolveImageSource(src);
+                if (!resolvedSource) return;
+                try {
+                    const properties = pdf.getImageProperties(resolvedSource);
+                    if (!properties.width || !properties.height) return;
+                    const requestedWidth = widthPx ? pxToMm(widthPx) : contentWidth * 0.7;
+                    const renderWidth = Math.min(contentWidth, Math.max(30, requestedWidth));
+                    const renderHeight = (properties.height / properties.width) * renderWidth;
+                    ensureSpace(renderHeight + 3);
+                    pdf.addImage(resolvedSource, properties.fileType || 'PNG', marginX, cursorY, renderWidth, renderHeight, undefined, 'FAST');
+                    cursorY += renderHeight + 2;
+                } catch (error) {
+                    console.warn('No se pudo renderizar una imagen en PDF', error);
+                }
+            };
+
+            for (const block of blocks) {
+                if (block.type === 'text') {
+                    addTextBlock(block.text);
+                    continue;
+                }
+                await addImageBlock(block.src, block.widthPx);
+            }
         };
 
         const templateTitle = record.title?.trim() || TEMPLATES[record.templateId]?.title || 'Registro Clínico';
@@ -664,7 +756,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         });
         cursorY += 2;
 
-        record.sections.forEach(section => {
+        for (const section of record.sections) {
             addSectionTitle(section.title);
             if (section.kind === 'clinical-update') {
                 if (section.updateDate) {
@@ -674,8 +766,8 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
                     addLabeledValue('Hora', section.updateTime);
                 }
             }
-            addParagraphs(section.content);
-        });
+            await addParagraphs(section.content);
+        }
 
         if (record.medico || record.especialidad) {
             addSectionTitle('Profesional Responsable');
