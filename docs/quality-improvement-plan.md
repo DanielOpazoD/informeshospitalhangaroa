@@ -59,3 +59,9 @@ Evolucionar el sistema de forma segura y gradual hacia una arquitectura más mod
 - % de PRs con tests verdes al primer intento.
 - Tamaño promedio de `App.tsx` y módulos críticos.
 - Número de utilidades compartidas vs lógica duplicada.
+
+## Estado actual (marzo 2026)
+- ✅ **Fase 1 completada**: build y typecheck de tests estables; accesos frágiles a entorno reducidos.
+- ✅ **Fase 2 completada**: casos de uso de settings e IA extraídos a hooks/utilidades.
+- ✅ **Fase 3 completada**: manejo de errores unificado para flujos de Drive + cobertura unitaria para estrategia de errores.
+- 🚧 **Fase 4 iniciada**: primera partición de bundle con carga diferida de `CartolaMedicamentosView`.

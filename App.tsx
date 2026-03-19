@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import type {
     ClinicalRecord,
@@ -38,7 +38,6 @@ import SettingsModal from './components/modals/SettingsModal';
 import OpenFromDriveModal from './components/modals/OpenFromDriveModal';
 import SaveToDriveModal from './components/modals/SaveToDriveModal';
 import HistoryModal from './components/modals/HistoryModal';
-import CartolaMedicamentosView from './components/CartolaMedicamentosView';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DriveProvider, useDrive } from './contexts/DriveContext';
 
@@ -48,6 +47,8 @@ declare global {
         google: any;
     }
 }
+
+const CartolaMedicamentosView = lazy(() => import('./components/CartolaMedicamentosView'));
 
 const DEFAULT_TEMPLATE_ID = '2';
 const RECOMMENDED_GEMINI_MODEL = 'gemini-1.5-flash-latest';
@@ -1291,7 +1292,11 @@ const App: React.FC = () => {
     const { toast, showToast } = useToast();
 
     if (activeApp === 'cartola') {
-        return <CartolaMedicamentosView onBack={() => setActiveApp('clinical')} />;
+        return (
+            <Suspense fallback={<div className="p-4 text-sm text-gray-600">Cargando cartola de medicamentos…</div>}>
+                <CartolaMedicamentosView onBack={() => setActiveApp('clinical')} />
+            </Suspense>
+        );
     }
 
     return (
