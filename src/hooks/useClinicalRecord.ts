@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getDefaultPatientFieldsByTemplate, getDefaultSectionsByTemplate } from '../constants';
-import type { ClinicalRecord, VersionHistoryEntry } from '../types';
+import type { ClinicalRecord, ToastFn, VersionHistoryEntry } from '../types';
 import { AUTO_SAVE_IDLE_DELAY, AUTO_SAVE_INTERVAL, LOCAL_STORAGE_KEYS, MAX_HISTORY_ENTRIES } from '../appConstants';
 import { useConfirmDialog } from './useConfirmDialog';
 
-type ToastType = 'success' | 'warning' | 'error';
-
 interface UseClinicalRecordOptions {
-    onToast: (message: string, type?: ToastType) => void;
+    onToast: ToastFn;
 }
 
 export const useClinicalRecord = ({ onToast }: UseClinicalRecordOptions) => {

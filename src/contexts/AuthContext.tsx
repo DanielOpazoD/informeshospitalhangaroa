@@ -1,8 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { GoogleUserProfile, GoogleTokenClient, GoogleTokenResponse } from '../types';
+import type { GoogleUserProfile, GoogleTokenClient, GoogleTokenResponse, ToastFn } from '../types';
 import { decodeIdToken } from '../utils/googleAuth';
-
-type ToastFn = (message: string, type?: 'success' | 'warning' | 'error') => void;
 
 interface AuthContextValue {
     isSignedIn: boolean;

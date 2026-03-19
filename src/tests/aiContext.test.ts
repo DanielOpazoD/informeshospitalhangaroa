@@ -14,10 +14,12 @@ const baseRecord: ClinicalRecord = {
     ],
     sections: [
         {
+            id: 'test-1',
             title: 'Anamnesis',
             content: '<p>Paciente estable</p>',
         },
         {
+            id: 'test-2',
             title: 'Control nocturno',
             kind: 'clinical-update',
             updateDate: '2026-03-19',

@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { ClinicalRecord, ClinicalSectionData, PatientField } from '../types';
 import { calcEdadY } from '../utils/dateUtils';
+import { generateSectionId } from '../constants';
 
 type EditTarget =
     | { type: 'patient-section-title' }
@@ -120,7 +121,7 @@ export function useRecordForm({
     const handleAddSection = useCallback((newSection: ClinicalSectionData) => {
         setRecord(r => ({
             ...r,
-            sections: [...r.sections, newSection],
+            sections: [...r.sections, { ...newSection, id: newSection.id || generateSectionId() }],
         }));
     }, [setRecord]);
 

@@ -1,6 +1,6 @@
 
 
-import React, { Suspense, lazy, useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback, useMemo } from 'react';
 import type {
     ClinicalRecord,
     PatientField,
@@ -10,14 +10,16 @@ import {
     DEFAULT_PATIENT_FIELDS,
     getDefaultPatientFieldsByTemplate,
     getDefaultSectionsByTemplate,
+    generateSectionId,
 } from './constants';
 import { formatDateDMY } from './utils/dateUtils';
-import { suggestedFilename } from './utils/stringUtils';
-import { validateCriticalFields, formatTimeSince } from './utils/validationUtils';
+import { formatTimeSince } from './utils/validationUtils';
 import { useToast, type ToastState } from './hooks/useToast';
 
 import { useConfirmDialog } from './hooks/useConfirmDialog';
 import { useAppSettings } from './hooks/useAppSettings';
+import { useFileOperations } from './hooks/useFileOperations';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { getEnvGeminiApiKey, getEnvGeminiProjectId, getEnvGeminiModel } from './utils/env';
 import { persistSettings } from './utils/settingsStorage';
 import { buildAiConversationKey, buildFullRecordContext, mapSectionsForAi } from './utils/aiContext';
@@ -184,7 +186,6 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         setDriveDateTo,
         setDriveContentTerm,
     } = drive;
-    const importInputRef = useRef<HTMLInputElement>(null);
     useEffect(() => {
         document.body.dataset.theme = 'light';
     }, []);
@@ -283,18 +284,23 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
     });
 
 
-    const handleManualSave = useCallback(() => {
-        if (!hasUnsavedChanges) {
-            showToast('No hay cambios nuevos que guardar.', 'warning');
-            return;
-        }
-        const errors = validateCriticalFields(record);
-        if (errors.length) {
-            showToast(`No se puede guardar porque:\n- ${errors.join('\n- ')}`, 'error');
-            return;
-        }
-        saveDraft('manual');
-    }, [hasUnsavedChanges, record, saveDraft, showToast]);
+    const {
+        importInputRef,
+        handleManualSave,
+        handleImportFile,
+        handleDownloadJson,
+        handlePrint,
+        defaultDriveFileName,
+    } = useFileOperations({
+        record,
+        setRecord,
+        setHasUnsavedChanges,
+        saveDraft,
+        markRecordAsReplaced,
+        hasUnsavedChanges,
+        showToast,
+        normalizePatientFields,
+    });
 
     const saveStatusLabel = useMemo(() => {
         if (!lastLocalSave) return 'Sin guardados aún';
@@ -306,11 +312,6 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         if (!lastLocalSave) return '';
         return new Date(lastLocalSave).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
     }, [lastLocalSave]);
-
-    const defaultDriveFileName = useMemo(() => {
-        const patientName = record.patientFields.find(f => f.id === 'nombre')?.value || '';
-        return suggestedFilename(record.templateId, patientName);
-    }, [record.patientFields, record.templateId]);
 
     // Modals State
     const {
@@ -373,10 +374,6 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         [showToast],
     );
 
-
-
-
-    
     // --- App State & Form Handlers ---
     const getReportDate = useCallback(() => {
         return record.patientFields.find(f => f.id === 'finf')?.value || '';
@@ -425,12 +422,6 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         }
     }, [isEditing, clearActiveEditTarget]);
 
-
-
-
-
-
-
     const handleTemplateChange = (id: string) => {
         const template = TEMPLATES[id];
         if (!template) return;
@@ -451,13 +442,14 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         });
     };
     
-    const handleAddSection = () => hookAddSection({ title: 'Sección personalizada', content: '' });
+    const handleAddSection = () => hookAddSection({ id: generateSectionId(), title: 'Sección personalizada', content: '' });
     const handleAddClinicalUpdateSection = useCallback(() => {
         const now = new Date();
         const pad = (value: number) => String(value).padStart(2, '0');
         const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
         const currentTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
         hookAddSection({
+            id: generateSectionId(),
             title: 'Actualización clínica',
             content: '',
             kind: 'clinical-update',
@@ -486,95 +478,12 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         })();
     }, [confirm, markRecordAsReplaced, record.templateId, setHasUnsavedChanges, showToast]);
 
-    const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const importedRecord = JSON.parse(e.target?.result as string);
-                if (importedRecord.version && importedRecord.patientFields && importedRecord.sections) {
-                    const normalizedRecord: ClinicalRecord = {
-                        ...importedRecord,
-                        patientFields: normalizePatientFields(importedRecord.patientFields),
-                    };
-                    markRecordAsReplaced();
-                    setRecord(normalizedRecord);
-                    setHasUnsavedChanges(false);
-                    saveDraft('import', normalizedRecord);
-                    showToast('Borrador importado correctamente.');
-                } else {
-                    showToast('Archivo JSON inválido.', 'error');
-                }
-            } catch (error) {
-                showToast('Error al leer el archivo JSON.', 'error');
-            }
-        };
-        reader.readAsText(file);
-        if (event.target) event.target.value = '';
-    };
-
-    const handleDownloadJson = useCallback(() => {
-        const errors = validateCriticalFields(record);
-        if (errors.length) {
-            showToast(`No se puede exportar porque:\n- ${errors.join('\n- ')}`, 'error');
-            return;
-        }
-        const patientName = record.patientFields.find(f => f.id === 'nombre')?.value || '';
-        const fileName = `${suggestedFilename(record.templateId, patientName)}.json`;
-        const blob = new Blob([JSON.stringify(record, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }, [record, showToast]);
-
-    const handlePrint = useCallback(() => {
-        void (async () => {
-            const errors = validateCriticalFields(record);
-            if (errors.length) {
-                const proceed = await confirm({
-                    title: 'Advertencias antes de imprimir',
-                    message: `Se detectaron advertencias antes de imprimir:\n- ${errors.join('\n- ')}\n\n¿Desea continuar de todas formas?`,
-                    confirmLabel: 'Imprimir de todas formas',
-                    cancelLabel: 'Revisar',
-                    tone: 'warning',
-                });
-                if (!proceed) return;
-            }
-            const patientName = record.patientFields.find(f => f.id === 'nombre')?.value || '';
-            const originalTitle = document.title;
-            document.title = suggestedFilename(record.templateId, patientName);
-            window.print();
-            setTimeout(() => { document.title = originalTitle; }, 1000);
-        })();
-    }, [confirm, record]);
-
-    useEffect(() => {
-        const handleShortcut = (event: KeyboardEvent) => {
-            if (!event.ctrlKey && !event.metaKey) return;
-            const key = event.key.toLowerCase();
-            if (key === 's') {
-                event.preventDefault();
-                handleManualSave();
-            } else if (key === 'p') {
-                event.preventDefault();
-                handlePrint();
-            } else if (key === 'e') {
-                event.preventDefault();
-                toggleGlobalStructureEditing();
-            } else if (key === 'n') {
-                event.preventDefault();
-                restoreAll();
-            }
-        };
-        window.addEventListener('keydown', handleShortcut);
-        return () => window.removeEventListener('keydown', handleShortcut);
-    }, [handleManualSave, handlePrint, restoreAll, toggleGlobalStructureEditing]);
+    useKeyboardShortcuts({
+        onSave: handleManualSave,
+        onPrint: handlePrint,
+        onToggleEdit: toggleGlobalStructureEditing,
+        onRestore: restoreAll,
+    });
 
     return (
         <>
@@ -739,7 +648,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
                             />
                             <div id="sectionsContainer">{record.sections.map((section, index) => (
                                 <ClinicalSection
-                                    key={index}
+                                    key={section.id}
                                     section={section}
                                     index={index}
                                     isEditing={isEditing}

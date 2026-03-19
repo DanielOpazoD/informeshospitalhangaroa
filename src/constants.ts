@@ -2,6 +2,10 @@
 import type { PatientField, ClinicalSectionData, Template } from './types';
 import { buildInstitutionTitle } from './institutionConfig';
 
+/** Generates a short unique ID for stable React keys in dynamic lists */
+export const generateSectionId = (): string =>
+    `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
 export const TEMPLATES: Record<string, Template> = Object.freeze({
   '1': { id: '1', name: buildInstitutionTitle('Informe médico de traslado'), title: buildInstitutionTitle('Informe médico de traslado') },
   '2': { id: '2', name: buildInstitutionTitle('Evolución médica (FECHA)'), title: buildInstitutionTitle('Evolución médica (____)') },
@@ -12,7 +16,6 @@ export const TEMPLATES: Record<string, Template> = Object.freeze({
   '7': { id: '7', name: 'INFORME MÉDICO MEDIF/LATAM', title: 'INFORME MÉDICO MEDIF/LATAM' },
 });
 
-// FIX: Removed Object.freeze to resolve readonly type mismatch. The constants are used to initialize mutable state.
 export const DEFAULT_PATIENT_FIELDS: PatientField[] = [
     { id: 'nombre', label: 'Nombre', value: '', type: 'text', placeholder: 'Nombre Apellido' },
     { id: 'rut', label: 'Rut', value: '', type: 'text' },
@@ -23,13 +26,12 @@ export const DEFAULT_PATIENT_FIELDS: PatientField[] = [
     { id: 'hinf', label: 'Hora del informe', value: '', type: 'time' },
 ];
 
-// FIX: Removed Object.freeze to resolve readonly type mismatch. The constants are used to initialize mutable state.
 export const DEFAULT_SECTIONS: ClinicalSectionData[] = [
-    { title: 'Antecedentes', content: '' },
-    { title: 'Historia y evolución clínica', content: '' },
-    { title: 'Exámenes complementarios', content: '' },
-    { title: 'Diagnósticos', content: '' },
-    { title: 'Plan', content: '' },
+    { id: generateSectionId(), title: 'Antecedentes', content: '' },
+    { id: generateSectionId(), title: 'Historia y evolución clínica', content: '' },
+    { id: generateSectionId(), title: 'Exámenes complementarios', content: '' },
+    { id: generateSectionId(), title: 'Diagnósticos', content: '' },
+    { id: generateSectionId(), title: 'Plan', content: '' },
 ];
 
 export const getDefaultPatientFieldsByTemplate = (templateId: string): PatientField[] => {
@@ -48,13 +50,14 @@ export const getDefaultSectionsByTemplate = (templateId: string): ClinicalSectio
     if (templateId === '7') {
         return [
             {
+                id: generateSectionId(),
                 title: '',
                 content: 'Diagnosticos de traslado\n(...)\nPaciente se encuentra en condiciones clínicas compatibles de volar en avión comercial con personal de salud, sin requerimientos adicionales',
             },
         ];
     }
 
-    const sections = structuredClone(DEFAULT_SECTIONS);
+    const sections = structuredClone(DEFAULT_SECTIONS).map(s => ({ ...s, id: generateSectionId() }));
     if (templateId === '3' || templateId === '4') {
         return sections.map(section => {
             if (section.title === 'Diagnósticos') {

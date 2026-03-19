@@ -16,8 +16,8 @@ function createMockRecord(): ClinicalRecord {
             { id: 'edad', label: 'Edad', value: '', type: 'text', readonly: true },
         ],
         sections: [
-            { title: 'Antecedentes', content: 'Contenido de antecedentes' },
-            { title: 'Diagnósticos', content: 'Diagnóstico principal' },
+            { id: 'sec-1', title: 'Antecedentes', content: 'Contenido de antecedentes' },
+            { id: 'sec-2', title: 'Diagnósticos', content: 'Diagnóstico principal' },
         ],
         medico: 'Dr. Test',
         especialidad: 'Medicina Interna',
@@ -161,7 +161,7 @@ describe('useRecordForm', () => {
         it('adds a new section to the end', () => {
             const { result, setRecord } = setup();
             act(() => {
-                result.current.handleAddSection({ title: 'Plan', content: 'Nuevo plan' });
+                result.current.handleAddSection({ id: 'sec-new', title: 'Plan', content: 'Nuevo plan' });
             });
             const updater = setRecord.mock.calls[0][0] as (r: ClinicalRecord) => ClinicalRecord;
             const updated = updater(createMockRecord());

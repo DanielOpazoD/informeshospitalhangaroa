@@ -1,13 +1,9 @@
+// ── Shared utility types ────────────────────────────
 
-// FIX: Added Patient interface to resolve import error in components/PatientInfo.tsx.
-export interface Patient {
-    nombre: string;
-    apellido: string;
-    rut: string;
-    fechaNacimiento: string;
-    prevision: string;
-    ficha: string;
-}
+/** Callback para mostrar notificaciones toast en la UI */
+export type ToastFn = (message: string, type?: 'success' | 'warning' | 'error') => void;
+
+// ── Patient types ───────────────────────────────────
 
 export interface PatientField {
     id?: string;
@@ -19,21 +15,11 @@ export interface PatientField {
     isCustom?: boolean;
 }
 
-// FIX: Added ClinicalField and ClinicalSection interfaces to resolve import error in components/ClinicalSection.tsx.
-export interface ClinicalField {
-    label: string;
-    value: string;
-    type: 'text' | 'textarea';
-}
-
-export interface ClinicalSection {
-    title: string;
-    fields: ClinicalField[];
-}
-
 export type ClinicalSectionKind = 'standard' | 'clinical-update';
 
 export interface ClinicalSectionData {
+    /** Stable unique ID for React key reconciliation */
+    id: string;
     title: string;
     content: string;
     kind?: ClinicalSectionKind;

@@ -35,9 +35,9 @@ const markdownParagraphToHtml = (paragraph: string): string => {
             .map(item => applyInlineFormatting(item.trim()));
         return buildList(items, 'ul');
     }
-    if (lines.every(line => /^\s*\d+[\.)]\s+/.test(line))) {
+    if (lines.every(line => /^\s*\d+[.)]\s+/.test(line))) {
         const items = lines
-            .map(line => line.replace(/^\s*\d+[\.)]\s+/, ''))
+            .map(line => line.replace(/^\s*\d+[.)]\s+/, ''))
             .map(item => applyInlineFormatting(item.trim()));
         return buildList(items, 'ol');
     }

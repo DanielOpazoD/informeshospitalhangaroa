@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useState, useMemo } from 'react';
-import type { ClinicalRecord, ClinicalSectionData, PatientField } from '../types';
+import type { ClinicalRecord, ClinicalSectionData, PatientField, ToastFn, VersionHistoryEntry } from '../types';
 import { useClinicalRecord } from '../hooks/useClinicalRecord';
 import { useRecordForm } from '../hooks/useRecordForm';
-
-type ToastFn = (message: string, type?: 'success' | 'warning' | 'error') => void;
 
 type EditTarget =
     | { type: 'patient-section-title' }
@@ -26,11 +24,11 @@ interface RecordContextValue {
     /** Indica si hay modificaciones recientes no guardadas permanentemente */
     hasUnsavedChanges: boolean;
     setHasUnsavedChanges: React.Dispatch<React.SetStateAction<boolean>>;
-    versionHistory: any[];
+    versionHistory: VersionHistoryEntry[];
     isHistoryModalOpen: boolean;
     setIsHistoryModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     saveDraft: (reason: 'auto' | 'manual' | 'import', overrideRecord?: ClinicalRecord) => void;
-    handleRestoreHistoryEntry: (entry: any) => void;
+    handleRestoreHistoryEntry: (entry: VersionHistoryEntry) => void;
     markRecordAsReplaced: () => void;
 
     // State from useRecordForm & UI state

@@ -37,5 +37,5 @@ export function suggestedFilename(templateId: string, patientName: string): stri
     const name = patientNameForFile(patientName);
     const date = todayDMY();
     const parts = [base, name, date].filter(Boolean).join(' - ');
-    return stripAccents(parts).replace(/[^A-Za-z0-9 _\-]/g, '');
+    return stripAccents(parts).replace(/[^A-Za-z0-9 _-]/g, '');
 }
