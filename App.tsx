@@ -22,8 +22,9 @@ import { validateCriticalFields, formatTimeSince } from './utils/validationUtils
 import { useToast, type ToastState } from './hooks/useToast';
 import { useClinicalRecord } from './hooks/useClinicalRecord';
 import { useConfirmDialog } from './hooks/useConfirmDialog';
-import { getEnvGeminiApiKey, getEnvGeminiProjectId, getEnvGeminiModel, normalizeGeminiModelId } from './utils/env';
-import { clearPersistedSettings, loadPersistedSettings, persistSettings, resolveClientId } from './utils/settingsStorage';
+import { useAppSettings } from './hooks/useAppSettings';
+import { getEnvGeminiApiKey, getEnvGeminiProjectId, getEnvGeminiModel } from './utils/env';
+import { persistSettings } from './utils/settingsStorage';
 import { htmlToPlainText } from './utils/textUtils';
 import { appDisplayName, buildInstitutionTitle, logoUrls } from './institutionConfig';
 import { DEFAULT_GOOGLE_CLIENT_ID } from './appConstants';
@@ -178,24 +179,9 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
     } = useClinicalRecord({ onToast: showToast });
     const [nowTick, setNowTick] = useState(Date.now());
     const importInputRef = useRef<HTMLInputElement>(null);
-    const [apiKey, setApiKey] = useState('');
-    const [aiApiKey, setAiApiKey] = useState('');
-    const [aiProjectId, setAiProjectId] = useState('');
-    const [aiModel, setAiModel] = useState(INITIAL_GEMINI_MODEL);
-
     // Modals State
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
     const [isOpenModalOpen, setIsOpenModalOpen] = useState(false);
-    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-
-    // Settings Modal Temp State
-    const [tempApiKey, setTempApiKey] = useState('');
-    const [tempClientId, setTempClientId] = useState('');
-    const [tempAiApiKey, setTempAiApiKey] = useState('');
-    const [tempAiProjectId, setTempAiProjectId] = useState('');
-    const [tempAiModel, setTempAiModel] = useState(INITIAL_GEMINI_MODEL);
-    const [showApiKey, setShowApiKey] = useState(false);
-    const [showAiApiKey, setShowAiApiKey] = useState(false);
 
     useEffect(() => {
         document.body.dataset.theme = 'light';
@@ -257,15 +243,48 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         return () => window.clearInterval(timer);
     }, []);
     
-    // Load settings from localStorage on initial render
-    useEffect(() => {
-        const settings = loadPersistedSettings();
-        if (settings.googleApiKey) setApiKey(settings.googleApiKey);
-        if (settings.googleClientId) setClientId(resolveClientId(settings.googleClientId));
-        if (settings.geminiApiKey) setAiApiKey(settings.geminiApiKey);
-        if (settings.geminiProjectId) setAiProjectId(settings.geminiProjectId);
-        if (settings.geminiModel) setAiModel(settings.geminiModel);
-    }, [setClientId]);
+    const {
+        apiKey,
+        aiApiKey,
+        aiProjectId,
+        aiModel,
+        setAiModel,
+        isSettingsModalOpen,
+        tempApiKey,
+        tempClientId,
+        tempAiApiKey,
+        tempAiProjectId,
+        tempAiModel,
+        setTempApiKey,
+        setTempClientId,
+        setTempAiApiKey,
+        setTempAiProjectId,
+        setTempAiModel,
+        showApiKey,
+        showAiApiKey,
+        toggleShowApiKey,
+        toggleShowAiApiKey,
+        openSettingsModal,
+        closeSettingsModal,
+        saveSettings,
+        clearSettings,
+    } = useAppSettings({
+        clientId,
+        setClientId,
+        envGeminiApiKey: ENV_GEMINI_API_KEY,
+        envGeminiProjectId: ENV_GEMINI_PROJECT_ID,
+        initialGeminiModel: INITIAL_GEMINI_MODEL,
+        confirmClearSettings: () =>
+            confirm({
+                title: 'Eliminar credenciales',
+                message: '¿Está seguro de que desea eliminar las credenciales guardadas? Esta acción no se puede deshacer.',
+                confirmLabel: 'Eliminar',
+                cancelLabel: 'Cancelar',
+                tone: 'danger',
+            }),
+        onToast: showToast,
+    });
+
 
     const handleManualSave = useCallback(() => {
         if (!hasUnsavedChanges) {
@@ -382,63 +401,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         [showToast],
     );
 
-    // --- Settings Modal Handlers ---
-    const openSettingsModal = () => {
-        setTempApiKey(apiKey);
-        setTempClientId(clientId);
-        setTempAiApiKey(aiApiKey || ENV_GEMINI_API_KEY);
-        setTempAiProjectId(aiProjectId || ENV_GEMINI_PROJECT_ID);
-        setTempAiModel(aiModel || INITIAL_GEMINI_MODEL);
-        setIsSettingsModalOpen(true);
-    };
 
-    const closeSettingsModal = () => {
-        setIsSettingsModalOpen(false);
-        setShowApiKey(false);
-        setShowAiApiKey(false);
-    };
-
-    const handleSaveSettings = () => {
-        const sanitizedModel = tempAiModel.trim() ? normalizeGeminiModelId(tempAiModel) : '';
-        persistSettings({
-            googleApiKey: tempApiKey,
-            googleClientId: tempClientId,
-            geminiApiKey: tempAiApiKey,
-            geminiProjectId: tempAiProjectId,
-            geminiModel: sanitizedModel,
-        });
-
-        setApiKey(tempApiKey.trim());
-        setClientId(resolveClientId(tempClientId));
-        setAiApiKey(tempAiApiKey.trim());
-        setAiProjectId(tempAiProjectId.trim());
-        setAiModel(sanitizedModel || INITIAL_GEMINI_MODEL);
-
-        showToast('Configuración guardada. Para que todos los cambios surtan efecto, por favor, recargue la página.');
-        closeSettingsModal();
-    };
-
-    const handleClearSettings = () => {
-        void (async () => {
-            const confirmed = await confirm({
-                title: 'Eliminar credenciales',
-                message: '¿Está seguro de que desea eliminar las credenciales guardadas? Esta acción no se puede deshacer.',
-                confirmLabel: 'Eliminar',
-                cancelLabel: 'Cancelar',
-                tone: 'danger',
-            });
-            if (!confirmed) return;
-            clearPersistedSettings();
-            setApiKey('');
-            setClientId(DEFAULT_GOOGLE_CLIENT_ID);
-            setAiApiKey('');
-            setAiProjectId('');
-            setAiModel(INITIAL_GEMINI_MODEL);
-            setTempAiModel(INITIAL_GEMINI_MODEL);
-            showToast('Credenciales eliminadas. Recargue la página para aplicar los cambios.', 'warning');
-            closeSettingsModal();
-        })();
-    };
 
     // --- Save Modal Handlers ---
     const openSaveModal = () => {
@@ -1213,15 +1176,15 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
                 showApiKey={showApiKey}
                 showAiApiKey={showAiApiKey}
                 onClose={closeSettingsModal}
-                onToggleShowApiKey={() => setShowApiKey(prev => !prev)}
-                onToggleShowAiApiKey={() => setShowAiApiKey(prev => !prev)}
+                onToggleShowApiKey={toggleShowApiKey}
+                onToggleShowAiApiKey={toggleShowAiApiKey}
                 onTempApiKeyChange={setTempApiKey}
                 onTempClientIdChange={setTempClientId}
                 onTempAiApiKeyChange={setTempAiApiKey}
                 onTempAiProjectIdChange={setTempAiProjectId}
                 onTempAiModelChange={setTempAiModel}
-                onSave={handleSaveSettings}
-                onClearCredentials={handleClearSettings}
+                onSave={saveSettings}
+                onClearCredentials={() => { void clearSettings(); }}
             />
             
             <OpenFromDriveModal
