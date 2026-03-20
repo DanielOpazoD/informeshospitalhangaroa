@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/15</span>
+                <span class='fraction'>15/15</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">88.88% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/18</span>
+                <span class='fraction'>16/18</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/2</span>
+                <span class='fraction'>2/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/15</span>
+                <span class='fraction'>15/15</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -88,55 +88,55 @@
 <a name='L23'></a><a href='#L23'>23</a>
 <a name='L24'></a><a href='#L24'>24</a>
 <a name='L25'></a><a href='#L25'>25</a>
-<a name='L26'></a><a href='#L26'>26</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<a name='L26'></a><a href='#L26'>26</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">export const getErrorMessage = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(e</span>rror: unknown, fallback = <span class="branch-0 cbranch-no" title="branch not covered" >'Ocurrió un error inesperado.'): string =&gt; {</span></span>
-<span class="cstat-no" title="statement not covered" >    if (typeof error === 'string') {</span>
-        const trimmed = <span class="cstat-no" title="statement not covered" >error.trim();</span>
-<span class="cstat-no" title="statement not covered" >        return trimmed || fallback;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">export const getErrorMessage = (error: unknown, fallback = 'Ocurrió un error inesperado.'): string =&gt; {
+    if (typeof error === 'string') {
+        const trimmed = error.trim();
+        return trimmed || fallback;
     }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    if (error instanceof Error) {</span>
-        const trimmed = <span class="cstat-no" title="statement not covered" >error.message.trim();</span>
-<span class="cstat-no" title="statement not covered" >        return trimmed || fallback;</span>
+    if (error instanceof Error) {
+        const trimmed = error.message.trim();
+        return trimmed || <span class="branch-1 cbranch-no" title="branch not covered" >fallback;</span>
     }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    if (error &amp;&amp; typeof error === 'object' &amp;&amp; 'message' in error) {</span>
-        const candidate = (<span class="cstat-no" title="statement not covered" >error as { message?: unknown }).message;</span>
-<span class="cstat-no" title="statement not covered" >        if (typeof candidate === 'string' &amp;&amp; candidate.trim()) {</span>
-<span class="cstat-no" title="statement not covered" >            return candidate.trim();</span>
+    if (error &amp;&amp; typeof error === 'object' &amp;&amp; 'message' in error) {
+        const candidate = (error as { message?: unknown }).message;
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (typeof candidate === 'string' &amp;&amp; candidate.trim()) {
+            return candidate.trim();
         }
     }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    return fallback;</span>
+    return fallback;
 };
 &nbsp;
-export const buildContextualErrorMessage = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(c</span>ontext: string, error: unknown, fallback?: string): string =&gt; {</span>
-    const reason = <span class="cstat-no" title="statement not covered" >getErrorMessage(error, fallback);</span>
-<span class="cstat-no" title="statement not covered" >    return `${context}: ${reason}`;</span>
+export const buildContextualErrorMessage = (context: string, error: unknown, fallback?: string): string =&gt; {
+    const reason = getErrorMessage(error, fallback);
+    return `${context}: ${reason}`;
 };
 &nbsp;</pre></td></tr></table></pre>
 
@@ -145,7 +145,7 @@ export const buildContextualErrorMessage = <span class="cstat-no" title="stateme
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-19T21:06:34.782Z
+                at 2026-03-20T01:30:28.092Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

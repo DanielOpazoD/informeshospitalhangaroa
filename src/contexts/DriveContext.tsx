@@ -4,7 +4,6 @@ import type {
     DriveFolder,
     FavoriteFolderEntry,
     RecentDriveFile,
-    GoogleDriveFileResource,
     SaveFormat,
     SaveOptions,
     ToastFn,
@@ -12,6 +11,8 @@ import type {
 import { buildDriveContextErrorMessage } from '../utils/driveErrorUtils';
 import { useDriveStorage } from '../hooks/useDriveStorage';
 import { useDriveSearch } from '../hooks/useDriveSearch';
+import { createDriveGateway } from '../services/driveGateway';
+import { getRootDriveFolder } from '../utils/driveFolderStorage';
 
 interface DriveCacheEntry {
     folders: DriveFolder[];
@@ -69,7 +70,7 @@ const DriveContext = createContext<DriveContextValue | undefined>(undefined);
 export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToast }) => {
     const [driveFolders, setDriveFolders] = useState<DriveFolder[]>([]);
     const [driveJsonFiles, setDriveJsonFiles] = useState<DriveFolder[]>([]);
-    const [folderPath, setFolderPath] = useState<DriveFolder[]>([{ id: 'root', name: 'Mi unidad' }]);
+    const [folderPath, setFolderPath] = useState<DriveFolder[]>([getRootDriveFolder()]);
     const [saveFormat, setSaveFormat] = useState<SaveFormat>('json');
     const [selectedFolderId, setSelectedFolderId] = useState<string>('root');
     const [newFolderName, setNewFolderName] = useState('');
@@ -77,6 +78,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
     const [isDriveLoading, setIsDriveLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const driveCacheRef = useRef(new Map<string, DriveCacheEntry>());
+    const driveGateway = useMemo(() => createDriveGateway(), []);
 
     const {
         favoriteFolders,
@@ -104,17 +106,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
                 setSelectedFolderId(folderId);
                 return;
             }
-            const response = await window.gapi.client.drive.files.list({
-                q: `'${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-                fields: 'files(id, name, mimeType, modifiedTime)',
-                orderBy: 'name',
-            });
-            const folders = (response.result.files || []).map((file: GoogleDriveFileResource) => ({
-                id: file.id,
-                name: file.name,
-                mimeType: file.mimeType,
-                modifiedTime: file.modifiedTime,
-            }));
+            const folders = await driveGateway.listFolders(folderId);
             cacheFolders(cacheKey, folders);
             setDriveFolders(folders);
             setSelectedFolderId(folderId);
@@ -124,7 +116,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         } finally {
             setIsDriveLoading(false);
         }
-    }, [cacheFolders, showToast]);
+    }, [cacheFolders, driveGateway, showToast]);
 
     const fetchFolderContents = useCallback(async (folderId: string) => {
         setIsDriveLoading(true);
@@ -137,30 +129,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
                 setSelectedFolderId(folderId);
                 return;
             }
-
-            const foldersPromise = window.gapi.client.drive.files.list({
-                q: `'${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-                fields: 'files(id, name, mimeType, modifiedTime)',
-                orderBy: 'name',
-            });
-            const filesPromise = window.gapi.client.drive.files.list({
-                q: `'${folderId}' in parents and mimeType='application/json' and trashed=false`,
-                fields: 'files(id, name, mimeType, modifiedTime)',
-                orderBy: 'name',
-            });
-            const [foldersResponse, filesResponse] = await Promise.all([foldersPromise, filesPromise]);
-            const folders = (foldersResponse.result.files || []).map((file: GoogleDriveFileResource) => ({
-                id: file.id,
-                name: file.name,
-                mimeType: file.mimeType,
-                modifiedTime: file.modifiedTime,
-            }));
-            const files = (filesResponse.result.files || []).map((file: GoogleDriveFileResource) => ({
-                id: file.id,
-                name: file.name,
-                mimeType: file.mimeType,
-                modifiedTime: file.modifiedTime,
-            }));
+            const { folders, files } = await driveGateway.listFolderContents(folderId);
             cacheFolders(cacheKey, folders, files);
             setDriveFolders(folders);
             setDriveJsonFiles(files);
@@ -171,7 +140,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         } finally {
             setIsDriveLoading(false);
         }
-    }, [cacheFolders, showToast]);
+    }, [cacheFolders, driveGateway, showToast]);
 
     const {
         driveSearchTerm,
@@ -192,6 +161,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         showToast,
         driveCacheRef,
         fetchFolderContents,
+        driveGateway,
     });
 
 
@@ -227,13 +197,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         setIsDriveLoading(true);
         try {
             const currentFolderId = folderPath[folderPath.length - 1].id;
-            await window.gapi.client.drive.files.create({
-                resource: {
-                    name: newFolderName.trim(),
-                    mimeType: 'application/vnd.google-apps.folder',
-                    parents: [currentFolderId]
-                }
-            });
+            await driveGateway.createFolder(newFolderName.trim(), currentFolderId);
             setNewFolderName('');
             driveCacheRef.current.delete(`folders:${currentFolderId}`);
             driveCacheRef.current.delete(`contents:${currentFolderId}`);
@@ -245,18 +209,14 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         } finally {
             setIsDriveLoading(false);
         }
-    }, [fetchDriveFolders, folderPath, newFolderName, showToast]);
+    }, [driveGateway, fetchDriveFolders, folderPath, newFolderName, showToast]);
 
 
 
     const openJsonFileFromDrive = useCallback(async (file: DriveFolder): Promise<ClinicalRecord | null> => {
         setIsDriveLoading(true);
         try {
-            const response = await window.gapi.client.drive.files.get({
-                fileId: file.id,
-                alt: 'media',
-            });
-            const importedRecord = JSON.parse(response.body);
+            const importedRecord = await driveGateway.getJsonRecord(file.id);
             if (importedRecord.version && importedRecord.patientFields && importedRecord.sections) {
                 showToast('Archivo cargado exitosamente desde Google Drive.');
                 addRecentFile(file);
@@ -271,7 +231,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         } finally {
             setIsDriveLoading(false);
         }
-    }, [addRecentFile, showToast]);
+    }, [addRecentFile, driveGateway, showToast]);
 
     const saveToDrive = useCallback(async ({ record, baseFileName, format, generatePdf }: SaveOptions) => {
         setIsSaving(true);
@@ -283,23 +243,12 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
             const fileContent = type === 'pdf'
                 ? await generatePdf()
                 : new Blob([JSON.stringify(record, null, 2)], { type: mimeType });
-
-            const metadata = { name: fileName, parents: [selectedFolderId] };
-            const form = new FormData();
-            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            form.append('file', fileContent);
-
-            const accessToken = window.gapi.client.getToken()?.access_token;
-            if (!accessToken) throw new Error('No hay token de acceso. Por favor, inicie sesión de nuevo.');
-
-            const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${accessToken}` },
-                body: form,
+            await driveGateway.uploadFile({
+                fileName,
+                mimeType,
+                content: fileContent,
+                parentId: selectedFolderId,
             });
-
-            const result = await response.json();
-            if (!response.ok) throw new Error(result?.error?.message || `Error del servidor: ${response.status}`);
             return fileName;
         };
 
@@ -319,7 +268,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         } finally {
             setIsSaving(false);
         }
-    }, [selectedFolderId, showToast]);
+    }, [driveGateway, selectedFolderId, showToast]);
 
     const value = useMemo<DriveContextValue>(() => ({
         driveFolders,

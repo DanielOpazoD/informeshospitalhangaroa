@@ -1,100 +1,42 @@
-
-
-import React, { Suspense, lazy, useState, useEffect, useCallback, useMemo } from 'react';
-import type {
-    ClinicalRecord,
-    PatientField,
-} from './types';
-import {
-    TEMPLATES,
-    DEFAULT_PATIENT_FIELDS,
-    getDefaultPatientFieldsByTemplate,
-    getDefaultSectionsByTemplate,
-    generateSectionId,
-} from './constants';
+import React, { lazy, useCallback, useEffect, useMemo, useState, Suspense } from 'react';
+import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
+import { generateSectionId, TEMPLATES } from './constants';
 import { formatDateDMY } from './utils/dateUtils';
-import { formatTimeSince } from './utils/validationUtils';
+import { getEnvGeminiApiKey, getEnvGeminiModel, getEnvGeminiProjectId } from './utils/env';
+import { DEFAULT_GOOGLE_CLIENT_ID } from './appConstants';
+import { appDisplayName, buildInstitutionTitle } from './institutionConfig';
 import { useToast, type ToastState } from './hooks/useToast';
-
 import { useConfirmDialog } from './hooks/useConfirmDialog';
 import { useAppSettings } from './hooks/useAppSettings';
 import { useFileOperations } from './hooks/useFileOperations';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { getEnvGeminiApiKey, getEnvGeminiProjectId, getEnvGeminiModel } from './utils/env';
-import { persistSettings } from './utils/settingsStorage';
-import { buildAiConversationKey, buildFullRecordContext, mapSectionsForAi } from './utils/aiContext';
-
-import { appDisplayName, buildInstitutionTitle, logoUrls } from './institutionConfig';
-import { DEFAULT_GOOGLE_CLIENT_ID } from './appConstants';
-import Header from './components/Header';
-import PatientInfo from './components/PatientInfo';
-import ClinicalSection from './components/ClinicalSection';
-import Footer from './components/Footer';
-import SettingsModal from './components/modals/SettingsModal';
-import OpenFromDriveModal from './components/modals/OpenFromDriveModal';
-import SaveToDriveModal from './components/modals/SaveToDriveModal';
-import HistoryModal from './components/modals/HistoryModal';
+import { useToolbarCommands } from './hooks/useToolbarCommands';
+import { useDriveModals } from './hooks/useDriveModals';
+import { useEditorUiState } from './hooks/useEditorUiState';
+import { useDocumentEffects } from './hooks/useDocumentEffects';
+import { useAiAssistantController } from './hooks/useAiAssistantController';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DriveProvider, useDrive } from './contexts/DriveContext';
 import { RecordProvider, useRecordContext } from './contexts/RecordContext';
 import { generatePdfAsBlob } from './utils/pdfGenerator';
-import { useToolbarCommands } from './hooks/useToolbarCommands';
-import { useDriveModals } from './hooks/useDriveModals';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import AppShellContent from './components/app/AppShellContent';
+import {
+    buildClinicalUpdateSection,
+    createTemplateBaseline,
+    DEFAULT_TEMPLATE_ID,
+    normalizePatientFields,
+    RECOMMENDED_GEMINI_MODEL,
+} from './utils/recordTemplates';
 
 const CartolaMedicamentosView = lazy(() => import('./components/CartolaMedicamentosView'));
 const AIAssistant = lazy(() => import('./components/AIAssistant'));
-
-const DEFAULT_TEMPLATE_ID = '2';
-const RECOMMENDED_GEMINI_MODEL = 'gemini-1.5-flash-latest';
-
-const normalizePatientFields = (fields: PatientField[]): PatientField[] => {
-    const defaultById = new Map(DEFAULT_PATIENT_FIELDS.map(field => [field.id, field]));
-    const defaultByLabel = new Map(DEFAULT_PATIENT_FIELDS.map(field => [field.label, field]));
-    const seenDefaultIds = new Set<string>();
-
-    const normalizedFields = fields.map(field => {
-        const matchingDefault = field.id ? defaultById.get(field.id) : defaultByLabel.get(field.label);
-        if (matchingDefault?.id) {
-            seenDefaultIds.add(matchingDefault.id);
-        }
-        return matchingDefault ? { ...matchingDefault, ...field } : { ...field };
-    });
-
-    const missingDefaults = DEFAULT_PATIENT_FIELDS
-        .filter(defaultField => defaultField.id && !seenDefaultIds.has(defaultField.id))
-        .map(defaultField => ({ ...defaultField }));
-
-    return [...normalizedFields, ...missingDefaults];
-};
-
-interface AppShellProps {
-    toast: ToastState | null;
-    showToast: (message: string, type?: 'success' | 'warning' | 'error') => void;
-    clientId: string;
-    setClientId: React.Dispatch<React.SetStateAction<string>>;
-    onOpenCartola: () => void;
-}
-
-const createTemplateBaseline = (templateId: string): ClinicalRecord => {
-    const selectedTemplateId = TEMPLATES[templateId] ? templateId : DEFAULT_TEMPLATE_ID;
-    const template = TEMPLATES[selectedTemplateId];
-    return {
-        version: 'v14',
-        templateId: selectedTemplateId,
-        title: template?.title || 'Registro Clínico',
-        patientFields: getDefaultPatientFieldsByTemplate(selectedTemplateId),
-        sections: getDefaultSectionsByTemplate(selectedTemplateId),
-        medico: '',
-        especialidad: ''
-    };
-};
 
 const ENV_GEMINI_API_KEY = getEnvGeminiApiKey();
 const ENV_GEMINI_PROJECT_ID = getEnvGeminiProjectId();
 const ENV_GEMINI_MODEL = getEnvGeminiModel();
 const INITIAL_GEMINI_MODEL = ENV_GEMINI_MODEL || RECOMMENDED_GEMINI_MODEL;
+interface AppShellProps { toast: ToastState | null; showToast: (message: string, type?: 'success' | 'warning' | 'error') => void; clientId: string; setClientId: React.Dispatch<React.SetStateAction<string>>; onOpenCartola: () => void; }
 
 const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClientId, onOpenCartola }) => {
     const {
@@ -129,144 +71,28 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         handleAddSection: hookAddSection,
         handleAddPatientField: hookAddPatientField,
     } = useRecordContext();
-    const [nowTick, setNowTick] = useState(Date.now());
-
-    const [isAdvancedEditing, setIsAdvancedEditing] = useState(false);
-    const [isAiAssistantVisible, setIsAiAssistantVisible] = useState(false);
-    const [sheetZoom, setSheetZoom] = useState(1);
-    const [aiPanelWidth, setAiPanelWidth] = useState(420);
-    const { handleToolbarCommand, lastEditableRef, lastSelectionRef } = useToolbarCommands({ setSheetZoom });
     const auth = useAuth();
     const drive = useDrive();
     const { confirm } = useConfirmDialog();
-    const {
-        isSignedIn,
-        userProfile,
-        tokenClient,
-        isGapiReady,
-        isGisReady,
-        isPickerApiReady,
-        handleSignIn,
-        handleSignOut,
-        handleChangeUser,
-    } = auth;
-    const {
-        driveFolders,
-        driveJsonFiles,
-        folderPath,
-        saveFormat,
-        driveSearchTerm,
-        driveDateFrom,
-        driveDateTo,
-        driveContentTerm,
-        favoriteFolders,
-        recentFiles,
-        newFolderName,
-        fileNameInput,
-        isDriveLoading,
-        isSaving,
-        fetchDriveFolders,
-        fetchFolderContents,
-        handleAddFavoriteFolder,
-        handleRemoveFavoriteFolder,
-        handleGoToFavorite,
-        handleSearchInDrive,
-        clearDriveSearch,
-        formatDriveDate,
-        handleCreateFolder,
-        handleSetDefaultFolder,
-        openJsonFileFromDrive,
-        saveToDrive,
-        setFolderPath,
-        setSaveFormat,
-        setFileNameInput,
-        setNewFolderName,
-        setDriveSearchTerm,
-        setDriveDateFrom,
-        setDriveDateTo,
-        setDriveContentTerm,
-    } = drive;
-    useEffect(() => {
-        document.body.dataset.theme = 'light';
-    }, []);
+    const editorUi = useEditorUiState({ lastLocalSave, hasUnsavedChanges });
+    const { handleToolbarCommand, lastEditableRef, lastSelectionRef } = useToolbarCommands({
+        setSheetZoom: editorUi.setSheetZoom,
+    });
 
-    useEffect(() => {
-        if (typeof document === 'undefined') return;
-        document.body.classList.toggle('advanced-editing-active', isAdvancedEditing);
-        return () => {
-            document.body.classList.remove('advanced-editing-active');
-        };
-    }, [isAdvancedEditing]);
+    const clearActiveEditTarget = useCallback(() => setActiveEditTarget(null), [setActiveEditTarget]);
 
-    const clearActiveEditTarget = useCallback(() => {
-        setActiveEditTarget(null);
-    }, [setActiveEditTarget]);
+    useDocumentEffects({
+        appTitle: appDisplayName,
+        isAdvancedEditing: editorUi.isAdvancedEditing,
+        isEditing,
+        clearActiveEditTarget,
+        setIsEditing,
+        setIsGlobalStructureEditing,
+        lastEditableRef,
+        lastSelectionRef,
+    });
 
-    useEffect(() => {
-        const handleFocusIn = (event: FocusEvent) => {
-            const target = event.target as HTMLElement | null;
-            if (!target) return;
-            const editable = target.closest('.note-area[contenteditable]') as HTMLElement | null;
-            if (!editable) return;
-            lastEditableRef.current = editable;
-            const selection = window.getSelection();
-            if (selection && selection.rangeCount > 0) {
-                lastSelectionRef.current = selection.getRangeAt(0).cloneRange();
-            }
-        };
-
-        const handleSelectionChange = () => {
-            const selection = window.getSelection();
-            if (!selection || selection.rangeCount === 0) return;
-            const focusNode = selection.focusNode;
-            if (!focusNode) return;
-            const focusElement = focusNode instanceof HTMLElement ? focusNode : focusNode.parentElement;
-            if (!focusElement) return;
-            const editable = focusElement.closest('.note-area[contenteditable]') as HTMLElement | null;
-            if (!editable) return;
-            lastEditableRef.current = editable;
-            lastSelectionRef.current = selection.getRangeAt(0).cloneRange();
-        };
-
-        document.addEventListener('focusin', handleFocusIn);
-        document.addEventListener('selectionchange', handleSelectionChange);
-        return () => {
-            document.removeEventListener('focusin', handleFocusIn);
-            document.removeEventListener('selectionchange', handleSelectionChange);
-        };
-    }, []);
-
-    useEffect(() => {
-        const timer = window.setInterval(() => setNowTick(Date.now()), 60000);
-        return () => window.clearInterval(timer);
-    }, []);
-    
-    const {
-        apiKey,
-        aiApiKey,
-        aiProjectId,
-        aiModel,
-        setAiModel,
-        isSettingsModalOpen,
-        tempApiKey,
-        tempClientId,
-        tempAiApiKey,
-        tempAiProjectId,
-        tempAiModel,
-        setTempApiKey,
-        setTempClientId,
-        setTempAiApiKey,
-        setTempAiProjectId,
-        setTempAiModel,
-        showApiKey,
-        showAiApiKey,
-        toggleShowApiKey,
-        toggleShowAiApiKey,
-        openSettingsModal,
-        closeSettingsModal,
-        saveSettings,
-        clearSettings,
-    } = useAppSettings({
+    const settings = useAppSettings({
         clientId,
         setClientId,
         envGeminiApiKey: ENV_GEMINI_API_KEY,
@@ -283,15 +109,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         onToast: showToast,
     });
 
-
-    const {
-        importInputRef,
-        handleManualSave,
-        handleImportFile,
-        handleDownloadJson,
-        handlePrint,
-        defaultDriveFileName,
-    } = useFileOperations({
+    const fileOperations = useFileOperations({
         record,
         setRecord,
         setHasUnsavedChanges,
@@ -302,164 +120,85 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         normalizePatientFields,
     });
 
-    const saveStatusLabel = useMemo(() => {
-        if (!lastLocalSave) return 'Sin guardados aún';
-        if (hasUnsavedChanges) return 'Cambios sin guardar';
-        return `Guardado ${formatTimeSince(lastLocalSave, nowTick)}`;
-    }, [hasUnsavedChanges, lastLocalSave, nowTick]);
-
-    const lastSaveTime = useMemo(() => {
-        if (!lastLocalSave) return '';
-        return new Date(lastLocalSave).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-    }, [lastLocalSave]);
-
-    // Modals State
-    const {
-        isSaveModalOpen,
-        isOpenModalOpen,
-        setIsOpenModalOpen,
-        openSaveModal,
-        closeSaveModal,
-        handleSaveFolderClick,
-        handleSaveBreadcrumbClick,
-        handleOpenModalFolderClick,
-        handleOpenModalBreadcrumbClick,
-        handleFileOpen,
-        handleOpenFromDrive,
-        handleFinalSave,
-    } = useDriveModals({
-        isSignedIn,
-        handleSignIn,
+    const driveModals = useDriveModals({
+        isSignedIn: auth.isSignedIn,
+        handleSignIn: auth.handleSignIn,
         showToast,
         record,
         setRecord,
         setHasUnsavedChanges,
         saveDraft,
         markRecordAsReplaced,
-        defaultDriveFileName,
-        apiKey,
-        isPickerApiReady,
-        fetchDriveFolders,
-        fetchFolderContents,
-        setFolderPath,
-        setFileNameInput,
-        fileNameInput,
-        saveFormat,
-        openJsonFileFromDrive,
-        saveToDrive,
+        defaultDriveFileName: fileOperations.defaultDriveFileName,
+        apiKey: settings.apiKey,
+        isPickerApiReady: auth.isPickerApiReady,
+        fetchDriveFolders: drive.fetchDriveFolders,
+        fetchFolderContents: drive.fetchFolderContents,
+        setFolderPath: drive.setFolderPath,
+        setFileNameInput: drive.setFileNameInput,
+        fileNameInput: drive.fileNameInput,
+        saveFormat: drive.saveFormat,
+        openJsonFileFromDrive: drive.openJsonFileFromDrive,
+        saveToDrive: drive.saveToDrive,
         generatePdf: () => generatePdfAsBlob({ record }),
     });
 
-    const resolvedAiApiKey = useMemo(() => aiApiKey || ENV_GEMINI_API_KEY, [aiApiKey]);
-    const resolvedAiProjectId = useMemo(() => aiProjectId || ENV_GEMINI_PROJECT_ID, [aiProjectId]);
-    const allowAiAutoSelection = useMemo(() => {
-        if (ENV_GEMINI_MODEL) return false;
-        return !aiModel || aiModel === RECOMMENDED_GEMINI_MODEL;
-    }, [aiModel]);
-    const resolvedAiModel = useMemo(() => aiModel || INITIAL_GEMINI_MODEL, [aiModel]);
-    const fullRecordContext = useMemo(() => buildFullRecordContext(record), [record]);
+    const aiAssistant = useAiAssistantController({
+        record,
+        aiApiKey: settings.aiApiKey,
+        aiProjectId: settings.aiProjectId,
+        aiModel: settings.aiModel,
+        envGeminiApiKey: ENV_GEMINI_API_KEY,
+        envGeminiProjectId: ENV_GEMINI_PROJECT_ID,
+        envGeminiModel: ENV_GEMINI_MODEL,
+        recommendedModel: RECOMMENDED_GEMINI_MODEL,
+        setAiModel: settings.setAiModel,
+        onToast: showToast,
+    });
 
-
-    const aiSections = useMemo(() => mapSectionsForAi(record.sections), [record.sections]);
-
-
-    const aiConversationKey = useMemo(() => buildAiConversationKey(record), [record]);
-
-    const handleAutoSelectAiModel = useCallback(
-        (modelId: string) => {
-            setAiModel(modelId);
-            persistSettings({ geminiModel: modelId });
-            showToast(`Modelo de IA actualizado automáticamente a ${modelId}.`);
-        },
-        [showToast],
-    );
-
-    // --- App State & Form Handlers ---
-    const getReportDate = useCallback(() => {
-        return record.patientFields.find(f => f.id === 'finf')?.value || '';
-    }, [record.patientFields]);
+    const getReportDate = useCallback(() => record.patientFields.find(f => f.id === 'finf')?.value || '', [record.patientFields]);
 
     useEffect(() => {
         const template = TEMPLATES[record.templateId];
         if (!template) return;
         let newTitle = template.title;
-        if (template.id === '2') {
+        if (template.id === DEFAULT_TEMPLATE_ID) {
             const reportDate = formatDateDMY(getReportDate());
             const baseTitle = reportDate ? `Evolución médica (${reportDate})` : 'Evolución médica (____)';
             newTitle = buildInstitutionTitle(baseTitle);
         }
         markRecordAsReplaced();
-        setRecord(r => ({ ...r, title: newTitle }));
-    }, [record.templateId, getReportDate]);
+        setRecord(current => ({ ...current, title: newTitle }));
+    }, [getReportDate, markRecordAsReplaced, record.templateId, setRecord]);
 
-    useEffect(() => {
-        document.title = appDisplayName;
-    }, []);
-    
-    useEffect(() => {
-        if (!isEditing) return;
-
-        const handleOutsideClick = (event: MouseEvent) => {
-            const target = event.target as Node | null;
-            if (!(target instanceof Element)) return;
-
-            if (target.closest('.topbar')) return;
-            if (target.closest('#sheet')) return;
-            if (target.closest('#editPanel')) return;
-
-            setIsEditing(false);
-            clearActiveEditTarget();
-        };
-
-        document.addEventListener('mousedown', handleOutsideClick);
-        return () => document.removeEventListener('mousedown', handleOutsideClick);
-    }, [isEditing, clearActiveEditTarget]);
-
-    useEffect(() => {
-        if (!isEditing) {
-            clearActiveEditTarget();
-            setIsGlobalStructureEditing(false);
-        }
-    }, [isEditing, clearActiveEditTarget]);
-
-    const handleTemplateChange = (id: string) => {
+    const handleTemplateChange = useCallback((id: string) => {
         const template = TEMPLATES[id];
         if (!template) return;
+        const baseline = createTemplateBaseline(id);
 
-        setRecord(r => {
-            const currentTemplate = TEMPLATES[r.templateId];
-            const trimmedTitle = r.title?.trim() || '';
+        setRecord(current => {
+            const currentTemplate = TEMPLATES[current.templateId];
+            const trimmedTitle = current.title?.trim() || '';
             const wasUsingDefaultTitle = trimmedTitle === (currentTemplate?.title || '');
-            const nextTitle = wasUsingDefaultTitle ? template.title : r.title;
-
             return {
-                ...r,
+                ...current,
                 templateId: id,
-                title: nextTitle,
-                patientFields: getDefaultPatientFieldsByTemplate(id),
-                sections: getDefaultSectionsByTemplate(id),
+                title: wasUsingDefaultTitle ? template.title : current.title,
+                patientFields: baseline.patientFields,
+                sections: baseline.sections,
             };
         });
-    };
-    
-    const handleAddSection = () => hookAddSection({ id: generateSectionId(), title: 'Sección personalizada', content: '' });
+    }, [setRecord]);
+
+    const handleAddSection = useCallback(() => hookAddSection({ id: generateSectionId(), title: 'Sección personalizada', content: '' }), [hookAddSection]);
+
     const handleAddClinicalUpdateSection = useCallback(() => {
-        const now = new Date();
-        const pad = (value: number) => String(value).padStart(2, '0');
-        const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-        const currentTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-        hookAddSection({
-            id: generateSectionId(),
-            title: 'Actualización clínica',
-            content: '',
-            kind: 'clinical-update',
-            updateDate: today,
-            updateTime: currentTime,
-        });
+        hookAddSection(buildClinicalUpdateSection());
         showToast('Sección de actualización clínica agregada');
     }, [hookAddSection, showToast]);
-    const handleAddPatientField = () => hookAddPatientField({ label: 'Nuevo campo', value: '', type: 'text', isCustom: true });
-    
+
+    const handleAddPatientField = useCallback(() => hookAddPatientField({ label: 'Nuevo campo', value: '', type: 'text', isCustom: true }), [hookAddPatientField]);
+
     const restoreAll = useCallback(() => {
         void (async () => {
             const confirmed = await confirm({
@@ -476,228 +215,88 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
             setHasUnsavedChanges(true);
             showToast('Formulario restablecido.', 'warning');
         })();
-    }, [confirm, markRecordAsReplaced, record.templateId, setHasUnsavedChanges, showToast]);
+    }, [confirm, markRecordAsReplaced, record.templateId, setHasUnsavedChanges, setRecord, showToast]);
 
     useKeyboardShortcuts({
-        onSave: handleManualSave,
-        onPrint: handlePrint,
+        onSave: fileOperations.handleManualSave,
+        onPrint: fileOperations.handlePrint,
         onToggleEdit: toggleGlobalStructureEditing,
         onRestore: restoreAll,
     });
 
+    const appWorkspaceAiAssistant = useMemo(() => (
+        <AIAssistant
+            sections={aiAssistant.aiSections}
+            apiKey={aiAssistant.resolvedAiApiKey}
+            projectId={aiAssistant.resolvedAiProjectId}
+            model={aiAssistant.resolvedAiModel}
+            allowModelAutoSelection={aiAssistant.allowAiAutoSelection}
+            onAutoModelSelected={aiAssistant.handleAutoSelectAiModel}
+            onApplySuggestion={handleSectionContentChange}
+            fullRecordContent={aiAssistant.fullRecordContext}
+            isOpen={editorUi.isAiAssistantVisible}
+            onClose={() => editorUi.setIsAiAssistantVisible(false)}
+            conversationKey={aiAssistant.aiConversationKey}
+            panelWidth={editorUi.aiPanelWidth}
+            onPanelWidthChange={editorUi.setAiPanelWidth}
+        />
+    ), [
+        aiAssistant.aiConversationKey,
+        aiAssistant.aiSections,
+        aiAssistant.allowAiAutoSelection,
+        aiAssistant.fullRecordContext,
+        aiAssistant.handleAutoSelectAiModel,
+        aiAssistant.resolvedAiApiKey,
+        aiAssistant.resolvedAiModel,
+        aiAssistant.resolvedAiProjectId,
+        editorUi.aiPanelWidth,
+        editorUi.isAiAssistantVisible,
+        editorUi.setAiPanelWidth,
+        editorUi.setIsAiAssistantVisible,
+        handleSectionContentChange,
+    ]);
+
     return (
-        <>
-            <Header
-                templateId={record.templateId}
-                onTemplateChange={handleTemplateChange}
-                onAddClinicalUpdateSection={handleAddClinicalUpdateSection}
-                onPrint={handlePrint}
-                onOpenSettings={openSettingsModal}
-                onRestoreTemplate={restoreAll}
-                onOpenCartolaApp={onOpenCartola}
-                auth={{
-                    isSignedIn,
-                    isGisReady,
-                    isGapiReady,
-                    isPickerApiReady,
-                    tokenClient,
-                    userProfile,
-                    onSignIn: handleSignIn,
-                    onSignOut: handleSignOut,
-                    onChangeUser: handleChangeUser,
-                }}
-                drive={{
-                    isSaving,
-                    hasApiKey: !!apiKey,
-                    onSaveToDrive: openSaveModal,
-                    onOpenFromDrive: handleOpenFromDrive,
-                    onDownloadJson: handleDownloadJson,
-                }}
-                editing={{
-                    isEditing: isGlobalStructureEditing,
-                    onToggleEdit: toggleGlobalStructureEditing,
-                    isAdvancedEditing,
-                    onToggleAdvancedEditing: () => setIsAdvancedEditing(prev => !prev),
-                    isAiAssistantVisible,
-                    onToggleAiAssistant: () => setIsAiAssistantVisible(prev => !prev),
-                    onToolbarCommand: handleToolbarCommand,
-                }}
-                save={{
-                    saveStatusLabel,
-                    lastSaveTime,
-                    hasUnsavedChanges,
-                    onQuickSave: handleManualSave,
-                    onOpenHistory: () => setIsHistoryModalOpen(true),
-                }}
-            />
-            
-            {/* --- Modals --- */}
-            <SettingsModal
-                isOpen={isSettingsModalOpen}
-                tempApiKey={tempApiKey}
-                tempClientId={tempClientId}
-                tempAiApiKey={tempAiApiKey}
-                tempAiProjectId={tempAiProjectId}
-                tempAiModel={tempAiModel}
-                showApiKey={showApiKey}
-                showAiApiKey={showAiApiKey}
-                onClose={closeSettingsModal}
-                onToggleShowApiKey={toggleShowApiKey}
-                onToggleShowAiApiKey={toggleShowAiApiKey}
-                onTempApiKeyChange={setTempApiKey}
-                onTempClientIdChange={setTempClientId}
-                onTempAiApiKeyChange={setTempAiApiKey}
-                onTempAiProjectIdChange={setTempAiProjectId}
-                onTempAiModelChange={setTempAiModel}
-                onSave={saveSettings}
-                onClearCredentials={() => { void clearSettings(); }}
-            />
-            
-            <OpenFromDriveModal
-                isOpen={isOpenModalOpen}
-                isDriveLoading={isDriveLoading}
-                folderPath={folderPath}
-                driveFolders={driveFolders}
-                driveJsonFiles={driveJsonFiles}
-                driveSearchTerm={driveSearchTerm}
-                driveDateFrom={driveDateFrom}
-                driveDateTo={driveDateTo}
-                driveContentTerm={driveContentTerm}
-                favoriteFolders={favoriteFolders}
-                recentFiles={recentFiles}
-                formatDriveDate={formatDriveDate}
-                onClose={() => setIsOpenModalOpen(false)}
-                onSearch={handleSearchInDrive}
-                onClearSearch={clearDriveSearch}
-                onAddFavorite={handleAddFavoriteFolder}
-                onRemoveFavorite={handleRemoveFavoriteFolder}
-                onGoToFavorite={favorite => handleGoToFavorite(favorite, 'open')}
-                onBreadcrumbClick={handleOpenModalBreadcrumbClick}
-                onFolderClick={handleOpenModalFolderClick}
-                onFileOpen={handleFileOpen}
-                onSearchTermChange={setDriveSearchTerm}
-                onDateFromChange={setDriveDateFrom}
-                onDateToChange={setDriveDateTo}
-                onContentTermChange={setDriveContentTerm}
-            />
-            
-            <SaveToDriveModal
-                isOpen={isSaveModalOpen}
-                isDriveLoading={isDriveLoading}
-                isSaving={isSaving}
-                saveFormat={saveFormat}
-                fileNameInput={fileNameInput}
-                defaultDriveFileName={defaultDriveFileName}
-                folderPath={folderPath}
-                driveFolders={driveFolders}
-                favoriteFolders={favoriteFolders}
-                newFolderName={newFolderName}
-                onClose={closeSaveModal}
-                onSave={handleFinalSave}
-                onAddFavorite={handleAddFavoriteFolder}
-                onRemoveFavorite={handleRemoveFavoriteFolder}
-                onGoToFavorite={favorite => handleGoToFavorite(favorite, 'save')}
-                onBreadcrumbClick={handleSaveBreadcrumbClick}
-                onFolderClick={handleSaveFolderClick}
-                onSaveFormatChange={setSaveFormat}
-                onFileNameInputChange={setFileNameInput}
-                onNewFolderNameChange={setNewFolderName}
-                onCreateFolder={handleCreateFolder}
-                onSetDefaultFolder={handleSetDefaultFolder}
-            />
-
-            <HistoryModal
-                isOpen={isHistoryModalOpen}
-                history={versionHistory}
-                onClose={() => setIsHistoryModalOpen(false)}
-                onRestore={handleRestoreHistoryEntry}
-            />
-
-            {toast && (
-                <div className={`toast toast-${toast.type}`}>
-                    {toast.message}
-                </div>
-            )}
-
-            <input ref={importInputRef} id="importJson" type="file" accept="application/json" style={{ display: 'none' }} onChange={handleImportFile} />
-
-            <div className="wrap">
-                <div className="workspace">
-                    <div className="sheet-shell">
-                        <div
-                            id="sheet"
-                            className={`sheet ${isEditing ? 'edit-mode' : ''}`}
-                            style={{ '--sheet-zoom': sheetZoom } as React.CSSProperties}
-                        >
-                            {logoUrls.left && (
-                                <img id="logoLeft" src={logoUrls.left} className="absolute top-2 left-2 w-12 h-auto opacity-60 print:block" alt="Logo Left"/>
-                            )}
-                            {logoUrls.right && (
-                                <img id="logoRight" src={logoUrls.right} className="absolute top-2 right-2 w-12 h-auto opacity-60 print:block" alt="Logo Right"/>
-                            )}
-                            <div
-                                className="title"
-                                contentEditable={record.templateId === '5' || (isEditing && activeEditTarget?.type === 'record-title')}
-                                suppressContentEditableWarning
-                                onDoubleClick={() => activateEditTarget({ type: 'record-title' })}
-                                onBlur={e => setRecord({...record, title: e.currentTarget.innerText})}
-                            >
-                                {record.title}
-                            </div>
-                            <PatientInfo
-                                isEditing={isEditing}
-                                isGlobalStructureEditing={isGlobalStructureEditing}
-                                activeEditTarget={(activeEditTarget?.type === 'patient-section-title' || activeEditTarget?.type === 'patient-field-label') ? activeEditTarget : null}
-                                onActivateEdit={handleActivatePatientEdit}
-                                patientFields={record.patientFields}
-                                onPatientFieldChange={handlePatientFieldChange}
-                                onPatientLabelChange={handlePatientLabelChange}
-                                onRemovePatientField={handleRemovePatientField}
-                            />
-                            <div id="sectionsContainer">{record.sections.map((section, index) => (
-                                <ClinicalSection
-                                    key={section.id}
-                                    section={section}
-                                    index={index}
-                                    isEditing={isEditing}
-                                    isAdvancedEditing={isAdvancedEditing}
-                                    isGlobalStructureEditing={isGlobalStructureEditing}
-                                    activeEditTarget={activeEditTarget?.type === 'section-title' && activeEditTarget.index === index ? activeEditTarget : null}
-                                    onActivateEdit={handleActivateSectionEdit}
-                                    onSectionContentChange={handleSectionContentChange}
-                                    onSectionTitleChange={handleSectionTitleChange}
-                                    onRemoveSection={handleRemoveSection}
-                                    onUpdateSectionMeta={handleUpdateSectionMeta}
-                                />
-                            ))}</div>
-                            <Footer medico={record.medico} especialidad={record.especialidad} onMedicoChange={value => setRecord({...record, medico: value})} onEspecialidadChange={value => setRecord({...record, especialidad: value})} />
-                        </div>
-                    </div>
-                    <div id="editPanel" className={`edit-panel ${isGlobalStructureEditing ? 'visible' : 'hidden'}`}>
-                        <div>Edición</div>
-                        <button onClick={handleAddPatientField} className="btn" type="button">Agregar campo</button>
-                        <button onClick={handleAddSection} className="btn" type="button">Agregar nueva sección</button>
-                    </div>
-                    <Suspense fallback={null}>
-                        <AIAssistant
-                            sections={aiSections}
-                            apiKey={resolvedAiApiKey}
-                            projectId={resolvedAiProjectId}
-                            model={resolvedAiModel}
-                            allowModelAutoSelection={allowAiAutoSelection}
-                            onAutoModelSelected={handleAutoSelectAiModel}
-                            onApplySuggestion={handleSectionContentChange}
-                            fullRecordContent={fullRecordContext}
-                            isOpen={isAiAssistantVisible}
-                            onClose={() => setIsAiAssistantVisible(false)}
-                            conversationKey={aiConversationKey}
-                            panelWidth={aiPanelWidth}
-                            onPanelWidthChange={setAiPanelWidth}
-                        />
-                    </Suspense>
-                </div>
-            </div>
-        </>
+        <AppShellContent
+            toast={toast}
+            settings={settings}
+            driveModals={driveModals}
+            editorUi={editorUi}
+            fileOperations={fileOperations}
+            auth={auth}
+            drive={drive}
+            recordState={{
+                record,
+                setRecord,
+                hasUnsavedChanges,
+                versionHistory,
+                isHistoryModalOpen,
+                setIsHistoryModalOpen,
+                handleRestoreHistoryEntry,
+                isEditing,
+                isGlobalStructureEditing,
+                activeEditTarget,
+                activateEditTarget,
+                handleActivatePatientEdit,
+                handleActivateSectionEdit,
+                handlePatientFieldChange,
+                handlePatientLabelChange,
+                handleSectionContentChange,
+                handleSectionTitleChange,
+                handleUpdateSectionMeta,
+                handleRemoveSection,
+                handleRemovePatientField,
+            }}
+            toggleGlobalStructureEditing={toggleGlobalStructureEditing}
+            handleTemplateChange={handleTemplateChange}
+            handleAddClinicalUpdateSection={handleAddClinicalUpdateSection}
+            handleAddPatientField={handleAddPatientField}
+            handleAddSection={handleAddSection}
+            handleRestoreAll={restoreAll}
+            handleToolbarCommand={handleToolbarCommand}
+            onOpenCartola={onOpenCartola}
+            aiAssistantPanel={appWorkspaceAiAssistant}
+        />
     );
 };
 
@@ -712,20 +311,26 @@ const Root: React.FC = () => {
                 <RecordProvider showToast={showToast}>
                     <ErrorBoundary>
                         <Routes>
-                            <Route path="/" element={
-                                <AppShell
-                                    toast={toast}
-                                    showToast={showToast}
-                                    clientId={clientId}
-                                    setClientId={setClientId}
-                                    onOpenCartola={() => navigate('/cartola')}
-                                />
-                            } />
-                            <Route path="/cartola" element={
-                                <Suspense fallback={<div className="p-4 text-sm text-gray-600">Cargando cartola de medicamentos…</div>}>
-                                    <CartolaMedicamentosView onBack={() => navigate('/')} />
-                                </Suspense>
-                            } />
+                            <Route
+                                path="/"
+                                element={
+                                    <AppShell
+                                        toast={toast}
+                                        showToast={showToast}
+                                        clientId={clientId}
+                                        setClientId={setClientId}
+                                        onOpenCartola={() => navigate('/cartola')}
+                                    />
+                                }
+                            />
+                            <Route
+                                path="/cartola"
+                                element={
+                                    <Suspense fallback={<div className="p-4 text-sm text-gray-600">Cargando cartola de medicamentos…</div>}>
+                                        <CartolaMedicamentosView onBack={() => navigate('/')} />
+                                    </Suspense>
+                                }
+                            />
                         </Routes>
                     </ErrorBoundary>
                 </RecordProvider>
@@ -734,12 +339,10 @@ const Root: React.FC = () => {
     );
 };
 
-const App: React.FC = () => {
-    return (
-        <BrowserRouter>
-            <Root />
-        </BrowserRouter>
-    );
-};
+const App: React.FC = () => (
+    <BrowserRouter>
+        <Root />
+    </BrowserRouter>
+);
 
 export default App;

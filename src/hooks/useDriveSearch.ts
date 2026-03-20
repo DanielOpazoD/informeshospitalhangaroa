@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 import type { DriveFolder, ToastFn } from '../types';
 import { SEARCH_CACHE_TTL, DRIVE_CONTENT_FETCH_CONCURRENCY } from '../appConstants';
 import { buildDriveContextErrorMessage } from '../utils/driveErrorUtils';
+import type { DriveGateway } from '../services/driveGateway';
 
 interface DriveCacheEntry {
     folders: DriveFolder[];
@@ -13,10 +14,11 @@ interface UseDriveSearchProps {
     setIsDriveLoading: (loading: boolean) => void;
     setDriveFolders: (folders: DriveFolder[]) => void;
     setDriveJsonFiles: (files: DriveFolder[]) => void;
-    setFolderPath: (path: DriveFolder[]) => void;
+    setFolderPath: Dispatch<SetStateAction<DriveFolder[]>>;
     showToast: ToastFn;
-    driveCacheRef: React.MutableRefObject<Map<string, DriveCacheEntry>>;
+    driveCacheRef: MutableRefObject<Map<string, DriveCacheEntry>>;
     fetchFolderContents: (folderId: string) => Promise<void>;
+    driveGateway: DriveGateway;
 }
 
 export function useDriveSearch({
@@ -27,6 +29,7 @@ export function useDriveSearch({
     showToast,
     driveCacheRef,
     fetchFolderContents,
+    driveGateway,
 }: UseDriveSearchProps) {
     const [driveSearchTerm, setDriveSearchTerm] = useState('');
     const [driveDateFrom, setDriveDateFrom] = useState('');
@@ -53,32 +56,11 @@ export function useDriveSearch({
                 return;
             }
 
-            const qParts = ["mimeType='application/json'", 'trashed=false'];
-            if (searchTerm) {
-                const sanitized = searchTerm.replace(/'/g, "\\'");
-                qParts.push(`name contains '${sanitized}'`);
-            }
-            if (driveDateFrom) {
-                qParts.push(`modifiedTime >= '${driveDateFrom}T00:00:00'`);
-            }
-            if (driveDateTo) {
-                qParts.push(`modifiedTime <= '${driveDateTo}T23:59:59'`);
-            }
-            
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const response: any = await (window as any).gapi.client.drive.files.list({
-                q: qParts.join(' and '),
-                fields: 'files(id, name, mimeType, modifiedTime)',
-                orderBy: 'modifiedTime desc',
+            let files = await driveGateway.searchJsonFiles({
+                searchTerm,
+                dateFrom: driveDateFrom,
+                dateTo: driveDateTo,
             });
-            
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let files: DriveFolder[] = (response.result.files || []).map((file: any) => ({
-                id: file.id,
-                name: file.name,
-                mimeType: file.mimeType,
-                modifiedTime: file.modifiedTime,
-            }));
 
             if (contentTerm && files.length) {
                 const term = contentTerm.toLowerCase();
@@ -91,13 +73,7 @@ export function useDriveSearch({
                         const nextFile = queue.shift();
                         if (!nextFile) return;
                         try {
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const fileResponse: any = await (window as any).gapi.client.drive.files.get({
-                                fileId: nextFile.id,
-                                alt: 'media',
-                            });
-                            const body = fileResponse?.body;
-                            const content = typeof body === 'string' ? body : body ? JSON.stringify(body) : '';
+                            const content = await driveGateway.getFileContent(nextFile.id);
                             if (content && content.toLowerCase().includes(term)) {
                                 filtered.push(nextFile);
                             }
@@ -121,7 +97,7 @@ export function useDriveSearch({
         } finally {
             setIsDriveLoading(false);
         }
-    }, [driveContentTerm, driveDateFrom, driveDateTo, driveSearchTerm, driveCacheRef, setDriveFolders, setDriveJsonFiles, setFolderPath, setIsDriveLoading, showToast]);
+    }, [driveContentTerm, driveDateFrom, driveDateTo, driveSearchTerm, driveCacheRef, driveGateway, setDriveFolders, setDriveJsonFiles, setFolderPath, setIsDriveLoading, showToast]);
 
     const clearDriveSearch = useCallback(() => {
         setDriveSearchTerm('');

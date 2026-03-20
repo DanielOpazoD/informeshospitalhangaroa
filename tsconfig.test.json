@@ -10,7 +10,8 @@
   "include": [
     "src/utils/**/*.ts",
     "src/types.ts",
-    "src/tests/**/*.ts"
+    "src/tests/**/*.ts",
+    "src/tests/**/*.tsx"
   ],
   "exclude": ["node_modules"]
 }

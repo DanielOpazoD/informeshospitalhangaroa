@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">79.16% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/24</span>
+                <span class='fraction'>19/24</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/10</span>
+                <span class='fraction'>5/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/5</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">78.26% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/23</span>
+                <span class='fraction'>18/23</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line medium'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -108,83 +108,83 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">&nbsp;
 &nbsp;
 &nbsp;
-export function <span class="fstat-no" title="function not covered" >stripAccents(s</span>: string) {
-<span class="cstat-no" title="statement not covered" >    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');</span>
+export function stripAccents(s: string) {
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 &nbsp;
-export function <span class="fstat-no" title="function not covered" >baseNameFromTemplate(t</span>emplateId: string): string {
-<span class="cstat-no" title="statement not covered" >    switch (templateId) {</span>
-        case '1': <span class="cstat-no" title="statement not covered" >return 'Informe medico';</span>
-        case '2': <span class="cstat-no" title="statement not covered" >return 'Evolucion medica';</span>
-        case '3': <span class="cstat-no" title="statement not covered" >return 'Epicrisis';</span>
-        case '4': <span class="cstat-no" title="statement not covered" >return 'Epicrisis traslado';</span>
-        case '5': <span class="cstat-no" title="statement not covered" >return 'Registro Clinico';</span>
-        case '6': <span class="cstat-no" title="statement not covered" >return 'Informe medico';</span>
-        case '7': <span class="cstat-no" title="statement not covered" >return 'Informe medico MEDIF LATAM';</span>
-        default: <span class="cstat-no" title="statement not covered" >return 'Registro Clinico';</span>
+export function baseNameFromTemplate(templateId: string): string {
+    switch (templateId) {
+        case '1': return 'Informe medico';
+<span class="branch-1 cbranch-no" title="branch not covered" >        case '2': <span class="cstat-no" title="statement not covered" >return 'Evolucion medica';</span></span>
+        case '3': return 'Epicrisis';
+<span class="branch-3 cbranch-no" title="branch not covered" >        case '4': <span class="cstat-no" title="statement not covered" >return 'Epicrisis traslado';</span></span>
+<span class="branch-4 cbranch-no" title="branch not covered" >        case '5': <span class="cstat-no" title="statement not covered" >return 'Registro Clinico';</span></span>
+<span class="branch-5 cbranch-no" title="branch not covered" >        case '6': <span class="cstat-no" title="statement not covered" >return 'Informe medico';</span></span>
+<span class="branch-6 cbranch-no" title="branch not covered" >        case '7': <span class="cstat-no" title="statement not covered" >return 'Informe medico MEDIF LATAM';</span></span>
+        default: return 'Registro Clinico';
     }
 }
 &nbsp;
-export function <span class="fstat-no" title="function not covered" >patientNameForFile(f</span>ullName: string): string {
-<span class="cstat-no" title="statement not covered" >    if (!fullName) <span class="cstat-no" title="statement not covered" >return '';</span></span>
-    const parts = <span class="cstat-no" title="statement not covered" >fullName.trim().split(/\s+/);</span>
-<span class="cstat-no" title="statement not covered" >    return parts.slice(0, 2).join(' ');</span>
+export function patientNameForFile(fullName: string): string {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(/\s+/);
+    return parts.slice(0, 2).join(' ');
 }
 &nbsp;
-function <span class="fstat-no" title="function not covered" >todayDMY(): string {</span>
-    const now = <span class="cstat-no" title="statement not covered" >new Date();</span>
-    const dd = <span class="cstat-no" title="statement not covered" >String(now.getDate()).padStart(2, '0');</span>
-    const mm = <span class="cstat-no" title="statement not covered" >String(now.getMonth() + 1).padStart(2, '0');</span>
-    const yy = <span class="cstat-no" title="statement not covered" >String(now.getFullYear()).slice(-2);</span>
-<span class="cstat-no" title="statement not covered" >    return `${dd}-${mm}-${yy}`;</span>
+function todayDMY(): string {
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yy = String(now.getFullYear()).slice(-2);
+    return `${dd}-${mm}-${yy}`;
 }
 &nbsp;
-export function <span class="fstat-no" title="function not covered" >suggestedFilename(t</span>emplateId: string, patientName: string): string {
-    const base = <span class="cstat-no" title="statement not covered" >baseNameFromTemplate(templateId);</span>
-    const name = <span class="cstat-no" title="statement not covered" >patientNameForFile(patientName);</span>
-    const date = <span class="cstat-no" title="statement not covered" >todayDMY();</span>
-    const parts = <span class="cstat-no" title="statement not covered" >[base, name, date].filter(Boolean).join(' - ');</span>
-<span class="cstat-no" title="statement not covered" >    return stripAccents(parts).replace(/[^A-Za-z0-9 _\-]/g, '');</span>
+export function suggestedFilename(templateId: string, patientName: string): string {
+    const base = baseNameFromTemplate(templateId);
+    const name = patientNameForFile(patientName);
+    const date = todayDMY();
+    const parts = [base, name, date].filter(Boolean).join(' - ');
+    return stripAccents(parts).replace(/[^A-Za-z0-9 _-]/g, '');
 }
 &nbsp;</pre></td></tr></table></pre>
 
@@ -193,7 +193,7 @@ export function <span class="fstat-no" title="function not covered" >suggestedFi
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-19T21:06:34.782Z
+                at 2026-03-20T01:30:28.092Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

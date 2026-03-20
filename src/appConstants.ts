@@ -12,6 +12,8 @@ export const LOCAL_STORAGE_KEYS = Object.freeze({
     history: 'hhr-version-history',
     favorites: 'hhr-drive-favorites',
     recent: 'hhr-drive-recents',
+    defaultDriveFolderId: 'defaultDriveFolderId',
+    defaultDriveFolderPath: 'defaultDriveFolderPath',
     googleApiKey: 'googleApiKey',
     googleClientId: 'googleClientId',
     geminiApiKey: 'geminiApiKey',

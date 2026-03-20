@@ -1,32 +1,32 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { DriveFolder, FavoriteFolderEntry, RecentDriveFile, ToastFn } from '../types';
 import { LOCAL_STORAGE_KEYS, MAX_RECENT_FILES } from '../appConstants';
+import { getBrowserStorageAdapter, readStoredJson, writeStoredJson, type StorageAdapter } from '../utils/storageAdapter';
+import { persistDefaultDriveFolder } from '../utils/driveFolderStorage';
 
-export function useDriveStorage(showToast: ToastFn) {
+export function useDriveStorage(showToast: ToastFn, storage: StorageAdapter | null = getBrowserStorageAdapter()) {
     const [favoriteFolders, setFavoriteFolders] = useState<FavoriteFolderEntry[]>([]);
     const [recentFiles, setRecentFiles] = useState<RecentDriveFile[]>([]);
 
     useEffect(() => {
-        if (typeof window === 'undefined') return;
         try {
-            const favoritesRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.favorites);
-            if (favoritesRaw) {
-                setFavoriteFolders(JSON.parse(favoritesRaw));
+            const favorites = readStoredJson<FavoriteFolderEntry[]>(storage, LOCAL_STORAGE_KEYS.favorites);
+            if (favorites) {
+                setFavoriteFolders(favorites);
             }
         } catch (error) {
             console.warn('No se pudo leer la lista de favoritos de Drive:', error);
         }
 
         try {
-            const recentsRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.recent);
-            if (recentsRaw) {
-                const parsedRecents = JSON.parse(recentsRaw) as RecentDriveFile[];
-                setRecentFiles(parsedRecents.slice(0, MAX_RECENT_FILES));
+            const recents = readStoredJson<RecentDriveFile[]>(storage, LOCAL_STORAGE_KEYS.recent);
+            if (recents) {
+                setRecentFiles(recents.slice(0, MAX_RECENT_FILES));
             }
         } catch (error) {
             console.warn('No se pudo leer la lista de documentos recientes:', error);
         }
-    }, []);
+    }, [storage]);
 
     const handleAddFavoriteFolder = useCallback((folderPath: DriveFolder[]) => {
         const currentFolder = folderPath[folderPath.length - 1];
@@ -42,13 +42,11 @@ export function useDriveStorage(showToast: ToastFn) {
                 path: structuredClone(folderPath),
             };
             const updated = [...prev, newEntry];
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem(LOCAL_STORAGE_KEYS.favorites, JSON.stringify(updated));
-            }
+            writeStoredJson(storage, LOCAL_STORAGE_KEYS.favorites, updated);
             showToast('Carpeta añadida a favoritos.');
             return updated;
         });
-    }, [showToast]);
+    }, [showToast, storage]);
 
     const handleRemoveFavoriteFolder = useCallback((id: string) => {
         setFavoriteFolders(prev => {
@@ -57,13 +55,11 @@ export function useDriveStorage(showToast: ToastFn) {
                 return prev;
             }
             const updated = prev.filter(fav => fav.id !== id);
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem(LOCAL_STORAGE_KEYS.favorites, JSON.stringify(updated));
-            }
+            writeStoredJson(storage, LOCAL_STORAGE_KEYS.favorites, updated);
             showToast('Favorito eliminado.', 'warning');
             return updated;
         });
-    }, [showToast]);
+    }, [showToast, storage]);
 
     const addRecentFile = useCallback((file: DriveFolder) => {
         setRecentFiles(prev => {
@@ -72,19 +68,16 @@ export function useDriveStorage(showToast: ToastFn) {
                 { id: file.id, name: file.name, openedAt: Date.now() },
                 ...filtered,
             ].slice(0, MAX_RECENT_FILES);
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem(LOCAL_STORAGE_KEYS.recent, JSON.stringify(updated));
-            }
+            writeStoredJson(storage, LOCAL_STORAGE_KEYS.recent, updated);
             return updated;
         });
-    }, []);
+    }, [storage]);
 
     const handleSetDefaultFolder = useCallback((folderPath: DriveFolder[], selectedFolderId: string) => {
         if (!folderPath.length) return;
-        localStorage.setItem('defaultDriveFolderId', selectedFolderId);
-        localStorage.setItem('defaultDriveFolderPath', JSON.stringify(folderPath));
+        persistDefaultDriveFolder(storage, folderPath, selectedFolderId);
         showToast(`'${folderPath[folderPath.length - 1].name}' guardada como predeterminada.`);
-    }, [showToast]);
+    }, [showToast, storage]);
 
     return {
         favoriteFolders,

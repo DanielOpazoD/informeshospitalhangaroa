@@ -12,12 +12,27 @@ View your app in AI Studio: https://ai.studio/apps/drive/1gRaJgpJCj1Y4n8qkayhtci
 
 **Prerequisites:**  Node.js
 
+Usa la versión definida en [.nvmrc](.nvmrc) (`20.19.0` o superior) para evitar diferencias entre local y CI.
+
 
 1. Install dependencies:
    `npm install`
 2. Set the `VITE_GEMINI_API_KEY` (or legacy `GEMINI_API_KEY`) in [.env.local](.env.local) to your Gemini API key for the Generative Language API. If your key was created inside Google Cloud Console (instead of Google AI Studio), also set `VITE_GEMINI_PROJECT_ID`/`GEMINI_PROJECT_ID` to the numeric project ID so the app can send the required `X-Goog-User-Project` header. Google Cloud keys also need the **serviceusage.serviceUsageConsumer** role (or a custom role with `serviceusage.services.use`) on that project; if you can't grant it, leave the project field empty and rely on an AI Studio key instead. Optionally, define `VITE_GEMINI_MODEL`/`GEMINI_MODEL` to force a specific model. The assistant now probes the Gemini catalog before every session: it autodetects whether the model should be called through `v1` or `v1beta`, automatically retries with the alternate endpoint if the API reports an incompatible combination, and—if the requested model is missing—first surfaces the list of models that *are* enabled for your key and then automatically switches to the best available option whenever you left the model field blank. If you need to force a specific endpoint, add the suffix `@v1` or `@v1beta` (e.g., `gemini-1.5-flash-latest@v1beta`).
 3. Run the app:
    `npm run dev`
+
+## Validación de calidad
+
+Antes de abrir un PR o desplegar cambios, ejecuta esta secuencia:
+
+```bash
+npm run lint
+npm run typecheck
+npm run typecheck:test
+npm run test:ci
+npm run build
+npm run check:bundle
+```
 
 ### Personaliza el nombre y los logos de la institución
 

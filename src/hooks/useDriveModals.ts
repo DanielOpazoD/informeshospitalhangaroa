@@ -3,6 +3,8 @@ import type { ClinicalRecord, DriveFolder, SaveFormat, SaveOptions } from '../ty
 import type { GooglePickerCallbackData } from '../google-api.d';
 import { validateCriticalFields } from '../utils/validationUtils';
 import { buildContextualErrorMessage } from '../utils/errorUtils';
+import { getRootDriveFolder, loadDefaultDriveFolderPath } from '../utils/driveFolderStorage';
+import { getBrowserStorageAdapter, type StorageAdapter } from '../utils/storageAdapter';
 
 interface UseDriveModalsOptions {
     isSignedIn: boolean;
@@ -26,6 +28,7 @@ interface UseDriveModalsOptions {
     openJsonFileFromDrive: (file: DriveFolder) => Promise<ClinicalRecord | null>;
     saveToDrive: (options: SaveOptions) => Promise<boolean>;
     generatePdf: () => Promise<Blob>;
+    storage?: StorageAdapter | null;
 }
 
 /**
@@ -56,6 +59,7 @@ export function useDriveModals({
     openJsonFileFromDrive,
     saveToDrive,
     generatePdf,
+    storage = getBrowserStorageAdapter(),
 }: UseDriveModalsOptions) {
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
     const [isOpenModalOpen, setIsOpenModalOpen] = useState(false);
@@ -67,17 +71,16 @@ export function useDriveModals({
             return;
         }
         setFileNameInput(defaultDriveFileName);
-        const savedPath = localStorage.getItem('defaultDriveFolderPath');
-        if (savedPath) {
-            const path = JSON.parse(savedPath) as DriveFolder[];
+        const path = loadDefaultDriveFolderPath(storage);
+        if (path) {
             setFolderPath(path);
             fetchDriveFolders(path[path.length - 1].id);
         } else {
-            setFolderPath([{ id: 'root', name: 'Mi unidad' }]);
+            setFolderPath([getRootDriveFolder()]);
             fetchDriveFolders('root');
         }
         setIsSaveModalOpen(true);
-    }, [isSignedIn, showToast, handleSignIn, defaultDriveFileName, setFileNameInput, setFolderPath, fetchDriveFolders]);
+    }, [isSignedIn, showToast, handleSignIn, defaultDriveFileName, setFileNameInput, setFolderPath, fetchDriveFolders, storage]);
 
     const closeSaveModal = useCallback(() => {
         setIsSaveModalOpen(false);
@@ -138,13 +141,12 @@ export function useDriveModals({
 
         if (!apiKey) {
             setIsOpenModalOpen(true);
-            const savedPath = localStorage.getItem('defaultDriveFolderPath');
-            if (savedPath) {
-                const path = JSON.parse(savedPath) as DriveFolder[];
+            const path = loadDefaultDriveFolderPath(storage);
+            if (path) {
                 setFolderPath(path);
                 fetchFolderContents(path[path.length - 1].id);
             } else {
-                setFolderPath([{ id: 'root', name: 'Mi unidad' }]);
+                setFolderPath([getRootDriveFolder()]);
                 fetchFolderContents('root');
             }
             return;
@@ -170,7 +172,7 @@ export function useDriveModals({
             setIsOpenModalOpen(true);
             fetchFolderContents('root');
         }
-    }, [apiKey, isPickerApiReady, showToast, handleSignIn, setFolderPath, fetchFolderContents, handlePickerCallback]);
+    }, [apiKey, isPickerApiReady, showToast, handleSignIn, setFolderPath, fetchFolderContents, handlePickerCallback, storage]);
 
     const handleFinalSave = useCallback(async () => {
         const errors = validateCriticalFields(record);

@@ -3,12 +3,14 @@ import { getDefaultPatientFieldsByTemplate, getDefaultSectionsByTemplate } from 
 import type { ClinicalRecord, ToastFn, VersionHistoryEntry } from '../types';
 import { AUTO_SAVE_IDLE_DELAY, AUTO_SAVE_INTERVAL, LOCAL_STORAGE_KEYS, MAX_HISTORY_ENTRIES } from '../appConstants';
 import { useConfirmDialog } from './useConfirmDialog';
+import { getBrowserStorageAdapter, readStoredJson, writeStoredJson, type StorageAdapter } from '../utils/storageAdapter';
 
 interface UseClinicalRecordOptions {
     onToast: ToastFn;
+    storage?: StorageAdapter | null;
 }
 
-export const useClinicalRecord = ({ onToast }: UseClinicalRecordOptions) => {
+export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter() }: UseClinicalRecordOptions) => {
     const { confirm } = useConfirmDialog();
     const [record, setRecord] = useState<ClinicalRecord>({
         version: 'v14',
@@ -41,56 +43,48 @@ export const useClinicalRecord = ({ onToast }: UseClinicalRecordOptions) => {
                 record: snapshot,
             };
             const newHistory = [newEntry, ...prev.filter(entry => entry.id !== newEntry.id)].slice(0, MAX_HISTORY_ENTRIES);
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem(LOCAL_STORAGE_KEYS.history, JSON.stringify(newHistory));
-            }
+            writeStoredJson(storage, LOCAL_STORAGE_KEYS.history, newHistory);
             return newHistory;
         });
-    }, []);
+    }, [storage]);
 
     const saveDraft = useCallback((reason: 'auto' | 'manual' | 'import', overrideRecord?: ClinicalRecord) => {
-        if (typeof window === 'undefined') return;
         const snapshot = overrideRecord
             ? structuredClone(overrideRecord)
             : getRecordSnapshot();
         const timestamp = Date.now();
-        window.localStorage.setItem(LOCAL_STORAGE_KEYS.draft, JSON.stringify({ timestamp, record: snapshot }));
+        writeStoredJson(storage, LOCAL_STORAGE_KEYS.draft, { timestamp, record: snapshot });
         setLastLocalSave(timestamp);
         setHasUnsavedChanges(false);
         pushHistory(snapshot, timestamp);
         if (reason === 'manual') {
             onToast('Borrador guardado localmente.');
         }
-    }, [getRecordSnapshot, onToast, pushHistory]);
+    }, [getRecordSnapshot, onToast, pushHistory, storage]);
 
     useEffect(() => {
-        if (typeof window === 'undefined') return;
         try {
-            const draftRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.draft);
-            if (draftRaw) {
-                const parsed = JSON.parse(draftRaw) as { timestamp?: number; record?: ClinicalRecord };
-                if (parsed?.record) {
-                    markRecordAsReplaced();
-                    setRecord(parsed.record);
-                    if (parsed.timestamp) setLastLocalSave(parsed.timestamp);
-                    setHasUnsavedChanges(false);
-                    onToast('Borrador recuperado automáticamente.', 'success');
-                }
+            const parsed = readStoredJson<{ timestamp?: number; record?: ClinicalRecord }>(storage, LOCAL_STORAGE_KEYS.draft);
+            if (parsed?.record) {
+                markRecordAsReplaced();
+                setRecord(parsed.record);
+                if (parsed.timestamp) setLastLocalSave(parsed.timestamp);
+                setHasUnsavedChanges(false);
+                onToast('Borrador recuperado automáticamente.', 'success');
             }
         } catch (error) {
             console.warn('No se pudo restaurar el borrador local:', error);
         }
 
         try {
-            const historyRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.history);
-            if (historyRaw) {
-                const parsedHistory = JSON.parse(historyRaw) as VersionHistoryEntry[];
+            const parsedHistory = readStoredJson<VersionHistoryEntry[]>(storage, LOCAL_STORAGE_KEYS.history);
+            if (parsedHistory) {
                 setVersionHistory(parsedHistory.slice(0, MAX_HISTORY_ENTRIES));
             }
         } catch (error) {
             console.warn('No se pudo leer el historial local:', error);
         }
-    }, [markRecordAsReplaced, onToast]);
+    }, [markRecordAsReplaced, onToast, storage]);
 
     useEffect(() => {
         if (skipUnsavedRef.current) {
@@ -131,13 +125,11 @@ export const useClinicalRecord = ({ onToast }: UseClinicalRecordOptions) => {
             setRecord(snapshot);
             setHasUnsavedChanges(false);
             setLastLocalSave(entry.timestamp);
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem(LOCAL_STORAGE_KEYS.draft, JSON.stringify({ timestamp: entry.timestamp, record: snapshot }));
-            }
+            writeStoredJson(storage, LOCAL_STORAGE_KEYS.draft, { timestamp: entry.timestamp, record: snapshot });
             onToast('Versión restaurada desde el historial.');
             setIsHistoryModalOpen(false);
         })();
-    }, [confirm, markRecordAsReplaced, onToast]);
+    }, [confirm, markRecordAsReplaced, onToast, storage]);
 
     return {
         record,

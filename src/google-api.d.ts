@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Type declarations for Google API (gapi) and Google Identity Services (GIS)
  * loaded via external <script> tags at runtime.
  */
+import type { GoogleTokenResponse } from './types';
 
 // ── Google Picker ────────────────────────────────────
 interface GooglePickerAction {
@@ -49,7 +49,7 @@ interface GapiClientToken {
 interface GapiDriveFilesResource {
     list: (params: Record<string, unknown>) => Promise<{ result: { files?: Array<import('./types').GoogleDriveFileResource> } }>;
     get: (params: Record<string, unknown>) => Promise<{ body: string; result?: unknown }>;
-    create: (params: Record<string, unknown>) => Promise<unknown>;
+    create: (params: { resource: { name: string; mimeType: string; parents: string[] } }) => Promise<unknown>;
 }
 
 interface GapiClient {
@@ -68,7 +68,12 @@ interface Gapi {
 
 // ── Google Identity Services ─────────────────────────
 interface GoogleAccountsOAuth2 {
-    initTokenClient: (config: Record<string, unknown>) => {
+    initTokenClient: (config: {
+        client_id: string;
+        scope: string;
+        ux_mode?: 'popup' | 'redirect';
+        callback: (response: GoogleTokenResponse) => void;
+    }) => {
         requestAccessToken: (options?: { prompt?: string }) => void;
     };
 }

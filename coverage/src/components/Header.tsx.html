@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/68</span>
+                <span class='fraction'>0/72</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/66</span>
+                <span class='fraction'>0/70</span>
             </div>
         
             
@@ -466,7 +466,42 @@
 <a name='L401'></a><a href='#L401'>401</a>
 <a name='L402'></a><a href='#L402'>402</a>
 <a name='L403'></a><a href='#L403'>403</a>
-<a name='L404'></a><a href='#L404'>404</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L404'></a><a href='#L404'>404</a>
+<a name='L405'></a><a href='#L405'>405</a>
+<a name='L406'></a><a href='#L406'>406</a>
+<a name='L407'></a><a href='#L407'>407</a>
+<a name='L408'></a><a href='#L408'>408</a>
+<a name='L409'></a><a href='#L409'>409</a>
+<a name='L410'></a><a href='#L410'>410</a>
+<a name='L411'></a><a href='#L411'>411</a>
+<a name='L412'></a><a href='#L412'>412</a>
+<a name='L413'></a><a href='#L413'>413</a>
+<a name='L414'></a><a href='#L414'>414</a>
+<a name='L415'></a><a href='#L415'>415</a>
+<a name='L416'></a><a href='#L416'>416</a>
+<a name='L417'></a><a href='#L417'>417</a>
+<a name='L418'></a><a href='#L418'>418</a>
+<a name='L419'></a><a href='#L419'>419</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -547,23 +582,18 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -894,11 +924,30 @@ import {
     CalendarPlusIcon,
 } from './icons';
 &nbsp;
-interface HeaderProps {
-    templateId: string;
-    onTemplateChange: (id: string) =&gt; void;
-    onAddClinicalUpdateSection: () =&gt; void;
-    onPrint: () =&gt; void;
+/** Props related to Google authentication state */
+export interface HeaderAuthProps {
+    isSignedIn: boolean;
+    isGisReady: boolean;
+    isGapiReady: boolean;
+    isPickerApiReady: boolean;
+    tokenClient: GoogleTokenClient | null;
+    userProfile: GoogleUserProfile | null;
+    onSignIn: () =&gt; void;
+    onSignOut: () =&gt; void;
+    onChangeUser: () =&gt; void;
+}
+&nbsp;
+/** Props related to Google Drive operations */
+export interface HeaderDriveProps {
+    isSaving: boolean;
+    hasApiKey: boolean;
+    onSaveToDrive: () =&gt; void;
+    onOpenFromDrive: () =&gt; void;
+    onDownloadJson: () =&gt; void;
+}
+&nbsp;
+/** Props related to editing state */
+export interface HeaderEditingProps {
     isEditing: boolean;
     onToggleEdit: () =&gt; void;
     isAdvancedEditing: boolean;
@@ -906,28 +955,29 @@ interface HeaderProps {
     isAiAssistantVisible: boolean;
     onToggleAiAssistant: () =&gt; void;
     onToolbarCommand: (command: string) =&gt; void;
-    isSignedIn: boolean;
-    isGisReady: boolean;
-    isGapiReady: boolean;
-    isPickerApiReady: boolean;
-    tokenClient: GoogleTokenClient | null;
-    userProfile: GoogleUserProfile | null;
-    isSaving: boolean;
-    onSaveToDrive: () =&gt; void;
-    onSignOut: () =&gt; void;
-    onSignIn: () =&gt; void;
-    onChangeUser: () =&gt; void;
-    onOpenFromDrive: () =&gt; void;
-    onOpenSettings: () =&gt; void;
-    onDownloadJson: () =&gt; void;
-    hasApiKey: boolean;
-    onQuickSave: () =&gt; void;
+}
+&nbsp;
+/** Props related to save status */
+export interface HeaderSaveProps {
     saveStatusLabel: string;
     lastSaveTime: string;
     hasUnsavedChanges: boolean;
+    onQuickSave: () =&gt; void;
     onOpenHistory: () =&gt; void;
+}
+&nbsp;
+interface HeaderProps {
+    templateId: string;
+    onTemplateChange: (id: string) =&gt; void;
+    onAddClinicalUpdateSection: () =&gt; void;
+    onPrint: () =&gt; void;
+    onOpenSettings: () =&gt; void;
     onRestoreTemplate: () =&gt; void;
     onOpenCartolaApp: () =&gt; void;
+    auth: HeaderAuthProps;
+    drive: HeaderDriveProps;
+    editing: HeaderEditingProps;
+    save: HeaderSaveProps;
 }
 &nbsp;
 type ActionMenu = 'archivo' | 'drive' | 'herramientas';
@@ -937,36 +987,31 @@ const Header: React.FC&lt;HeaderProps&gt; = <span class="cstat-no" title="statem
     onTemplateChange,
     onAddClinicalUpdateSection,
     onPrint,
-    isEditing,
-    onToggleEdit,
-    isAdvancedEditing,
-    onToggleAdvancedEditing,
-    isAiAssistantVisible,
-    onToggleAiAssistant,
-    onToolbarCommand,
-    isSignedIn,
-    isGisReady,
-    isGapiReady,
-    isPickerApiReady,
-    tokenClient,
-    userProfile,
-    isSaving,
-    onSaveToDrive,
-    onSignOut,
-    onSignIn,
-    onChangeUser,
-    onOpenFromDrive,
     onOpenSettings,
-    onDownloadJson,
-    hasApiKey,
-    onQuickSave,
-    saveStatusLabel,
-    lastSaveTime,
-    hasUnsavedChanges,
-    onOpenHistory,
     onRestoreTemplate,
-    onOpenCartolaApp
+    onOpenCartolaApp,
+    auth,
+    drive,
+    editing,
+    save,
 }) =&gt; {
+    const {
+        isEditing, onToggleEdit,
+        isAdvancedEditing, onToggleAdvancedEditing,
+        isAiAssistantVisible, onToggleAiAssistant,
+        onToolbarCommand,
+    } = <span class="cstat-no" title="statement not covered" >editing;</span>
+    const {
+        isSignedIn, isPickerApiReady,
+    } = <span class="cstat-no" title="statement not covered" >auth;</span>
+    const {
+        isSaving, hasApiKey,
+        onSaveToDrive, onOpenFromDrive, onDownloadJson,
+    } = <span class="cstat-no" title="statement not covered" >drive;</span>
+    const {
+        saveStatusLabel, lastSaveTime, hasUnsavedChanges,
+        onQuickSave, onOpenHistory,
+    } = <span class="cstat-no" title="statement not covered" >save;</span>
     const [isLauncherOpen, setIsLauncherOpen<span class="cstat-no" title="statement not covered" >] = useState(false);</span>
     const [openActionMenu, setOpenActionMenu<span class="cstat-no" title="statement not covered" >] = useState&lt;ActionMenu | null&gt;(null);</span>
     const <span class="cstat-no" title="statement not covered" >launcherRef = useRef&lt;HTMLDivElement&gt;(null);</span>
@@ -1258,13 +1303,13 @@ const Header: React.FC&lt;HeaderProps&gt; = <span class="cstat-no" title="statem
             &lt;div className="topbar-account"&gt;
                 &lt;UserAccountMenu
                     isSignedIn={isSignedIn}
-                    isGisReady={isGisReady}
-                    isGapiReady={isGapiReady}
-                    tokenClient={tokenClient}
-                    userProfile={userProfile}
-                    onSignIn={onSignIn}
-                    onSignOut={onSignOut}
-                    onChangeUser={onChangeUser}
+                    isGisReady={auth.isGisReady}
+                    isGapiReady={auth.isGapiReady}
+                    tokenClient={auth.tokenClient}
+                    userProfile={auth.userProfile}
+                    onSignIn={auth.onSignIn}
+                    onSignOut={auth.onSignOut}
+                    onChangeUser={auth.onChangeUser}
                 /&gt;
             &lt;/div&gt;
         &lt;/div&gt;
@@ -1279,7 +1324,7 @@ export default Header;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-19T21:06:34.782Z
+                at 2026-03-20T01:30:28.092Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

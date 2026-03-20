@@ -1,5 +1,6 @@
 import { DEFAULT_GOOGLE_CLIENT_ID, LOCAL_STORAGE_KEYS } from '../appConstants';
 import { normalizeGeminiModelId } from './env';
+import { getBrowserStorageAdapter, type StorageAdapter } from './storageAdapter';
 
 export interface PersistedSettings {
     googleApiKey: string;
@@ -9,17 +10,9 @@ export interface PersistedSettings {
     geminiModel: string;
 }
 
-const getStorage = (): Storage | null => {
-    if (typeof window === 'undefined' || !window.localStorage) {
-        return null;
-    }
-    return window.localStorage;
-};
-
 const sanitizeValue = (value: string | null): string => value?.trim() ?? '';
 
-export const loadPersistedSettings = (): Partial<PersistedSettings> => {
-    const storage = getStorage();
+export const loadPersistedSettings = (storage: StorageAdapter | null = getBrowserStorageAdapter()): Partial<PersistedSettings> => {
     if (!storage) {
         return {};
     }
@@ -39,8 +32,10 @@ export const loadPersistedSettings = (): Partial<PersistedSettings> => {
     };
 };
 
-export const persistSettings = (settings: Partial<PersistedSettings>): void => {
-    const storage = getStorage();
+export const persistSettings = (
+    settings: Partial<PersistedSettings>,
+    storage: StorageAdapter | null = getBrowserStorageAdapter(),
+): void => {
     if (!storage) {
         return;
     }
@@ -65,8 +60,7 @@ export const persistSettings = (settings: Partial<PersistedSettings>): void => {
     });
 };
 
-export const clearPersistedSettings = (): void => {
-    const storage = getStorage();
+export const clearPersistedSettings = (storage: StorageAdapter | null = getBrowserStorageAdapter()): void => {
     if (!storage) {
         return;
     }
