@@ -247,7 +247,7 @@ Responde preguntas o genera documentos basados en toda la información disponibl
         } catch (err: unknown) {
             const error = err instanceof Error ? err : new Error(String(err));
             console.error(error);
-            let errMsg = error.message || 'Error desconocido';
+            const errMsg = error.message || 'Error desconocido';
 
             if (err instanceof GeminiModelUnavailableError && allowModelAutoSelection && err.availableModels) {
                 const fallback = suggestGeminiFallbackModel(err.availableModels);

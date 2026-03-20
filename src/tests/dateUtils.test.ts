@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { calcEdadY, formatDateDMY, todayDMY } from '../utils/dateUtils.ts';
+import { calcEdadY, formatDateDMY, todayDMY } from '../utils/dateUtils';
 
 describe('formatDateDMY', () => {
     it('convierte fechas ISO a formato DD/MM/YY', () => {

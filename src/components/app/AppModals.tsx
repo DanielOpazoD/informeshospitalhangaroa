@@ -1,5 +1,6 @@
 import React from 'react';
-import type { DriveFolder, FavoriteFolderEntry, RecentDriveFile, ToastState, VersionHistoryEntry } from '../../types';
+import type { DriveFolder, FavoriteFolderEntry, RecentDriveFile, VersionHistoryEntry } from '../../types';
+import type { ToastState } from '../../hooks/useToast';
 import SettingsModal from '../modals/SettingsModal';
 import OpenFromDriveModal from '../modals/OpenFromDriveModal';
 import SaveToDriveModal from '../modals/SaveToDriveModal';

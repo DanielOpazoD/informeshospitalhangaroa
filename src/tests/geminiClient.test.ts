@@ -96,7 +96,7 @@ describe('geminiClient - API Interactions', () => {
             status: 200,
             json: async () => ({ candidates: [{ content: { parts: [{ text: 'Hola' }] } }] })
         };
-        (vi.mocked(fetch) as any).mockResolvedValue(mockResponse);
+        vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
 
         const result = await generateGeminiContent({
             apiKey: 'test-key',
@@ -105,7 +105,7 @@ describe('geminiClient - API Interactions', () => {
         });
 
         expect(result).toBeDefined();
-        expect((result as any).candidates[0].content.parts[0].text).toBe('Hola');
+        expect((result as { candidates: Array<{ content: { parts: Array<{ text: string }> } }> }).candidates[0].content.parts[0].text).toBe('Hola');
         expect(fetch).toHaveBeenCalledTimes(2); // 1 discovery + 1 generate
     });
 
@@ -126,10 +126,10 @@ describe('geminiClient - API Interactions', () => {
             json: async () => ({ result: 'OK' })
         };
 
-        (vi.mocked(fetch) as any)
-            .mockResolvedValueOnce(discoveryResponse) // discovery
-            .mockResolvedValueOnce(errorResponse)     // attempt 1
-            .mockResolvedValueOnce(successResponse);    // attempt 2
+        vi.mocked(fetch)
+            .mockResolvedValueOnce(discoveryResponse as unknown as Response)
+            .mockResolvedValueOnce(errorResponse as unknown as Response)
+            .mockResolvedValueOnce(successResponse as unknown as Response);
 
         const result = await generateGeminiContent({
             apiKey: 'test-key',
@@ -163,11 +163,11 @@ describe('geminiClient - API Interactions', () => {
             json: async () => ({ result: 'OK-V1BETA' })
         };
 
-        (vi.mocked(fetch) as any)
-            .mockResolvedValueOnce(discoveryResponse)      // discovery try 1
-            .mockResolvedValueOnce(versionErrorResponse)  // attempt 1 (fails with version error)
-            .mockResolvedValueOnce(secondDiscoveryResponse) // discovery try 2 (new routing)
-            .mockResolvedValueOnce(successResponse);       // attempt 2 (on v1beta)
+        vi.mocked(fetch)
+            .mockResolvedValueOnce(discoveryResponse as unknown as Response)
+            .mockResolvedValueOnce(versionErrorResponse as unknown as Response)
+            .mockResolvedValueOnce(secondDiscoveryResponse as unknown as Response)
+            .mockResolvedValueOnce(successResponse as unknown as Response);
 
         const result = await generateGeminiContent({
             apiKey: 'test-key',
@@ -182,7 +182,7 @@ describe('geminiClient - API Interactions', () => {
 
     it('probeGeminiModelVersion - debe retornar la versión correcta', async () => {
         const discoveryResponse = { ok: true, status: 200, json: async () => ({}) };
-        (vi.mocked(fetch) as any).mockResolvedValue(discoveryResponse);
+        vi.mocked(fetch).mockResolvedValue(discoveryResponse as unknown as Response);
 
         const result = await probeGeminiModelVersion({
             apiKey: 'test-key',

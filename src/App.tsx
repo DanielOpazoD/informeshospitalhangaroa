@@ -1,4 +1,4 @@
-import React, { lazy, useCallback, useEffect, useMemo, useState, Suspense } from 'react';
+import React, { lazy, useCallback, useEffect, useState, Suspense } from 'react';
 import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { generateSectionId, TEMPLATES } from './constants';
 import { formatDateDMY } from './utils/dateUtils';
@@ -224,7 +224,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         onRestore: restoreAll,
     });
 
-    const appWorkspaceAiAssistant = useMemo(() => (
+    const appWorkspaceAiAssistant = (
         <AIAssistant
             sections={aiAssistant.aiSections}
             apiKey={aiAssistant.resolvedAiApiKey}
@@ -240,21 +240,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
             panelWidth={editorUi.aiPanelWidth}
             onPanelWidthChange={editorUi.setAiPanelWidth}
         />
-    ), [
-        aiAssistant.aiConversationKey,
-        aiAssistant.aiSections,
-        aiAssistant.allowAiAutoSelection,
-        aiAssistant.fullRecordContext,
-        aiAssistant.handleAutoSelectAiModel,
-        aiAssistant.resolvedAiApiKey,
-        aiAssistant.resolvedAiModel,
-        aiAssistant.resolvedAiProjectId,
-        editorUi.aiPanelWidth,
-        editorUi.isAiAssistantVisible,
-        editorUi.setAiPanelWidth,
-        editorUi.setIsAiAssistantVisible,
-        handleSectionContentChange,
-    ]);
+    );
 
     return (
         <AppShellContent

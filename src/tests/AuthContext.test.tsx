@@ -2,26 +2,38 @@ import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import type { ReactNode } from 'react';
+import type { GoogleTokenClient } from '../types';
 
 describe('AuthContext', () => {
     beforeEach(() => {
-        (window as any).google = {
+        const tokenClient: GoogleTokenClient = {
+            requestAccessToken: vi.fn(),
+        };
+
+        window.google = {
             accounts: {
                 oauth2: {
-                    initTokenClient: vi.fn().mockReturnValue({
-                        requestAccessToken: vi.fn(),
-                    }),
+                    initTokenClient: vi.fn().mockReturnValue(tokenClient),
+                },
+                id: {
+                    revoke: vi.fn(),
                 },
             },
+            picker: undefined as never,
         };
-        (window as any).gapi = {
+        window.gapi = {
             load: vi.fn(),
-            auth2: {
-                getAuthInstance: vi.fn(),
-            },
             client: {
+                load: vi.fn(),
                 getToken: vi.fn(),
                 setToken: vi.fn(),
+                drive: {
+                    files: {
+                        list: vi.fn(),
+                        get: vi.fn(),
+                        create: vi.fn(),
+                    },
+                },
             },
         };
     });

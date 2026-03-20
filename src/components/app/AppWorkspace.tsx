@@ -10,7 +10,6 @@ import type { HeaderAuthProps, HeaderDriveProps, HeaderEditingProps, HeaderSaveP
 interface AppWorkspaceProps {
     record: ClinicalRecord;
     setRecord: React.Dispatch<React.SetStateAction<ClinicalRecord>>;
-    toast: ToastState | null;
     auth: HeaderAuthProps;
     driveHeader: HeaderDriveProps;
     editingHeader: HeaderEditingProps;

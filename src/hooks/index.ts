@@ -9,6 +9,7 @@ export { useClinicalRecord } from './useClinicalRecord';
 export { useConfirmDialog, ConfirmDialogProvider } from './useConfirmDialog';
 export { useDocumentEffects } from './useDocumentEffects';
 export { useDriveModals } from './useDriveModals';
+export { useDriveOperations } from './useDriveOperations';
 export { useEditorUiState } from './useEditorUiState';
 export { useFileOperations } from './useFileOperations';
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';

@@ -25,10 +25,10 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [versionHistory, setVersionHistory] = useState<VersionHistoryEntry[]>([]);
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-    const skipUnsavedRef = useRef(true);
+    const suppressedRecordChangeCountRef = useRef(1);
 
     const markRecordAsReplaced = useCallback(() => {
-        skipUnsavedRef.current = true;
+        suppressedRecordChangeCountRef.current += 1;
     }, []);
 
     const getRecordSnapshot = useCallback(() => {
@@ -87,8 +87,8 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
     }, [markRecordAsReplaced, onToast, storage]);
 
     useEffect(() => {
-        if (skipUnsavedRef.current) {
-            skipUnsavedRef.current = false;
+        if (suppressedRecordChangeCountRef.current > 0) {
+            suppressedRecordChangeCountRef.current -= 1;
             return;
         }
         setHasUnsavedChanges(true);

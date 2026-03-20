@@ -25,11 +25,17 @@ describe('useAppSettings', () => {
 
         act(() => {
             result.current.openSettingsModal();
+        });
+
+        act(() => {
             result.current.setTempApiKey(' api-key ');
             result.current.setTempClientId(' client-123 ');
             result.current.setTempAiApiKey(' ai-key ');
             result.current.setTempAiProjectId(' 321 ');
             result.current.setTempAiModel(' gemini-2.0-flash @v1beta ');
+        });
+
+        act(() => {
             result.current.saveSettings();
         });
 

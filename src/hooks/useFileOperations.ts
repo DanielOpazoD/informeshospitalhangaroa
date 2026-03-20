@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useMemo } from 'react';
 import type { ClinicalRecord, ToastFn } from '../types';
 import { suggestedFilename } from '../utils/stringUtils';
-import { validateCriticalFields } from '../utils/validationUtils';
+import { parseClinicalRecord, validateCriticalFields } from '../utils/validationUtils';
 import { useConfirmDialog } from './useConfirmDialog';
 import { FIELD_IDS } from '../appConstants';
 
@@ -56,12 +56,12 @@ export function useFileOperations({
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                const importedRecord = JSON.parse(e.target?.result as string);
-                if (importedRecord.version && importedRecord.patientFields && importedRecord.sections) {
-                    const normalizedRecord: ClinicalRecord = {
-                        ...importedRecord,
-                        patientFields: normalizePatientFields(importedRecord.patientFields),
-                    };
+                const importedRecord = parseClinicalRecord(
+                    JSON.parse(e.target?.result as string),
+                    normalizePatientFields,
+                );
+                if (importedRecord) {
+                    const normalizedRecord: ClinicalRecord = importedRecord;
                     markRecordAsReplaced();
                     setRecord(normalizedRecord);
                     setHasUnsavedChanges(false);

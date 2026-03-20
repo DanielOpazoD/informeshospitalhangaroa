@@ -1,12 +1,12 @@
 
 import { afterEach, describe, it, expect } from 'vitest';
-import { DEFAULT_GOOGLE_CLIENT_ID, LOCAL_STORAGE_KEYS } from '../appConstants.ts';
+import { DEFAULT_GOOGLE_CLIENT_ID, LOCAL_STORAGE_KEYS } from '../appConstants';
 import {
     clearPersistedSettings,
     loadPersistedSettings,
     persistSettings,
     resolveClientId,
-} from '../utils/settingsStorage.ts';
+} from '../utils/settingsStorage';
 
 type StorageMap = Map<string, string>;
 

@@ -1,7 +1,7 @@
 
 import { describe, it, expect } from 'vitest';
-import type { ClinicalRecord } from '../types.ts';
-import { buildAiConversationKey, buildFullRecordContext, mapSectionsForAi } from '../utils/aiContext.ts';
+import type { ClinicalRecord } from '../types';
+import { buildAiConversationKey, buildFullRecordContext, mapSectionsForAi } from '../utils/aiContext';
 
 const baseRecord: ClinicalRecord = {
     version: 'v1',

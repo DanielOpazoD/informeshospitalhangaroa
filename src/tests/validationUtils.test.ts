@@ -1,7 +1,7 @@
 
 import { describe, it, expect } from 'vitest';
-import type { ClinicalRecord, PatientField } from '../types.ts';
-import { formatTimeSince, validateCriticalFields } from '../utils/validationUtils.ts';
+import type { ClinicalRecord, PatientField } from '../types';
+import { formatTimeSince, isClinicalRecord, parseClinicalRecord, validateCriticalFields } from '../utils/validationUtils';
 
 const buildRecord = (fields: PatientField[]): ClinicalRecord => ({
     version: '1.0',
@@ -74,5 +74,37 @@ describe('formatTimeSince', () => {
         const reference = 10_000_000;
         expect(formatTimeSince(reference - 24 * 60 * 60_000, reference)).toBe('hace 1 día');
         expect(formatTimeSince(reference - 3 * 24 * 60 * 60_000, reference)).toBe('hace 3 días');
+    });
+});
+
+describe('parseClinicalRecord', () => {
+    it('reconoce una ficha clínica válida', () => {
+        const record = buildRecord([
+            { id: 'nombre', label: 'Nombre', value: 'Paciente', type: 'text' },
+        ]);
+        expect(isClinicalRecord(record)).toBe(true);
+        expect(parseClinicalRecord(record)).toEqual(record);
+    });
+
+    it('rechaza payloads incompletos o malformados', () => {
+        expect(isClinicalRecord({ version: '1' })).toBe(false);
+        expect(parseClinicalRecord({ version: '1' })).toBeNull();
+        expect(parseClinicalRecord({
+            version: '1',
+            templateId: '2',
+            title: 'x',
+            patientFields: [{ label: 'Nombre', value: 'Paciente', type: 'unsupported' }],
+            sections: [],
+            medico: '',
+            especialidad: '',
+        })).toBeNull();
+    });
+
+    it('normaliza los patientFields cuando se entrega un normalizador', () => {
+        const record = buildRecord([
+            { id: 'nombre', label: 'Nombre', value: 'Paciente', type: 'text' },
+        ]);
+        const parsed = parseClinicalRecord(record, fields => [...fields, { label: 'Extra', value: '', type: 'text' }]);
+        expect(parsed?.patientFields).toHaveLength(2);
     });
 });

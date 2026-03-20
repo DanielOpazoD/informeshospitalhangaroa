@@ -8,9 +8,9 @@ import type {
     SaveOptions,
     ToastFn,
 } from '../types';
-import { buildDriveContextErrorMessage } from '../utils/driveErrorUtils';
 import { useDriveStorage } from '../hooks/useDriveStorage';
 import { useDriveSearch } from '../hooks/useDriveSearch';
+import { useDriveOperations } from '../hooks/useDriveOperations';
 import { createDriveGateway } from '../services/driveGateway';
 import { getRootDriveFolder } from '../utils/driveFolderStorage';
 
@@ -92,55 +92,30 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
     const handleAddFavoriteFolder = useCallback(() => _handleAddFavoriteFolder(folderPath), [_handleAddFavoriteFolder, folderPath]);
     const handleSetDefaultFolder = useCallback(() => _handleSetDefaultFolder(folderPath, selectedFolderId), [_handleSetDefaultFolder, folderPath, selectedFolderId]);
 
-    const cacheFolders = useCallback((key: string, folders: DriveFolder[], files: DriveFolder[] = []) => {
-        driveCacheRef.current.set(key, { folders, files, timestamp: Date.now() });
-    }, []);
-
-    const fetchDriveFolders = useCallback(async (folderId: string) => {
-        setIsDriveLoading(true);
-        try {
-            const cacheKey = `folders:${folderId}`;
-            const cached = driveCacheRef.current.get(cacheKey);
-            if (cached) {
-                setDriveFolders(cached.folders);
-                setSelectedFolderId(folderId);
-                return;
-            }
-            const folders = await driveGateway.listFolders(folderId);
-            cacheFolders(cacheKey, folders);
-            setDriveFolders(folders);
-            setSelectedFolderId(folderId);
-        } catch (error) {
-            console.error('Error fetching folders:', error);
-            showToast(buildDriveContextErrorMessage('No se pudieron cargar las carpetas de Drive', error, 'Error al listar carpetas.'), 'error');
-        } finally {
-            setIsDriveLoading(false);
-        }
-    }, [cacheFolders, driveGateway, showToast]);
-
-    const fetchFolderContents = useCallback(async (folderId: string) => {
-        setIsDriveLoading(true);
-        try {
-            const cacheKey = `contents:${folderId}`;
-            const cached = driveCacheRef.current.get(cacheKey);
-            if (cached) {
-                setDriveFolders(cached.folders);
-                setDriveJsonFiles(cached.files);
-                setSelectedFolderId(folderId);
-                return;
-            }
-            const { folders, files } = await driveGateway.listFolderContents(folderId);
-            cacheFolders(cacheKey, folders, files);
-            setDriveFolders(folders);
-            setDriveJsonFiles(files);
-            setSelectedFolderId(folderId);
-        } catch (error) {
-            console.error('Error fetching folder contents:', error);
-            showToast(buildDriveContextErrorMessage('No se pudieron cargar los contenidos de la carpeta de Drive', error, 'Error al listar contenidos.'), 'error');
-        } finally {
-            setIsDriveLoading(false);
-        }
-    }, [cacheFolders, driveGateway, showToast]);
+    const {
+        fetchDriveFolders,
+        fetchFolderContents,
+        handleGoToFavorite,
+        formatDriveDate,
+        handleCreateFolder,
+        openJsonFileFromDrive,
+        saveToDrive,
+    } = useDriveOperations({
+        showToast,
+        driveGateway,
+        driveCacheRef,
+        folderPath,
+        selectedFolderId,
+        newFolderName,
+        addRecentFile,
+        setDriveFolders,
+        setDriveJsonFiles,
+        setFolderPath,
+        setSelectedFolderId,
+        setNewFolderName,
+        setIsDriveLoading,
+        setIsSaving,
+    });
 
     const {
         driveSearchTerm,
@@ -165,110 +140,6 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
     });
 
 
-
-    const handleGoToFavorite = useCallback((favorite: FavoriteFolderEntry, mode: 'save' | 'open') => {
-        const clonedPath = favorite.path?.length ? structuredClone(favorite.path) : [{ id: 'root', name: 'Mi unidad' }];
-        setFolderPath(clonedPath);
-        if (mode === 'save') {
-            fetchDriveFolders(favorite.id);
-        } else {
-            fetchFolderContents(favorite.id);
-        }
-    }, [fetchDriveFolders, fetchFolderContents]);
-
-
-
-
-
-    const formatDriveDate = useCallback((value?: string) => {
-        if (!value) return 'Sin fecha';
-        try {
-            return new Date(value).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' });
-        } catch (_) {
-            return value;
-        }
-    }, []);
-
-    const handleCreateFolder = useCallback(async () => {
-        if (!newFolderName.trim()) {
-            showToast('Por favor, ingrese un nombre para la nueva carpeta.', 'warning');
-            return;
-        }
-        setIsDriveLoading(true);
-        try {
-            const currentFolderId = folderPath[folderPath.length - 1].id;
-            await driveGateway.createFolder(newFolderName.trim(), currentFolderId);
-            setNewFolderName('');
-            driveCacheRef.current.delete(`folders:${currentFolderId}`);
-            driveCacheRef.current.delete(`contents:${currentFolderId}`);
-            fetchDriveFolders(currentFolderId);
-            showToast('Carpeta creada correctamente.');
-        } catch (error) {
-            console.error('Error creating folder:', error);
-            showToast(buildDriveContextErrorMessage('No se pudo crear la carpeta', error, 'Error al crear carpeta.'), 'error');
-        } finally {
-            setIsDriveLoading(false);
-        }
-    }, [driveGateway, fetchDriveFolders, folderPath, newFolderName, showToast]);
-
-
-
-    const openJsonFileFromDrive = useCallback(async (file: DriveFolder): Promise<ClinicalRecord | null> => {
-        setIsDriveLoading(true);
-        try {
-            const importedRecord = await driveGateway.getJsonRecord(file.id);
-            if (importedRecord.version && importedRecord.patientFields && importedRecord.sections) {
-                showToast('Archivo cargado exitosamente desde Google Drive.');
-                addRecentFile(file);
-                return importedRecord as ClinicalRecord;
-            }
-            showToast('El archivo JSON seleccionado de Drive no es válido.', 'error');
-            return null;
-        } catch (error) {
-            console.error('Error al abrir el archivo desde Drive:', error);
-            showToast(buildDriveContextErrorMessage('Hubo un error al leer el archivo desde Google Drive', error, 'No se pudo leer el archivo.'), 'error');
-            return null;
-        } finally {
-            setIsDriveLoading(false);
-        }
-    }, [addRecentFile, driveGateway, showToast]);
-
-    const saveToDrive = useCallback(async ({ record, baseFileName, format, generatePdf }: SaveOptions) => {
-        setIsSaving(true);
-        const saveFile = async (type: 'json' | 'pdf'): Promise<string> => {
-            const extension = type === 'pdf' ? '.pdf' : '.json';
-            const fileName = `${baseFileName}${extension}`;
-            const mimeType = type === 'pdf' ? 'application/pdf' : 'application/json';
-
-            const fileContent = type === 'pdf'
-                ? await generatePdf()
-                : new Blob([JSON.stringify(record, null, 2)], { type: mimeType });
-            await driveGateway.uploadFile({
-                fileName,
-                mimeType,
-                content: fileContent,
-                parentId: selectedFolderId,
-            });
-            return fileName;
-        };
-
-        try {
-            if (format === 'json' || format === 'pdf') {
-                const fileName = await saveFile(format);
-                showToast(`Archivo "${fileName}" guardado en Google Drive exitosamente.`);
-            } else {
-                const [jsonFileName, pdfFileName] = await Promise.all([saveFile('json'), saveFile('pdf')]);
-                showToast(`Archivos "${jsonFileName}" y "${pdfFileName}" guardados en Google Drive exitosamente.`);
-            }
-            return true;
-        } catch (error: unknown) {
-            console.error('Error saving to Drive:', error);
-            showToast(buildDriveContextErrorMessage('Error al guardar en Google Drive', error, 'No se pudo guardar el archivo.'), 'error');
-            return false;
-        } finally {
-            setIsSaving(false);
-        }
-    }, [driveGateway, selectedFolderId, showToast]);
 
     const value = useMemo<DriveContextValue>(() => ({
         driveFolders,

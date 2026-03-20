@@ -44,6 +44,45 @@ export const validateCriticalFields = (record: ClinicalRecord): string[] => {
     return errors;
 };
 
+const isPatientField = (value: unknown): value is PatientField => {
+    if (!value || typeof value !== 'object') return false;
+    const candidate = value as Partial<PatientField>;
+    return (
+        typeof candidate.label === 'string' &&
+        typeof candidate.value === 'string' &&
+        (candidate.type === 'text' || candidate.type === 'date' || candidate.type === 'number' || candidate.type === 'time')
+    );
+};
+
+export const isClinicalRecord = (value: unknown): value is ClinicalRecord => {
+    if (!value || typeof value !== 'object') return false;
+    const candidate = value as Partial<ClinicalRecord>;
+    return (
+        typeof candidate.version === 'string' &&
+        typeof candidate.templateId === 'string' &&
+        typeof candidate.title === 'string' &&
+        typeof candidate.medico === 'string' &&
+        typeof candidate.especialidad === 'string' &&
+        Array.isArray(candidate.patientFields) &&
+        candidate.patientFields.every(isPatientField) &&
+        Array.isArray(candidate.sections)
+    );
+};
+
+export const parseClinicalRecord = (
+    value: unknown,
+    normalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
+): ClinicalRecord | null => {
+    if (!isClinicalRecord(value)) {
+        return null;
+    }
+
+    return {
+        ...value,
+        patientFields: normalizePatientFields ? normalizePatientFields(value.patientFields) : value.patientFields,
+    };
+};
+
 export const formatTimeSince = (timestamp: number, reference = Date.now()): string => {
     const diff = Math.max(0, reference - timestamp);
     const minutes = Math.floor(diff / 60000);

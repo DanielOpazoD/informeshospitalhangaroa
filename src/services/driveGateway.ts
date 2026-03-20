@@ -21,6 +21,16 @@ export interface DriveGateway {
 const DRIVE_FOLDER_MIME = 'application/vnd.google-apps.folder';
 const JSON_FILE_MIME = 'application/json';
 
+const getDriveClient = () => {
+    if (!window.gapi?.client?.drive?.files) {
+        throw new Error('La API de Google Drive no está disponible todavía.');
+    }
+
+    return window.gapi.client.drive.files;
+};
+
+const getAccessToken = () => window.gapi?.client?.getToken?.()?.access_token ?? null;
+
 const mapDriveFile = (file: GoogleDriveFileResource): DriveFolder => ({
     id: file.id,
     name: file.name,
@@ -32,7 +42,7 @@ const buildListQuery = (folderId: string, mimeType: string) =>
     `'${folderId}' in parents and mimeType='${mimeType}' and trashed=false`;
 
 const listFiles = async (query: string, orderBy: string): Promise<DriveFolder[]> => {
-    const response = await window.gapi.client.drive.files.list({
+    const response = await getDriveClient().list({
         q: query,
         fields: 'files(id, name, mimeType, modifiedTime)',
         orderBy,
@@ -57,7 +67,7 @@ const buildSearchQuery = ({ searchTerm, dateFrom, dateTo }: DriveSearchFilters):
 
 export const createDriveGateway = (): DriveGateway => {
     const getFileContent = async (fileId: string): Promise<string> => {
-        const response = await window.gapi.client.drive.files.get({
+        const response = await getDriveClient().get({
             fileId,
             alt: 'media',
         });
@@ -65,15 +75,15 @@ export const createDriveGateway = (): DriveGateway => {
     };
 
     return {
-        getAccessToken: () => window.gapi.client.getToken()?.access_token ?? null,
+        getAccessToken,
         listFolders: (folderId: string) => listFiles(buildListQuery(folderId, DRIVE_FOLDER_MIME), 'name'),
         listJsonFiles: (folderId: string) => listFiles(buildListQuery(folderId, JSON_FILE_MIME), 'name'),
         listFolderContents: async (folderId: string) => {
-        const [folders, files] = await Promise.all([
-            listFiles(buildListQuery(folderId, DRIVE_FOLDER_MIME), 'name'),
-            listFiles(buildListQuery(folderId, JSON_FILE_MIME), 'name'),
-        ]);
-        return { folders, files };
+            const [folders, files] = await Promise.all([
+                listFiles(buildListQuery(folderId, DRIVE_FOLDER_MIME), 'name'),
+                listFiles(buildListQuery(folderId, JSON_FILE_MIME), 'name'),
+            ]);
+            return { folders, files };
         },
         searchJsonFiles: async (filters: DriveSearchFilters) => listFiles(buildSearchQuery(filters), 'modifiedTime desc'),
         getFileContent,
@@ -82,37 +92,37 @@ export const createDriveGateway = (): DriveGateway => {
             return JSON.parse(body) as ClinicalRecord;
         },
         createFolder: async (name: string, parentId: string) => {
-        await window.gapi.client.drive.files.create({
-            resource: {
-                name,
-                mimeType: DRIVE_FOLDER_MIME,
-                parents: [parentId],
-            },
-        });
+            await getDriveClient().create({
+                resource: {
+                    name,
+                    mimeType: DRIVE_FOLDER_MIME,
+                    parents: [parentId],
+                },
+            });
         },
-        uploadFile: async ({ fileName, mimeType, content, parentId }) => {
-        const accessToken = window.gapi.client.getToken()?.access_token;
-        if (!accessToken) {
-            throw new Error('No hay token de acceso. Por favor, inicie sesión de nuevo.');
-        }
+        uploadFile: async ({ fileName, mimeType: _mimeType, content, parentId }) => {
+            const accessToken = getAccessToken();
+            if (!accessToken) {
+                throw new Error('No hay token de acceso. Por favor, inicie sesión de nuevo.');
+            }
 
-        const metadata = { name: fileName, parents: [parentId] };
-        const form = new FormData();
-        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        form.append('file', content);
+            const metadata = { name: fileName, parents: [parentId] };
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            form.append('file', content);
 
-        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${accessToken}` },
-            body: form,
-        });
+            const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${accessToken}` },
+                body: form,
+            });
 
-        const result = (await response.json().catch(() => ({}))) as { id?: string; name?: string; error?: { message?: string } };
-        if (!response.ok) {
-            throw new Error(result?.error?.message || `Error del servidor: ${response.status}`);
-        }
+            const result = (await response.json().catch(() => ({}))) as { id?: string; name?: string; error?: { message?: string } };
+            if (!response.ok) {
+                throw new Error(result?.error?.message || `Error del servidor: ${response.status}`);
+            }
 
-        return result;
-    },
+            return result;
+        },
     };
 };

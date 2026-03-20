@@ -1,7 +1,7 @@
 
 import { afterEach, describe, it, expect } from 'vitest';
-import type { GeminiApiVersion } from '../utils/geminiModelUtils.ts';
-import { __testables__ } from '../utils/geminiClient.ts';
+import type { GeminiApiVersion } from '../utils/geminiModelUtils';
+import { __testables__ } from '../utils/geminiClient';
 
 const { parseModelListResponse, listAccessibleGeminiModels } = __testables__;
 

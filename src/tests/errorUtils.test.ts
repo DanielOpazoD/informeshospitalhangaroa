@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { buildContextualErrorMessage, getErrorMessage } from '../utils/errorUtils.ts';
+import { buildContextualErrorMessage, getErrorMessage } from '../utils/errorUtils';
 
 describe('getErrorMessage', () => {
     it('usa strings cuando vienen con contenido', () => {

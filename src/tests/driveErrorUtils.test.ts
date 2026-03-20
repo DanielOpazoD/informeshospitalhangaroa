@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { buildDriveContextErrorMessage, getDriveErrorMessage } from '../utils/driveErrorUtils.ts';
+import { buildDriveContextErrorMessage, getDriveErrorMessage } from '../utils/driveErrorUtils';
 
 describe('getDriveErrorMessage', () => {
     it('mapea errores por código HTTP conocidos de Drive', () => {

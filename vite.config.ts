@@ -27,6 +27,8 @@ export default defineConfig(({ mode }) => {
                 output: {
                     manualChunks: {
                         react: ['react', 'react-dom'],
+                        router: ['react-router-dom'],
+                        state: ['zustand'],
                         pdf: ['jspdf'],
                     },
                 },
