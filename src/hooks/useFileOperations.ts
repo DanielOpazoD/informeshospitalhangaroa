@@ -3,6 +3,7 @@ import type { ClinicalRecord, ToastFn } from '../types';
 import { suggestedFilename } from '../utils/stringUtils';
 import { validateCriticalFields } from '../utils/validationUtils';
 import { useConfirmDialog } from './useConfirmDialog';
+import { FIELD_IDS } from '../appConstants';
 
 /**
  * Options for configuring file I/O operations.
@@ -83,7 +84,7 @@ export function useFileOperations({
             showToast(`No se puede exportar porque:\n- ${errors.join('\n- ')}`, 'error');
             return;
         }
-        const patientName = record.patientFields.find(f => f.id === 'nombre')?.value || '';
+        const patientName = record.patientFields.find(f => f.id === FIELD_IDS.nombre)?.value || '';
         const fileName = `${suggestedFilename(record.templateId, patientName)}.json`;
         const blob = new Blob([JSON.stringify(record, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -109,7 +110,7 @@ export function useFileOperations({
                 });
                 if (!proceed) return;
             }
-            const patientName = record.patientFields.find(f => f.id === 'nombre')?.value || '';
+            const patientName = record.patientFields.find(f => f.id === FIELD_IDS.nombre)?.value || '';
             const originalTitle = document.title;
             document.title = suggestedFilename(record.templateId, patientName);
             window.print();
@@ -118,7 +119,7 @@ export function useFileOperations({
     }, [confirm, record]);
 
     const defaultDriveFileName = useMemo(() => {
-        const patientName = record.patientFields.find(f => f.id === 'nombre')?.value || '';
+        const patientName = record.patientFields.find(f => f.id === FIELD_IDS.nombre)?.value || '';
         return suggestedFilename(record.templateId, patientName);
     }, [record.patientFields, record.templateId]);
 

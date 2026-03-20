@@ -1,4 +1,5 @@
 import type { ClinicalRecord, PatientField } from '../types';
+import { FIELD_IDS } from '../appConstants';
 
 const findFieldValue = (fields: PatientField[], id: string) =>
     fields.find(field => field.id === id)?.value?.trim() || '';
@@ -13,25 +14,24 @@ export const validateCriticalFields = (record: ClinicalRecord): string[] => {
     const errors: string[] = [];
     const hasField = (id: string) => record.patientFields.some(field => field.id === id);
 
-    const name = findFieldValue(record.patientFields, 'nombre');
-    const rutField = record.patientFields.find(field => field.id === 'rut');
-    const rut = rutField?.value?.trim() || '';
-    const birth = findFieldValue(record.patientFields, 'fecnac');
-    const admission = findFieldValue(record.patientFields, 'fing');
-    const report = findFieldValue(record.patientFields, 'finf');
+    const name = findFieldValue(record.patientFields, FIELD_IDS.nombre);
+    const rut = findFieldValue(record.patientFields, FIELD_IDS.rut);
+    const birth = findFieldValue(record.patientFields, FIELD_IDS.fecnac);
+    const admission = findFieldValue(record.patientFields, FIELD_IDS.fing);
+    const report = findFieldValue(record.patientFields, FIELD_IDS.finf);
 
-    if (hasField('nombre') && !name) errors.push('Ingrese el nombre del paciente.');
-    if (hasField('rut') && !rut) {
+    if (hasField(FIELD_IDS.nombre) && !name) errors.push('Ingrese el nombre del paciente.');
+    if (hasField(FIELD_IDS.rut) && !rut) {
         errors.push('Ingrese el RUT del paciente.');
     }
 
-    const birthDate = hasField('fecnac') ? parseDate(birth) : null;
-    const admissionDate = hasField('fing') ? parseDate(admission) : null;
-    const reportDate = hasField('finf') ? parseDate(report) : null;
+    const birthDate = hasField(FIELD_IDS.fecnac) ? parseDate(birth) : null;
+    const admissionDate = hasField(FIELD_IDS.fing) ? parseDate(admission) : null;
+    const reportDate = hasField(FIELD_IDS.finf) ? parseDate(report) : null;
 
-    if (hasField('fecnac') && !birthDate) errors.push('Ingrese una fecha de nacimiento válida.');
-    if (hasField('fing') && !admissionDate) errors.push('Ingrese una fecha de ingreso válida.');
-    if (hasField('finf') && !reportDate) errors.push('Ingrese una fecha de informe válida.');
+    if (hasField(FIELD_IDS.fecnac) && !birthDate) errors.push('Ingrese una fecha de nacimiento válida.');
+    if (hasField(FIELD_IDS.fing) && !admissionDate) errors.push('Ingrese una fecha de ingreso válida.');
+    if (hasField(FIELD_IDS.finf) && !reportDate) errors.push('Ingrese una fecha de informe válida.');
 
     if (birthDate && admissionDate && birthDate > admissionDate) {
         errors.push('La fecha de ingreso debe ser posterior a la fecha de nacimiento.');

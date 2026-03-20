@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type {
     ClinicalRecord,
     DriveFolder,
@@ -9,8 +9,9 @@ import type {
     SaveOptions,
     ToastFn,
 } from '../types';
-import { MAX_RECENT_FILES, SEARCH_CACHE_TTL, DRIVE_CONTENT_FETCH_CONCURRENCY, LOCAL_STORAGE_KEYS } from '../appConstants';
 import { buildDriveContextErrorMessage } from '../utils/driveErrorUtils';
+import { useDriveStorage } from '../hooks/useDriveStorage';
+import { useDriveSearch } from '../hooks/useDriveSearch';
 
 interface DriveCacheEntry {
     folders: DriveFolder[];
@@ -70,12 +71,6 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
     const [driveJsonFiles, setDriveJsonFiles] = useState<DriveFolder[]>([]);
     const [folderPath, setFolderPath] = useState<DriveFolder[]>([{ id: 'root', name: 'Mi unidad' }]);
     const [saveFormat, setSaveFormat] = useState<SaveFormat>('json');
-    const [driveSearchTerm, setDriveSearchTerm] = useState('');
-    const [driveDateFrom, setDriveDateFrom] = useState('');
-    const [driveDateTo, setDriveDateTo] = useState('');
-    const [driveContentTerm, setDriveContentTerm] = useState('');
-    const [favoriteFolders, setFavoriteFolders] = useState<FavoriteFolderEntry[]>([]);
-    const [recentFiles, setRecentFiles] = useState<RecentDriveFile[]>([]);
     const [selectedFolderId, setSelectedFolderId] = useState<string>('root');
     const [newFolderName, setNewFolderName] = useState('');
     const [fileNameInput, setFileNameInput] = useState('');
@@ -83,27 +78,17 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
     const [isSaving, setIsSaving] = useState(false);
     const driveCacheRef = useRef(new Map<string, DriveCacheEntry>());
 
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        try {
-            const favoritesRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.favorites);
-            if (favoritesRaw) {
-                setFavoriteFolders(JSON.parse(favoritesRaw));
-            }
-        } catch (error) {
-            console.warn('No se pudo leer la lista de favoritos de Drive:', error);
-        }
+    const {
+        favoriteFolders,
+        recentFiles,
+        handleAddFavoriteFolder: _handleAddFavoriteFolder,
+        handleRemoveFavoriteFolder,
+        addRecentFile,
+        handleSetDefaultFolder: _handleSetDefaultFolder,
+    } = useDriveStorage(showToast);
 
-        try {
-            const recentsRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.recent);
-            if (recentsRaw) {
-                const parsedRecents = JSON.parse(recentsRaw) as RecentDriveFile[];
-                setRecentFiles(parsedRecents.slice(0, MAX_RECENT_FILES));
-            }
-        } catch (error) {
-            console.warn('No se pudo leer la lista de documentos recientes:', error);
-        }
-    }, []);
+    const handleAddFavoriteFolder = useCallback(() => _handleAddFavoriteFolder(folderPath), [_handleAddFavoriteFolder, folderPath]);
+    const handleSetDefaultFolder = useCallback(() => _handleSetDefaultFolder(folderPath, selectedFolderId), [_handleSetDefaultFolder, folderPath, selectedFolderId]);
 
     const cacheFolders = useCallback((key: string, folders: DriveFolder[], files: DriveFolder[] = []) => {
         driveCacheRef.current.set(key, { folders, files, timestamp: Date.now() });
@@ -188,42 +173,28 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         }
     }, [cacheFolders, showToast]);
 
-    const handleAddFavoriteFolder = useCallback(() => {
-        const currentFolder = folderPath[folderPath.length - 1];
-        if (!currentFolder) return;
-        setFavoriteFolders(prev => {
-            if (prev.some(fav => fav.id === currentFolder.id)) {
-                showToast('La carpeta ya está marcada como favorita.', 'warning');
-                return prev;
-            }
-            const newEntry: FavoriteFolderEntry = {
-                id: currentFolder.id,
-                name: currentFolder.name,
-                path: structuredClone(folderPath),
-            };
-            const updated = [...prev, newEntry];
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem(LOCAL_STORAGE_KEYS.favorites, JSON.stringify(updated));
-            }
-            showToast('Carpeta añadida a favoritos.');
-            return updated;
-        });
-    }, [folderPath, showToast]);
+    const {
+        driveSearchTerm,
+        driveDateFrom,
+        driveDateTo,
+        driveContentTerm,
+        setDriveSearchTerm,
+        setDriveDateFrom,
+        setDriveDateTo,
+        setDriveContentTerm,
+        handleSearchInDrive,
+        clearDriveSearch,
+    } = useDriveSearch({
+        setIsDriveLoading,
+        setDriveFolders,
+        setDriveJsonFiles,
+        setFolderPath,
+        showToast,
+        driveCacheRef,
+        fetchFolderContents,
+    });
 
-    const handleRemoveFavoriteFolder = useCallback((id: string) => {
-        setFavoriteFolders(prev => {
-            if (!prev.some(fav => fav.id === id)) {
-                showToast('La carpeta ya no está en favoritos.', 'warning');
-                return prev;
-            }
-            const updated = prev.filter(fav => fav.id !== id);
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem(LOCAL_STORAGE_KEYS.favorites, JSON.stringify(updated));
-            }
-            showToast('Favorito eliminado.', 'warning');
-            return updated;
-        });
-    }, [showToast]);
+
 
     const handleGoToFavorite = useCallback((favorite: FavoriteFolderEntry, mode: 'save' | 'open') => {
         const clonedPath = favorite.path?.length ? structuredClone(favorite.path) : [{ id: 'root', name: 'Mi unidad' }];
@@ -235,119 +206,15 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         }
     }, [fetchDriveFolders, fetchFolderContents]);
 
-    const handleSearchInDrive = useCallback(async () => {
-        if (!driveSearchTerm && !driveDateFrom && !driveDateTo && !driveContentTerm) {
-            showToast('Ingrese algún criterio de búsqueda.', 'warning');
-            return;
-        }
-        setIsDriveLoading(true);
-        try {
-            const searchTerm = driveSearchTerm.trim();
-            const contentTerm = driveContentTerm.trim();
-            const cacheKey = `search:${searchTerm.toLowerCase()}|${driveDateFrom}|${driveDateTo}|${contentTerm.toLowerCase()}`;
-            const cached = driveCacheRef.current.get(cacheKey);
-            if (cached && Date.now() - cached.timestamp < SEARCH_CACHE_TTL) {
-                setDriveFolders([]);
-                setDriveJsonFiles(cached.files);
-                setFolderPath([{ id: 'search', name: 'Resultados de búsqueda' }]);
-                showToast(`Se encontraron ${cached.files.length} archivo(s).`);
-                return;
-            }
 
-            const qParts = ["mimeType='application/json'", 'trashed=false'];
-            if (searchTerm) {
-                const sanitized = searchTerm.replace(/'/g, "\\'");
-                qParts.push(`name contains '${sanitized}'`);
-            }
-            if (driveDateFrom) {
-                qParts.push(`modifiedTime >= '${driveDateFrom}T00:00:00'`);
-            }
-            if (driveDateTo) {
-                qParts.push(`modifiedTime <= '${driveDateTo}T23:59:59'`);
-            }
-            const response = await window.gapi.client.drive.files.list({
-                q: qParts.join(' and '),
-                fields: 'files(id, name, mimeType, modifiedTime)',
-                orderBy: 'modifiedTime desc',
-            });
-            let files: DriveFolder[] = (response.result.files || []).map((file: GoogleDriveFileResource) => ({
-                id: file.id,
-                name: file.name,
-                mimeType: file.mimeType,
-                modifiedTime: file.modifiedTime,
-            }));
 
-            if (contentTerm && files.length) {
-                const term = contentTerm.toLowerCase();
-                const filtered: DriveFolder[] = [];
-                const queue = [...files];
-                const workerCount = Math.min(DRIVE_CONTENT_FETCH_CONCURRENCY, queue.length) || 1;
-                const workers = Array.from({ length: workerCount }, () => (async () => {
-                    while (queue.length) {
-                        const nextFile = queue.shift();
-                        if (!nextFile) {
-                            return;
-                        }
-                        try {
-                            const fileResponse = await window.gapi.client.drive.files.get({
-                                fileId: nextFile.id,
-                                alt: 'media',
-                            });
-                            const body = fileResponse?.body;
-                            const content = typeof body === 'string' ? body : body ? JSON.stringify(body) : '';
-                            if (content && content.toLowerCase().includes(term)) {
-                                filtered.push(nextFile);
-                            }
-                        } catch (error) {
-                            console.warn('No se pudo analizar el archivo para la búsqueda de contenido:', nextFile.name, error);
-                        }
-                    }
-                })());
-                await Promise.all(workers);
-                files = filtered;
-            }
 
-            setDriveFolders([]);
-            setDriveJsonFiles(files);
-            setFolderPath([{ id: 'search', name: 'Resultados de búsqueda' }]);
-            driveCacheRef.current.set(cacheKey, { folders: [], files, timestamp: Date.now() });
-            showToast(`Se encontraron ${files.length} archivo(s).`);
-        } catch (error) {
-            console.error('Error al buscar en Drive:', error);
-            showToast(buildDriveContextErrorMessage('No se pudo completar la búsqueda en Drive', error, 'Error durante la búsqueda.'), 'error');
-        } finally {
-            setIsDriveLoading(false);
-        }
-    }, [driveContentTerm, driveDateFrom, driveDateTo, driveSearchTerm, showToast]);
-
-    const clearDriveSearch = useCallback(() => {
-        setDriveSearchTerm('');
-        setDriveDateFrom('');
-        setDriveDateTo('');
-        setDriveContentTerm('');
-        setFolderPath([{ id: 'root', name: 'Mi unidad' }]);
-        fetchFolderContents('root');
-    }, [fetchFolderContents]);
-
-    const addRecentFile = useCallback((file: DriveFolder) => {
-        setRecentFiles(prev => {
-            const filtered = prev.filter(entry => entry.id !== file.id);
-            const updated: RecentDriveFile[] = [
-                { id: file.id, name: file.name, openedAt: Date.now() },
-                ...filtered,
-            ].slice(0, MAX_RECENT_FILES);
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem(LOCAL_STORAGE_KEYS.recent, JSON.stringify(updated));
-            }
-            return updated;
-        });
-    }, []);
 
     const formatDriveDate = useCallback((value?: string) => {
         if (!value) return 'Sin fecha';
         try {
             return new Date(value).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' });
-        } catch (error) {
+        } catch (_) {
             return value;
         }
     }, []);
@@ -380,11 +247,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         }
     }, [fetchDriveFolders, folderPath, newFolderName, showToast]);
 
-    const handleSetDefaultFolder = useCallback(() => {
-        localStorage.setItem('defaultDriveFolderId', selectedFolderId);
-        localStorage.setItem('defaultDriveFolderPath', JSON.stringify(folderPath));
-        showToast(`'${folderPath[folderPath.length - 1].name}' guardada como predeterminada.`);
-    }, [folderPath, selectedFolderId, showToast]);
+
 
     const openJsonFileFromDrive = useCallback(async (file: DriveFolder): Promise<ClinicalRecord | null> => {
         setIsDriveLoading(true);
@@ -498,6 +361,10 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
     }), [
         addRecentFile,
         clearDriveSearch,
+        setDriveContentTerm,
+        setDriveDateFrom,
+        setDriveDateTo,
+        setDriveSearchTerm,
         driveContentTerm,
         driveDateFrom,
         driveDateTo,
@@ -523,6 +390,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         saveFormat,
         selectedFolderId,
         saveToDrive,
+        openJsonFileFromDrive,
     ]);
 
     return <DriveContext.Provider value={value}>{children}</DriveContext.Provider>;

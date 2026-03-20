@@ -7,7 +7,7 @@ export const DRIVE_CONTENT_FETCH_CONCURRENCY = 4;
 
 export const DEFAULT_GOOGLE_CLIENT_ID = '962184902543-f8jujg3re8sa6522en75soum5n4dajcj.apps.googleusercontent.com';
 
-export const LOCAL_STORAGE_KEYS = {
+export const LOCAL_STORAGE_KEYS = Object.freeze({
     draft: 'hhr-local-draft',
     history: 'hhr-version-history',
     favorites: 'hhr-drive-favorites',
@@ -17,4 +17,15 @@ export const LOCAL_STORAGE_KEYS = {
     geminiApiKey: 'geminiApiKey',
     geminiProjectId: 'geminiProjectId',
     geminiModel: 'geminiModel',
-};
+} as const);
+
+/** Canonical patient field IDs — prevent typos and enable IDE autocomplete */
+export const FIELD_IDS = Object.freeze({
+    nombre: 'nombre',
+    rut: 'rut',
+    edad: 'edad',
+    fecnac: 'fecnac',
+    fing: 'fing',
+    finf: 'finf',
+    hinf: 'hinf',
+} as const);

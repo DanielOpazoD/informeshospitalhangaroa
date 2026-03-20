@@ -1,6 +1,7 @@
 
 import type { PatientField, ClinicalSectionData, Template } from './types';
 import { buildInstitutionTitle } from './institutionConfig';
+import { FIELD_IDS } from './appConstants';
 
 /** Generates a short unique ID for stable React keys in dynamic lists */
 export const generateSectionId = (): string =>
@@ -17,13 +18,13 @@ export const TEMPLATES: Record<string, Template> = Object.freeze({
 });
 
 export const DEFAULT_PATIENT_FIELDS: PatientField[] = [
-    { id: 'nombre', label: 'Nombre', value: '', type: 'text', placeholder: 'Nombre Apellido' },
-    { id: 'rut', label: 'Rut', value: '', type: 'text' },
-    { id: 'edad', label: 'Edad', value: '', type: 'text', placeholder: 'años', readonly: true },
-    { id: 'fecnac', label: 'Fecha de nacimiento', value: '', type: 'date' },
-    { id: 'fing', label: 'Fecha de ingreso', value: '', type: 'date' },
-    { id: 'finf', label: 'Fecha del informe', value: '', type: 'date' },
-    { id: 'hinf', label: 'Hora del informe', value: '', type: 'time' },
+    { id: FIELD_IDS.nombre, label: 'Nombre', value: '', type: 'text', placeholder: 'Nombre Apellido' },
+    { id: FIELD_IDS.rut, label: 'Rut', value: '', type: 'text' },
+    { id: FIELD_IDS.edad, label: 'Edad', value: '', type: 'text', placeholder: 'años', readonly: true },
+    { id: FIELD_IDS.fecnac, label: 'Fecha de nacimiento', value: '', type: 'date' },
+    { id: FIELD_IDS.fing, label: 'Fecha de ingreso', value: '', type: 'date' },
+    { id: FIELD_IDS.finf, label: 'Fecha del informe', value: '', type: 'date' },
+    { id: FIELD_IDS.hinf, label: 'Hora del informe', value: '', type: 'time' },
 ];
 
 export const DEFAULT_SECTIONS: ClinicalSectionData[] = [
@@ -38,7 +39,7 @@ export const getDefaultPatientFieldsByTemplate = (templateId: string): PatientFi
     const fields = structuredClone(DEFAULT_PATIENT_FIELDS);
     if (templateId === '3' || templateId === '4') {
         return fields.map(field =>
-            field.id === 'finf'
+            field.id === FIELD_IDS.finf
                 ? { ...field, label: 'Fecha de alta' }
                 : field
         );

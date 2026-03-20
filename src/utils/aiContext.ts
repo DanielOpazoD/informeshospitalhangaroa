@@ -1,5 +1,6 @@
 import type { ClinicalRecord, ClinicalSectionData, PatientField } from '../types';
 import { htmlToPlainText } from './textUtils';
+import { FIELD_IDS } from '../appConstants';
 
 interface AiSectionItem {
     id: string;
@@ -69,7 +70,7 @@ export const mapSectionsForAi = (sections: ClinicalSectionData[]): AiSectionItem
     }));
 
 export const buildAiConversationKey = (record: ClinicalRecord): string => {
-    const nameField = record.patientFields.find(field => fieldMatchers(field).byId('nombre') || fieldMatchers(field).byLabel('nombre'));
+    const nameField = record.patientFields.find(field => fieldMatchers(field).byId(FIELD_IDS.nombre) || fieldMatchers(field).byLabel('nombre'));
     const rutField = record.patientFields.find(
         field =>
             fieldMatchers(field).byId('rut') ||

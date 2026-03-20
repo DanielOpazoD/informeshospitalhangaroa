@@ -1,6 +1,7 @@
 import React from 'react';
 import type { VersionHistoryEntry } from '../../types';
 import { TEMPLATES } from '../../constants';
+import { FIELD_IDS } from '../../appConstants';
 
 interface HistoryModalProps {
     isOpen: boolean;
@@ -26,7 +27,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, history, onClose, o
                 ) : (
                     <div className="history-list">
                         {history.map(entry => {
-                            const patientName = entry.record.patientFields.find(f => f.id === 'nombre')?.value || 'Sin nombre';
+                            const patientName = entry.record.patientFields.find(f => f.id === FIELD_IDS.nombre)?.value || 'Sin nombre';
                             const templateName = TEMPLATES[entry.record.templateId]?.name || 'Plantilla desconocida';
                             const timestampLabel = new Date(entry.timestamp).toLocaleString('es-CL', {
                                 dateStyle: 'short',
