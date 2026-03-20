@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">90% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/10</span>
+                <span class='fraction'>9/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/8</span>
+                <span class='fraction'>4/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/4</span>
+                <span class='fraction'>4/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/8</span>
+                <span class='fraction'>8/8</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -138,12 +138,10 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -155,13 +153,15 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -169,7 +169,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -201,10 +201,10 @@ interface HistoryModalProps {
     onRestore: (entry: VersionHistoryEntry) =&gt; void;
 }
 &nbsp;
-const HistoryModal: React.FC&lt;HistoryModalProps&gt; = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >({</span> isOpen, history, onClose, onRestore }) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    if (!isOpen) <span class="cstat-no" title="statement not covered" >return null;</span></span>
+const HistoryModal: React.FC&lt;HistoryModalProps&gt; = ({ isOpen, history, onClose, onRestore }) =&gt; {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!isOpen) <span class="cstat-no" title="statement not covered" >return null;</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    return (</span>
+    return (
         &lt;div className="modal-overlay"&gt;
             &lt;div className="modal-content"&gt;
                 &lt;div className="modal-header"&gt;
@@ -212,19 +212,19 @@ const HistoryModal: React.FC&lt;HistoryModalProps&gt; = <span class="cstat-no" t
                     &lt;button onClick={onClose} className="modal-close"&gt;&amp;times;&lt;/button&gt;
                 &lt;/div&gt;
                 {history.length === 0 ? (
-                    &lt;div style={{ padding: '16px', fontSize: '13px', color: '#4b5563' }}&gt;
+<span class="branch-0 cbranch-no" title="branch not covered" >                    &lt;div style={{ padding: '16px', fontSize: '13px', color: '#4b5563' }}&gt;</span>
                         Aún no hay versiones guardadas. El autoguardado generará versiones automáticamente.
                     &lt;/div&gt;
                 ) : (
                     &lt;div className="history-list"&gt;
-                        {history.map(<span class="fstat-no" title="function not covered" >entry =&gt; {</span>
-                            const patientName = <span class="cstat-no" title="statement not covered" >entry.record.patientFields.find(<span class="fstat-no" title="function not covered" >f =&gt; <span class="cstat-no" title="statement not covered" >f</span>.id === FIELD_IDS.nombre)</span>?.value || 'Sin nombre';</span>
-                            const templateName = <span class="cstat-no" title="statement not covered" >TEMPLATES[entry.record.templateId]?.name || 'Plantilla desconocida';</span>
-                            const timestampLabel = <span class="cstat-no" title="statement not covered" >new Date(entry.timestamp).toLocaleString('es-CL', {</span>
+                        {history.map(entry =&gt; {
+                            const patientName = entry.record.patientFields.find(f =&gt; f.id === FIELD_IDS.nombre)?.value || <span class="branch-1 cbranch-no" title="branch not covered" >'Sin nombre';</span>
+                            const templateName = TEMPLATES[entry.record.templateId]?.name || <span class="branch-1 cbranch-no" title="branch not covered" >'Plantilla desconocida';</span>
+                            const timestampLabel = new Date(entry.timestamp).toLocaleString('es-CL', {
                                 dateStyle: 'short',
                                 timeStyle: 'short',
                             });
-<span class="cstat-no" title="statement not covered" >                            return (</span>
+                            return (
                                 &lt;div key={entry.id} className="history-item"&gt;
                                     &lt;div className="history-item-info"&gt;
                                         &lt;div className="history-item-title"&gt;{patientName}&lt;/div&gt;
@@ -232,7 +232,7 @@ const HistoryModal: React.FC&lt;HistoryModalProps&gt; = <span class="cstat-no" t
                                         &lt;div className="history-item-meta"&gt;Guardado: {timestampLabel}&lt;/div&gt;
                                     &lt;/div&gt;
                                     &lt;div className="history-item-actions"&gt;
-                                        &lt;button className="btn" onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >o</span>nRestore(entry)}&gt;</span>
+                                        &lt;button className="btn" onClick={() =&gt; onRestore(entry)}&gt;
                                             Restaurar
                                         &lt;/button&gt;
                                     &lt;/div&gt;
@@ -259,7 +259,7 @@ export default HistoryModal;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-20T02:50:46.776Z
+                at 2026-03-20T03:29:15.269Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

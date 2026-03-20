@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/7</span>
+                <span class='fraction'>7/7</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">84.21% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/19</span>
+                <span class='fraction'>16/19</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/6</span>
+                <span class='fraction'>6/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/7</span>
+                <span class='fraction'>7/7</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -262,7 +262,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -294,7 +294,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -325,8 +325,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -342,7 +342,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -361,8 +361,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -419,7 +419,7 @@ interface AppWorkspaceProps {
     aiAssistant: React.ReactNode;
 }
 &nbsp;
-const AppWorkspace: React.FC&lt;AppWorkspaceProps&gt; = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >({</span></span>
+const AppWorkspace: React.FC&lt;AppWorkspaceProps&gt; = ({
     record,
     setRecord,
     auth,
@@ -451,7 +451,7 @@ const AppWorkspace: React.FC&lt;AppWorkspaceProps&gt; = <span class="cstat-no" t
     sheetZoom,
     aiAssistant,
 }) =&gt; (
-<span class="cstat-no" title="statement not covered" >    &lt;div className="wrap"&gt;</span>
+    &lt;div className="wrap"&gt;
         &lt;Header
             templateId={templateId}
             onTemplateChange={onTemplateChange}
@@ -469,7 +469,7 @@ const AppWorkspace: React.FC&lt;AppWorkspaceProps&gt; = <span class="cstat-no" t
             &lt;div className="sheet-shell"&gt;
                 &lt;div
                     id="sheet"
-                    className={`sheet ${isEditing ? 'edit-mode' : ''}`}
+                    className={`sheet ${isEditing ? 'edit-mode' : <span class="branch-1 cbranch-no" title="branch not covered" >''}</span>`}
                     style={{ '--sheet-zoom': sheetZoom } as React.CSSProperties}
                 &gt;
                     {logoUrls.left &amp;&amp; (
@@ -482,15 +482,15 @@ const AppWorkspace: React.FC&lt;AppWorkspaceProps&gt; = <span class="cstat-no" t
                         className="title"
                         contentEditable={record.templateId === '5' || (isEditing &amp;&amp; activeEditTarget?.type === 'record-title')}
                         suppressContentEditableWarning
-                        onDoubleClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >a</span>ctivateEditTarget({ type: 'record-title' })}</span>
-                        onBlur={<span class="fstat-no" title="function not covered" >e =&gt; <span class="cstat-no" title="statement not covered" >s</span>etRecord({ ...record, title: e.currentTarget.innerText })}</span>
+                        onDoubleClick={() =&gt; activateEditTarget({ type: 'record-title' })}
+                        onBlur={e =&gt; setRecord({ ...record, title: e.currentTarget.innerText })}
                     &gt;
                         {record.title}
                     &lt;/div&gt;
                     &lt;PatientInfo
                         isEditing={isEditing}
                         isGlobalStructureEditing={isGlobalStructureEditing}
-                        activeEditTarget={(activeEditTarget?.type === 'patient-section-title' || activeEditTarget?.type === 'patient-field-label') ? activeEditTarget : null}
+                        activeEditTarget={(activeEditTarget?.type === 'patient-section-title' || activeEditTarget?.type === 'patient-field-label') ? <span class="branch-0 cbranch-no" title="branch not covered" >activeEditTarget : n</span>ull}
                         onActivateEdit={handleActivatePatientEdit}
                         patientFields={record.patientFields}
                         onPatientFieldChange={handlePatientFieldChange}
@@ -498,8 +498,8 @@ const AppWorkspace: React.FC&lt;AppWorkspaceProps&gt; = <span class="cstat-no" t
                         onRemovePatientField={handleRemovePatientField}
                     /&gt;
                     &lt;div id="sectionsContainer"&gt;
-                        {record.sections.map(<span class="fstat-no" title="function not covered" >(s</span>ection, index) =&gt; (
-<span class="cstat-no" title="statement not covered" >                            &lt;ClinicalSection</span>
+                        {record.sections.map((section, index) =&gt; (
+                            &lt;ClinicalSection
                                 key={section.id}
                                 section={section}
                                 index={index}
@@ -518,12 +518,12 @@ const AppWorkspace: React.FC&lt;AppWorkspaceProps&gt; = <span class="cstat-no" t
                     &lt;Footer
                         medico={record.medico}
                         especialidad={record.especialidad}
-                        onMedicoChange={<span class="fstat-no" title="function not covered" >value =&gt; <span class="cstat-no" title="statement not covered" >s</span>etRecord({ ...record, medico: value })}</span>
-                        onEspecialidadChange={<span class="fstat-no" title="function not covered" >value =&gt; <span class="cstat-no" title="statement not covered" >s</span>etRecord({ ...record, especialidad: value })}</span>
+                        onMedicoChange={value =&gt; setRecord({ ...record, medico: value })}
+                        onEspecialidadChange={value =&gt; setRecord({ ...record, especialidad: value })}
                     /&gt;
                 &lt;/div&gt;
             &lt;/div&gt;
-            &lt;div id="editPanel" className={`edit-panel ${isGlobalStructureEditing ? 'visible' : 'hidden'}`}&gt;
+            &lt;div id="editPanel" className={`edit-panel ${isGlobalStructureEditing ? 'visible' : <span class="branch-1 cbranch-no" title="branch not covered" >'hidden'}</span>`}&gt;
                 &lt;div&gt;Edición&lt;/div&gt;
                 &lt;button onClick={onAddPatientField} className="btn" type="button"&gt;Agregar campo&lt;/button&gt;
                 &lt;button onClick={onAddSection} className="btn" type="button"&gt;Agregar nueva sección&lt;/button&gt;
@@ -541,7 +541,7 @@ export default AppWorkspace;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-20T02:50:46.776Z
+                at 2026-03-20T03:29:15.269Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>
