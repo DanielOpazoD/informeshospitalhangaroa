@@ -28,6 +28,7 @@ El estado de la "Ficha Clínica Actual" (el paciente que se está editando) resi
 2. **Gateway tipado:** `infrastructure/drive/driveGateway.ts` encapsula `window.gapi` y devuelve `Result` explícito.
 3. **UI de Drive:** `useDriveModals` coordina modales/Picker y `useDriveSearch` resuelve búsqueda, caché, progreso y cancelación.
    La búsqueda ahora distingue entre modo rápido por metadata y búsqueda profunda por contenido con presupuesto/cancelación.
+   `DriveContext` expone además un `driveSearchJob` explícito para no inferir estados largos desde flags dispersos.
 4. **Persistencia local:** `storageAdapter.ts`, `settingsStorage.ts` y `driveFolderStorage.ts` concentran lectura/escritura en navegador.
    Las API keys sensibles se mantienen en sesión; la configuración estable sigue persistiendo localmente.
 
@@ -66,6 +67,7 @@ Se usa `react-router-dom` para separar vistas pesadas:
 - `infrastructure/hhr/hhrGateway.ts` envuelve login, logout y persistencia clínica HHR con resultados tipados.
 - `infrastructure/shared/resilience.ts` centraliza timeouts y retries para Drive, Auth y HHR.
 - Los gateways enriquecen `AppError` con `operation`, `transient`, `httpStatus?` y `details?` para que la UI no infiera contexto desde strings ambiguos.
+- `AppResult<T>` distingue ahora operaciones completas, parciales o canceladas cuando la integración puede devolver trabajo útil pero incompleto.
 
 ## 9. Historial Local Inteligente
 - Cada entrada local puede incluir `commandType`, `commandCategory`, `changed`, `summary` y `groupKey`.
@@ -73,6 +75,7 @@ Se usa `react-router-dom` para separar vistas pesadas:
 - Cambios consecutivos compatibles dentro de una ventana de 2 minutos se agrupan en una sola entrada.
 - `useClinicalRecord` mantiene `past/present/future` como fuente de verdad y expone `undo`, `redo`, `canUndo` y `canRedo` a `RecordContext`.
 - Restaurar desde historial, deshacer y rehacer usan el mismo pipeline clínico oficial antes de persistir draft e historial.
+- La UI del editor muestra siempre `Deshacer` y `Rehacer`, con disabled state derivado del stack real.
 
 ## 10. Flujo Resumido
 ```mermaid
@@ -101,3 +104,4 @@ flowchart LR
 - Guardado HHR fallido: inspeccionar `error.operation`, `error.transient` y `error.details`; solo errores transient deberían reintentarse.
 - Drive parcial: la búsqueda profunda puede devolver `partial = true` por cancelación, límite de archivos o presupuesto de tiempo.
 - Google Auth: si falla `fetch_profile`, el gateway intenta perfil remoto con retry y luego fallback al `id_token` antes de devolver error.
+- Los jobs largos visibles hoy son `driveSearchJob`, `profileJob` y `saveJob`; cada uno concentra mensaje y estado en lugar de múltiples flags ad hoc.

@@ -65,6 +65,7 @@ npm run check:bundle
 El editor principal además usa un workflow central (`idle`, `dirty`, `saving`, `restoring`, `importing`, `searching_drive`, `syncing_hhr`, `error`) para mantener coherentes autoguardado, restauración e integraciones remotas.
 Las operaciones críticas ahora pasan además por comandos clínicos explícitos y casos de uso de editor, que devuelven `effects` declarativos para separar decisión de negocio y reacciones de UI.
 El header expone `Deshacer` / `Rehacer` sobre snapshots persistidos, reutilizando exactamente el mismo pipeline clínico que la restauración desde historial.
+Las integraciones largas ya no dependen solo de booleanos sueltos: Drive, Google Auth y HHR exponen jobs operativos con estado y mensaje (`driveSearchJob`, `profileJob`, `saveJob`).
 
 ### Personaliza el nombre y los logos de la institución
 
@@ -136,7 +137,8 @@ Opcionalmente, ajusta el límite global con `MAX_MAIN_CHUNK_KB` (por defecto: `8
 - Importación inválida: si un JSON no supera parseo, migración o sanitización, el editor conserva el documento actual y muestra error sin romper la sesión.
 - Drive parcial: la búsqueda profunda puede responder con `partial = true` cuando se cancela, supera el presupuesto de tiempo o alcanza el límite de archivos inspeccionados.
 - Guardado HHR fallido: la UI consume `AppError` enriquecido con `operation`, `transient`, `httpStatus?` y `details?`; reintentar manualmente solo tiene sentido cuando `transient = true`.
-- Google Auth: el perfil intenta primero la API remota con timeout/retry; si eso falla y existe `id_token`, se completa el perfil localmente.
+- Google Auth: el perfil intenta primero la API remota con timeout/retry; si eso falla y existe `id_token`, se completa el perfil localmente y el resultado queda marcado como parcial.
+- `AppResult<T>` ya puede distinguir `complete`, `partial`, `cancelled`, `timeout` y `error`, lo que evita inferir estado operativo desde mensajes libres.
 
 ## Flujo de edición resumido
 

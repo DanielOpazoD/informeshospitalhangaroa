@@ -15,6 +15,7 @@ const isRetryableAuthError = (error: unknown): boolean => {
 
 const toAuthError = (error: unknown, fallbackMessage: string, operation: string, code: string): AppResult<never> => ({
     ok: false,
+    status: error instanceof Error && error.message.toLowerCase().includes('tiempo de espera') ? 'timeout' : 'error',
     error: {
         source: 'auth',
         code,
@@ -88,6 +89,7 @@ export const createGoogleAuthGateway = (): GoogleAuthGateway => ({
             const fallback = decodeIdToken(idToken);
             return {
                 ok: true,
+                status: 'complete',
                 data: {
                     name: profile?.name || fallback.name || '',
                     email: profile?.email || fallback.email || '',
@@ -99,6 +101,7 @@ export const createGoogleAuthGateway = (): GoogleAuthGateway => ({
             if (fallback.email || fallback.name || fallback.picture) {
                 return {
                     ok: true,
+                    status: 'partial',
                     data: {
                         name: fallback.name || '',
                         email: fallback.email || '',

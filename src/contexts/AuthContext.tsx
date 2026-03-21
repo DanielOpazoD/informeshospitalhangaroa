@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { GoogleUserProfile, GoogleTokenClient, GoogleTokenResponse, ToastFn } from '../types';
+import type { AsyncJobState, GoogleUserProfile, GoogleTokenClient, GoogleTokenResponse, ToastFn } from '../types';
 import { useGoogleApiBootstrap } from '../hooks/useGoogleApiBootstrap';
 import { createGoogleAuthGateway } from '../infrastructure/auth/googleAuthGateway';
 
@@ -10,6 +10,7 @@ interface AuthContextValue {
     isGapiReady: boolean;
     isGisReady: boolean;
     isPickerApiReady: boolean;
+    profileJob: AsyncJobState;
     handleSignIn: () => void;
     handleSignOut: () => void;
     handleChangeUser: () => void;
@@ -34,6 +35,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ clientId, showToast,
     const [isSignedIn, setIsSignedIn] = useState(false);
     const [userProfile, setUserProfile] = useState<GoogleUserProfile | null>(null);
     const [tokenClient, setTokenClient] = useState<GoogleTokenClient | null>(null);
+    const [profileJob, setProfileJob] = useState<AsyncJobState>({
+        operation: 'google_profile',
+        status: 'idle',
+        message: null,
+        updatedAt: null,
+    });
     const googleAuthGateway = useMemo(() => createGoogleAuthGateway(), []);
     const {
         isGapiReady,
@@ -42,12 +49,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ clientId, showToast,
     } = useGoogleApiBootstrap(showToast);
 
     const fetchUserProfile = useCallback(async (accessToken: string, idToken?: string) => {
+        setProfileJob({
+            operation: 'google_profile',
+            status: 'running',
+            message: 'Cargando perfil de Google…',
+            updatedAt: Date.now(),
+        });
         const profileResult = await googleAuthGateway.fetchUserProfile(accessToken, idToken);
         if (profileResult.ok) {
             setUserProfile(profileResult.data);
+            setProfileJob({
+                operation: 'google_profile',
+                status: profileResult.status === 'partial' ? 'partial' : 'success',
+                message: profileResult.warnings?.[0] || 'Perfil de Google cargado.',
+                updatedAt: Date.now(),
+            });
             return;
         }
         console.error('Error fetching user profile:', profileResult.error.message);
+        setProfileJob({
+            operation: 'google_profile',
+            status: profileResult.status === 'timeout' ? 'error' : 'error',
+            message: profileResult.error.message,
+            updatedAt: Date.now(),
+        });
     }, [googleAuthGateway]);
 
     useEffect(() => {
@@ -89,6 +114,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ clientId, showToast,
     const handleSignOut = useCallback(() => {
         setIsSignedIn(false);
         setUserProfile(null);
+        setProfileJob({
+            operation: 'google_profile',
+            status: 'idle',
+            message: null,
+            updatedAt: Date.now(),
+        });
         googleAuthGateway.clearAccessToken();
         googleAuthGateway.revoke(userProfile?.email || '');
     }, [googleAuthGateway, userProfile?.email]);
@@ -101,11 +132,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ clientId, showToast,
             isGapiReady,
             isGisReady,
             isPickerApiReady,
+            profileJob,
             handleSignIn,
             handleSignOut,
             handleChangeUser,
         }),
-        [handleChangeUser, handleSignIn, handleSignOut, isGapiReady, isGisReady, isPickerApiReady, isSignedIn, tokenClient, userProfile],
+        [handleChangeUser, handleSignIn, handleSignOut, isGapiReady, isGisReady, isPickerApiReady, isSignedIn, profileJob, tokenClient, userProfile],
     );
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

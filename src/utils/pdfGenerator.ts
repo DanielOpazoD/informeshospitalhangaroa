@@ -1,4 +1,3 @@
-import jsPDF from 'jspdf';
 import type { ClinicalRecord } from '../types';
 import { TEMPLATES } from '../constants';
 import { formatDateDMY } from './dateUtils';
@@ -9,6 +8,9 @@ interface PdfGeneratorOptions {
 }
 
 export async function generatePdfAsBlob({ record }: PdfGeneratorOptions): Promise<Blob> {
+    const [{ default: jsPDF }] = await Promise.all([
+        import('jspdf'),
+    ]);
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
     const marginX = 16;
     const marginY = 18;

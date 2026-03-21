@@ -123,6 +123,7 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
                 driveSearchWarnings: drive.driveSearchWarnings,
                 isDriveSearchPartial: drive.isDriveSearchPartial,
                 deepSearchStatus: drive.deepSearchStatus,
+                driveSearchJob: drive.driveSearchJob,
                 favoriteFolders: drive.favoriteFolders,
                 recentFiles: drive.recentFiles,
                 formatDriveDate: drive.formatDriveDate,

@@ -21,6 +21,7 @@ const isRetryableHhrError = (error: unknown): boolean => {
 
 const toHhrError = (error: unknown, fallbackMessage: string, operation: string, code: string): AppResult<never> => ({
     ok: false,
+    status: error instanceof Error && error.message.toLowerCase().includes('tiempo de espera') ? 'timeout' : 'error',
     error: {
         source: 'hhr',
         code,
@@ -58,6 +59,7 @@ export const createHhrGateway = (): HhrGateway => ({
         try {
             return {
                 ok: true,
+                status: 'complete',
                 data: await runWithResilience(
                     () => signInToHhrWithGoogle(),
                     {
@@ -95,6 +97,7 @@ export const createHhrGateway = (): HhrGateway => ({
         try {
             return {
                 ok: true,
+                status: 'complete',
                 data: await runWithResilience(
                     () => saveClinicalDocumentToHhr(params),
                     {

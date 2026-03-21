@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { FIELD_IDS } from '../appConstants';
-import type { ClinicalRecord } from '../types';
+import type { AsyncJobState, ClinicalRecord } from '../types';
 import type {
     HhrAuthenticatedUser,
     HhrClinicalSyncState,
@@ -52,6 +52,12 @@ export const useHhrIntegrationController = ({
     const [hhrSyncState, setHhrSyncState] = useState<HhrClinicalSyncState | null>(null);
     const [isSavingToHhr, setIsSavingToHhr] = useState(false);
     const [lastHhrSyncAt, setLastHhrSyncAt] = useState<string | null>(null);
+    const [saveJob, setSaveJob] = useState<AsyncJobState>({
+        operation: 'hhr_save',
+        status: 'idle',
+        message: null,
+        updatedAt: null,
+    });
     const { patients: hhrPatients, isLoading: isHhrCensusLoading, error: hhrCensusError } = useHospitalCensus({
         enabled: hhrConfigured && Boolean(hhrUser),
         dateKey: hhrDateKey,
@@ -94,6 +100,12 @@ export const useHhrIntegrationController = ({
     const clearSyncState = useCallback(() => {
         setHhrSyncState(null);
         setLastHhrSyncAt(null);
+        setSaveJob({
+            operation: 'hhr_save',
+            status: 'idle',
+            message: null,
+            updatedAt: Date.now(),
+        });
     }, []);
 
     const handleHhrSignIn = useCallback(() => {
@@ -180,6 +192,12 @@ export const useHhrIntegrationController = ({
         void (async () => {
             try {
                 setIsSavingToHhr(true);
+                setSaveJob({
+                    operation: 'hhr_save',
+                    status: 'running',
+                    message: 'Guardando documento clínico en HHR…',
+                    updatedAt: Date.now(),
+                });
                 syncDecision.workflowActions.forEach(action => dispatchWorkflow?.(action));
                 const result = await hhrGateway.saveClinicalDocument({
                     record,
@@ -189,12 +207,26 @@ export const useHhrIntegrationController = ({
                 });
                 if (!result.ok) {
                     dispatchWorkflow?.({ type: 'SYNC_FAILED', error: result.error.message });
+                    setSaveJob({
+                        operation: 'hhr_save',
+                        status: result.status === 'timeout' ? 'error' : 'error',
+                        message: result.error.message,
+                        updatedAt: Date.now(),
+                    });
                     showToast(result.error.message, 'error');
                     return;
                 }
                 setHhrSyncState(result.data.syncState);
                 setLastHhrSyncAt(result.data.savedAt);
                 dispatchWorkflow?.({ type: 'SYNC_SUCCEEDED' });
+                setSaveJob({
+                    operation: 'hhr_save',
+                    status: 'success',
+                    message: hhrSyncState
+                        ? 'Documento clínico actualizado en la ficha HHR.'
+                        : 'Documento clínico guardado en la ficha HHR.',
+                    updatedAt: Date.now(),
+                });
                 showToast(
                     hhrSyncState
                         ? 'Documento clínico actualizado en la ficha HHR.'
@@ -247,6 +279,7 @@ export const useHhrIntegrationController = ({
             censusError: hhrCensusError,
             selectedPatient: selectedHhrPatient,
             lastSyncLabel: lastHhrSyncLabel,
+            saveJob,
             onSignIn: handleHhrSignIn,
             onSignOut: handleHhrSignOut,
             onOpenCensusModal: () => setIsHhrCensusModalOpen(true),

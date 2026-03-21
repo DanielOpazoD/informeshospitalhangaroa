@@ -51,6 +51,7 @@ const toAppError = (
     retryable = true,
 ): AppResult<never> => ({
     ok: false,
+    status: error instanceof Error && error.message.toLowerCase().includes('tiempo de espera') ? 'timeout' : 'error',
     error: {
         source,
         code,
@@ -151,6 +152,7 @@ export const createDriveGateway = (): DriveGateway => {
             try {
                 return {
                     ok: true,
+                    status: 'complete',
                     data: await runWithResilience(
                         () => legacyGateway.listFolders(folderId),
                         {
@@ -170,6 +172,7 @@ export const createDriveGateway = (): DriveGateway => {
             try {
                 return {
                     ok: true,
+                    status: 'complete',
                     data: await runWithResilience(
                         () => legacyGateway.listFolderContents(folderId),
                         {
@@ -189,6 +192,7 @@ export const createDriveGateway = (): DriveGateway => {
             try {
                 return {
                     ok: true,
+                    status: 'complete',
                     data: await runWithResilience(
                         () => legacyGateway.getJsonRecord(fileId),
                         {
@@ -216,7 +220,7 @@ export const createDriveGateway = (): DriveGateway => {
                         onEvent: logGatewayEvent('create_folder'),
                     },
                 );
-                return { ok: true, data: undefined };
+                return { ok: true, status: 'complete', data: undefined };
             } catch (error) {
                 return toAppError('drive', error, 'No se pudo crear la carpeta.', 'create_folder', 'create_folder', isRetryableDriveError(error));
             }
@@ -225,6 +229,7 @@ export const createDriveGateway = (): DriveGateway => {
             try {
                 return {
                     ok: true,
+                    status: 'complete',
                     data: await runWithResilience(
                         () => legacyGateway.uploadFile(params),
                         {
@@ -269,6 +274,11 @@ export const createDriveGateway = (): DriveGateway => {
                     ok: true,
                     data: result,
                     warnings: result.warnings,
+                    status: result.partial
+                        ? result.warnings.some(warning => warning.toLowerCase().includes('cancelada'))
+                            ? 'cancelled'
+                            : 'partial'
+                        : 'complete',
                 };
             } catch (error) {
                 return toAppError('drive', error, 'No se pudo completar la búsqueda en Drive.', 'search', 'search', isRetryableDriveError(error));

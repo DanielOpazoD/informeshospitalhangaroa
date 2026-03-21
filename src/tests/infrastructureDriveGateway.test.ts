@@ -56,6 +56,8 @@ describe('infrastructure drive gateway', () => {
         if (!result.ok) {
             expect(result.error.source).toBe('drive');
             expect(result.error.code).toBe('list_folders');
+            expect(result.error.operation).toBe('list_folders');
+            expect(result.error.transient).toBe(true);
         }
     });
 
@@ -70,5 +72,28 @@ describe('infrastructure drive gateway', () => {
 
         expect(legacyGateway.listFolders).toHaveBeenCalledTimes(2);
         expect(result.ok).toBe(true);
+    });
+
+    it('marca búsquedas canceladas como resultado cancelado', async () => {
+        const { createDriveGateway } = await import('../infrastructure/drive/driveGateway');
+        legacyGateway.searchJsonFiles.mockResolvedValue([
+            { id: 'file-1', name: 'uno.json' },
+        ]);
+
+        const gateway = createDriveGateway();
+        const result = await gateway.search({
+            searchTerm: 'Paciente',
+            dateFrom: '',
+            dateTo: '',
+            contentTerm: 'diagnostico',
+        }, 'deepContent', {
+            cancelToken: { cancelled: true },
+        });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.status).toBe('cancelled');
+            expect(result.data.partial).toBe(true);
+        }
     });
 });

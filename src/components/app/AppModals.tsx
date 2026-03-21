@@ -1,5 +1,5 @@
 import React from 'react';
-import type { DriveFolder, DriveSearchMode, FavoriteFolderEntry, RecentDriveFile, VersionHistoryEntry } from '../../types';
+import type { AsyncJobState, DriveFolder, DriveSearchMode, FavoriteFolderEntry, RecentDriveFile, VersionHistoryEntry } from '../../types';
 import type { ToastState } from '../../hooks/useToast';
 import SettingsModal from '../modals/SettingsModal';
 import OpenFromDriveModal from '../modals/OpenFromDriveModal';
@@ -41,6 +41,7 @@ interface AppModalsProps {
         driveSearchWarnings: string[];
         isDriveSearchPartial: boolean;
         deepSearchStatus: string;
+        driveSearchJob: AsyncJobState;
         favoriteFolders: FavoriteFolderEntry[];
         recentFiles: RecentDriveFile[];
         formatDriveDate: (value?: string) => string;
@@ -140,6 +141,7 @@ const AppModals: React.FC<AppModalsProps> = ({
             driveSearchWarnings={openModal.driveSearchWarnings}
             isDriveSearchPartial={openModal.isDriveSearchPartial}
             deepSearchStatus={openModal.deepSearchStatus}
+            driveSearchJob={openModal.driveSearchJob}
             favoriteFolders={openModal.favoriteFolders}
             recentFiles={openModal.recentFiles}
             formatDriveDate={openModal.formatDriveDate}

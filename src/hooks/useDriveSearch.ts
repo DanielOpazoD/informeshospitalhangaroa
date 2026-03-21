@@ -6,7 +6,7 @@ import {
     type MutableRefObject,
     type SetStateAction,
 } from 'react';
-import type { AppResult, DriveFolder, DriveSearchMode, DriveSearchResult, ToastFn } from '../types';
+import type { AppResult, AsyncJobState, DriveFolder, DriveSearchMode, DriveSearchResult, ToastFn } from '../types';
 import { SEARCH_CACHE_TTL } from '../appConstants';
 import {
     DRIVE_CONTENT_FETCH_CONCURRENCY,
@@ -67,6 +67,12 @@ export function useDriveSearch({
     const [driveSearchWarnings, setDriveSearchWarnings] = useState<string[]>([]);
     const [isDriveSearchPartial, setIsDriveSearchPartial] = useState(false);
     const [deepSearchStatus, setDeepSearchStatus] = useState('');
+    const [driveSearchJob, setDriveSearchJob] = useState<AsyncJobState>({
+        operation: 'drive_deep_search',
+        status: 'idle',
+        message: null,
+        updatedAt: null,
+    });
     const activeDeepSearchRef = useRef<{ cancelled: boolean } | null>(null);
 
     const applySearchResult = useCallback((result: DriveSearchResult) => {
@@ -113,7 +119,14 @@ export function useDriveSearch({
         }
 
         const workerCount = Math.min(DRIVE_CONTENT_FETCH_CONCURRENCY, queue.length) || 1;
-        setDeepSearchStatus(`Analizando 0 de ${candidates.length} archivos...`);
+        const initialMessage = `Analizando 0 de ${candidates.length} archivos...`;
+        setDeepSearchStatus(initialMessage);
+        setDriveSearchJob({
+            operation: 'drive_deep_search',
+            status: 'running',
+            message: initialMessage,
+            updatedAt: Date.now(),
+        });
 
         const workers = Array.from({ length: workerCount }, () => (async () => {
             while (queue.length) {
@@ -144,7 +157,14 @@ export function useDriveSearch({
                     console.warn('No se pudo analizar el archivo para la búsqueda de contenido:', nextFile.name, error);
                 } finally {
                     processed += 1;
-                    setDeepSearchStatus(`Analizando ${processed} de ${candidates.length} archivos...`);
+                    const message = `Analizando ${processed} de ${candidates.length} archivos...`;
+                    setDeepSearchStatus(message);
+                    setDriveSearchJob({
+                        operation: 'drive_deep_search',
+                        status: 'running',
+                        message,
+                        updatedAt: Date.now(),
+                    });
                 }
             }
         })());
@@ -168,6 +188,12 @@ export function useDriveSearch({
         setDeepSearchStatus('');
         setDriveSearchWarnings([]);
         setIsDriveSearchPartial(false);
+        setDriveSearchJob({
+            operation: 'drive_deep_search',
+            status: driveSearchMode === 'deepContent' ? 'running' : 'idle',
+            message: driveSearchMode === 'deepContent' ? 'Preparando búsqueda profunda…' : null,
+            updatedAt: Date.now(),
+        });
         try {
             const searchTerm = driveSearchTerm.trim();
             const contentTerm = driveContentTerm.trim();
@@ -194,9 +220,27 @@ export function useDriveSearch({
                     onProgress: setDeepSearchStatus,
                 });
                 if (!searchResult.ok) {
-                    throw new Error(searchResult.error.message);
+                    throw Object.assign(new Error(searchResult.error.message), { appResultStatus: searchResult.status });
                 }
                 result = searchResult.data;
+                setDriveSearchJob({
+                    operation: 'drive_deep_search',
+                    status: searchResult.status === 'cancelled'
+                        ? 'cancelled'
+                        : searchResult.status === 'partial'
+                            ? 'partial'
+                            : driveSearchMode === 'deepContent'
+                                ? 'success'
+                                : 'idle',
+                    message: searchResult.status === 'cancelled'
+                        ? 'Búsqueda cancelada por el usuario.'
+                        : searchResult.status === 'partial'
+                            ? 'Búsqueda profunda completada con resultados parciales.'
+                            : driveSearchMode === 'deepContent'
+                                ? 'Búsqueda profunda completada.'
+                                : null,
+                    updatedAt: Date.now(),
+                });
             } else {
                 const metadataFiles = await runLegacyMetadataSearch();
                 result = driveSearchMode === 'deepContent'
@@ -206,6 +250,22 @@ export function useDriveSearch({
                         partial: false,
                         warnings: contentTerm ? ['El término de contenido solo se usa en la búsqueda profunda.'] : [],
                     };
+                setDriveSearchJob({
+                    operation: 'drive_deep_search',
+                    status: result.partial
+                        ? result.warnings.some(warning => warning.toLowerCase().includes('cancelada'))
+                            ? 'cancelled'
+                            : 'partial'
+                        : driveSearchMode === 'deepContent'
+                            ? 'success'
+                            : 'idle',
+                    message: result.partial
+                        ? 'Búsqueda profunda finalizada con resultados parciales.'
+                        : driveSearchMode === 'deepContent'
+                            ? 'Búsqueda profunda completada.'
+                            : null,
+                    updatedAt: Date.now(),
+                });
             }
 
             applySearchResult(result);
@@ -215,6 +275,13 @@ export function useDriveSearch({
             showToast(`Se encontraron ${result.files.length} archivo(s).${result.partial ? ' Resultado parcial.' : ''}`);
         } catch (error) {
             console.error('Error al buscar en Drive:', error);
+            const status = (error as { appResultStatus?: string })?.appResultStatus;
+            setDriveSearchJob({
+                operation: 'drive_deep_search',
+                status: status === 'cancelled' ? 'cancelled' : status === 'partial' ? 'partial' : 'error',
+                message: buildDriveContextErrorMessage('No se pudo completar la búsqueda en Drive', error, 'Error durante la búsqueda.'),
+                updatedAt: Date.now(),
+            });
             showToast(buildDriveContextErrorMessage('No se pudo completar la búsqueda en Drive', error, 'Error durante la búsqueda.'), 'error');
         } finally {
             activeDeepSearchRef.current = null;
@@ -226,6 +293,12 @@ export function useDriveSearch({
     const cancelDriveSearch = useCallback(() => {
         if (activeDeepSearchRef.current) {
             activeDeepSearchRef.current.cancelled = true;
+            setDriveSearchJob({
+                operation: 'drive_deep_search',
+                status: 'cancelled',
+                message: 'Cancelando búsqueda profunda…',
+                updatedAt: Date.now(),
+            });
         }
     }, []);
 
@@ -237,6 +310,12 @@ export function useDriveSearch({
         setDriveSearchWarnings([]);
         setIsDriveSearchPartial(false);
         setDeepSearchStatus('');
+        setDriveSearchJob({
+            operation: 'drive_deep_search',
+            status: 'idle',
+            message: null,
+            updatedAt: Date.now(),
+        });
         setFolderPath([{ id: 'root', name: 'Mi unidad' }]);
         void fetchFolderContents('root');
     }, [fetchFolderContents, setFolderPath]);
@@ -250,6 +329,7 @@ export function useDriveSearch({
         driveSearchWarnings,
         isDriveSearchPartial,
         deepSearchStatus,
+        driveSearchJob,
         setDriveSearchTerm,
         setDriveDateFrom,
         setDriveDateTo,

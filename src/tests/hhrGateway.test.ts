@@ -24,7 +24,7 @@ describe('hhrGateway', () => {
         const gateway = createHhrGateway();
         const result = await gateway.signIn();
 
-        expect(result).toEqual({ ok: true, data: { uid: 'user-1' } });
+        expect(result).toEqual({ ok: true, status: 'complete', data: { uid: 'user-1' } });
     });
 
     it('normaliza errores al guardar documentos clínicos', async () => {

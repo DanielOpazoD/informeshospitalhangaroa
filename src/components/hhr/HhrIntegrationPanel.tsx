@@ -1,4 +1,5 @@
 import React from 'react';
+import type { AsyncJobState } from '../../types';
 import type { HhrAuthenticatedUser, HhrCensusPatient } from '../../hhrTypes';
 import { formatHhrDisplayDate, formatHhrRoleLabel } from '../../utils/hhrIntegration';
 
@@ -13,6 +14,7 @@ interface HhrIntegrationPanelProps {
     censusError: string | null;
     selectedPatient: HhrCensusPatient | null;
     lastSyncLabel: string | null;
+    saveJob: AsyncJobState;
     onSignIn: () => void;
     onSignOut: () => void;
     onOpenCensusModal: () => void;
@@ -30,6 +32,7 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
     censusError,
     selectedPatient,
     lastSyncLabel,
+    saveJob,
     onSignIn,
     onSignOut,
     onOpenCensusModal,
@@ -47,6 +50,7 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
                 <span>{formatHhrDisplayDate(censusDateKey)}</span>
                 <span>{isCensusLoading ? 'Actualizando pacientes…' : `${censusCount} pacientes visibles`}</span>
                 {lastSyncLabel && <span>{lastSyncLabel}</span>}
+                {saveJob.message && <span>{saveJob.message}</span>}
                 {user && <span>{formatHhrRoleLabel(user.role)}</span>}
             </div>
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { DriveFolder, DriveSearchMode, FavoriteFolderEntry, RecentDriveFile } from '../../types';
+import type { AsyncJobState, DriveFolder, DriveSearchMode, FavoriteFolderEntry, RecentDriveFile } from '../../types';
 
 interface OpenFromDriveModalProps {
     isOpen: boolean;
@@ -15,6 +15,7 @@ interface OpenFromDriveModalProps {
     driveSearchWarnings: string[];
     isDriveSearchPartial: boolean;
     deepSearchStatus: string;
+    driveSearchJob: AsyncJobState;
     favoriteFolders: FavoriteFolderEntry[];
     recentFiles: RecentDriveFile[];
     formatDriveDate: (value?: string) => string;
@@ -49,6 +50,7 @@ const OpenFromDriveModal: React.FC<OpenFromDriveModalProps> = ({
     driveSearchWarnings,
     isDriveSearchPartial,
     deepSearchStatus,
+    driveSearchJob,
     favoriteFolders,
     recentFiles,
     formatDriveDate,
@@ -131,9 +133,9 @@ const OpenFromDriveModal: React.FC<OpenFromDriveModalProps> = ({
                             </button>
                         </div>
                     </div>
-                    {(deepSearchStatus || driveSearchWarnings.length > 0 || isDriveSearchPartial) && (
+                    {(deepSearchStatus || driveSearchJob.message || driveSearchWarnings.length > 0 || isDriveSearchPartial) && (
                         <div className={`drive-progress ${isDriveSearchPartial ? 'text-amber-700' : ''}`}>
-                            {deepSearchStatus || (isDriveSearchPartial ? 'Resultados parciales por búsqueda profunda.' : 'Resultados completos por metadata.')}
+                            {deepSearchStatus || driveSearchJob.message || (isDriveSearchPartial ? 'Resultados parciales por búsqueda profunda.' : 'Resultados completos por metadata.')}
                             {driveSearchWarnings.length > 0 && (
                                 <div className="mt-2 text-xs">
                                     {driveSearchWarnings.map(warning => (

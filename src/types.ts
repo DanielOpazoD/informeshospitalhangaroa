@@ -76,9 +76,18 @@ export interface AppError {
     details?: string[];
 }
 
+export type AppResultStatus = 'complete' | 'partial' | 'cancelled' | 'timeout' | 'error';
+
 export type AppResult<T> =
-    | { ok: true; data: T; warnings?: string[] }
-    | { ok: false; error: AppError };
+    | { ok: true; data: T; warnings?: string[]; status?: Extract<AppResultStatus, 'complete' | 'partial' | 'cancelled'> }
+    | { ok: false; error: AppError; status?: Extract<AppResultStatus, 'timeout' | 'cancelled' | 'error'> };
+
+export interface AsyncJobState {
+    operation: 'drive_deep_search' | 'google_profile' | 'hhr_save';
+    status: 'idle' | 'running' | 'success' | 'partial' | 'cancelled' | 'error';
+    message: string | null;
+    updatedAt: number | null;
+}
 
 export interface FavoriteFolderEntry {
     id: string;

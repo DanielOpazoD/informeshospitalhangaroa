@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type {
+    AsyncJobState,
     ClinicalRecord,
     DriveFolder,
     DriveSearchMode,
@@ -35,6 +36,7 @@ interface DriveContextValue {
     driveSearchWarnings: string[];
     isDriveSearchPartial: boolean;
     deepSearchStatus: string;
+    driveSearchJob: AsyncJobState;
     favoriteFolders: FavoriteFolderEntry[];
     recentFiles: RecentDriveFile[];
     selectedFolderId: string;
@@ -133,6 +135,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         driveSearchWarnings,
         isDriveSearchPartial,
         deepSearchStatus,
+        driveSearchJob,
         setDriveSearchTerm,
         setDriveDateFrom,
         setDriveDateTo,
@@ -167,6 +170,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         driveSearchWarnings,
         isDriveSearchPartial,
         deepSearchStatus,
+        driveSearchJob,
         favoriteFolders,
         recentFiles,
         selectedFolderId,
@@ -207,6 +211,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         setDriveSearchMode,
         setDriveSearchTerm,
         deepSearchStatus,
+        driveSearchJob,
         driveContentTerm,
         driveDateFrom,
         driveDateTo,

@@ -68,6 +68,7 @@ const buildProps = (): React.ComponentProps<typeof AppModals> => ({
         driveSearchWarnings: ['Resultado parcial'],
         isDriveSearchPartial: true,
         deepSearchStatus: '',
+        driveSearchJob: { operation: 'drive_deep_search', status: 'partial', message: 'Resultado parcial', updatedAt: Date.now() },
         favoriteFolders,
         recentFiles,
         formatDriveDate: value => value ? '19/03/2026' : 'Sin fecha',

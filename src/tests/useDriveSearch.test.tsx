@@ -137,6 +137,37 @@ describe('useDriveSearch', () => {
         );
     });
 
+    it('expone estado parcial del job cuando el gateway devuelve búsqueda parcial', async () => {
+        const params = createParams({
+            driveGateway: {
+                search: vi.fn().mockResolvedValue({
+                    ok: true,
+                    status: 'partial',
+                    data: {
+                        files: [{ id: 'file-1', name: 'uno.json' }],
+                        partial: true,
+                        warnings: ['Tiempo agotado'],
+                    },
+                    warnings: ['Tiempo agotado'],
+                }),
+            },
+        });
+        const { result } = renderHook(() => useDriveSearch(params));
+
+        act(() => {
+            result.current.setDriveSearchTerm('Paciente');
+            result.current.setDriveSearchMode('deepContent');
+        });
+
+        await act(async () => {
+            await result.current.handleSearchInDrive();
+        });
+
+        expect(result.current.driveSearchJob.status).toBe('partial');
+        expect(result.current.isDriveSearchPartial).toBe(true);
+        expect(params.showToast).toHaveBeenCalledWith('Se encontraron 1 archivo(s). Resultado parcial.');
+    });
+
     it('limpia criterios y vuelve a la carpeta raíz', async () => {
         const params = createParams();
         const { result } = renderHook(() => useDriveSearch(params));
