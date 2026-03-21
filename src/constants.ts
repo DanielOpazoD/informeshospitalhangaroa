@@ -8,14 +8,16 @@ export const generateSectionId = (): string =>
     `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 export const TEMPLATES: Record<string, Template> = Object.freeze({
-  '1': { id: '1', name: buildInstitutionTitle('Informe médico de traslado'), title: buildInstitutionTitle('Informe médico de traslado') },
-  '2': { id: '2', name: buildInstitutionTitle('Evolución médica (FECHA)'), title: buildInstitutionTitle('Evolución médica (____)') },
+  '1': { id: '1', name: 'Informe médico de traslado', title: buildInstitutionTitle('Informe médico de traslado') },
+  '2': { id: '2', name: 'Evolución médica', title: buildInstitutionTitle('Evolución médica (____)') },
   '3': { id: '3', name: 'Epicrisis médica', title: 'Epicrisis médica' },
   '4': { id: '4', name: 'Epicrisis médica de traslado', title: 'Epicrisis médica de traslado' },
   '5': { id: '5', name: 'Otro (personalizado)', title: '' },
-  '6': { id: '6', name: buildInstitutionTitle('Informe médico'), title: buildInstitutionTitle('Informe médico') },
-  '7': { id: '7', name: 'INFORME MÉDICO MEDIF/LATAM', title: 'INFORME MÉDICO MEDIF/LATAM' },
+  '6': { id: '6', name: 'Informe médico', title: buildInstitutionTitle('Informe médico') },
+  '7': { id: '7', name: 'Informe médico MEDIF/LATAM', title: 'INFORME MÉDICO MEDIF/LATAM' },
 });
+
+export const TEMPLATE_SELECTOR_ORDER = Object.freeze(['3', '4', '6', '1', '7', '2', '5']);
 
 export const DEFAULT_PATIENT_FIELDS: PatientField[] = [
     { id: FIELD_IDS.nombre, label: 'Nombre', value: '', type: 'text', placeholder: 'Nombre Apellido' },

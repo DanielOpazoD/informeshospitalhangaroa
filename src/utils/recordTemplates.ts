@@ -36,6 +36,45 @@ export const normalizePatientFields = (fields: PatientField[]): PatientField[] =
     return [...normalizedFields, ...missingDefaults];
 };
 
+export const remapPatientFieldsForTemplate = (
+    currentFields: PatientField[],
+    templateId: string,
+): PatientField[] => {
+    const targetFields = getDefaultPatientFieldsByTemplate(templateId);
+    const targetById = new Map(
+        targetFields
+            .filter(field => field.id)
+            .map(field => [field.id as string, field]),
+    );
+    const targetIds = new Set(targetFields.map(field => field.id).filter((value): value is string => Boolean(value)));
+    const currentById = new Map(
+        currentFields
+            .filter(field => field.id)
+            .map(field => [field.id as string, field]),
+    );
+
+    const mergedDefaults = targetFields.map(field => {
+        const currentField = field.id ? currentById.get(field.id) : undefined;
+        return currentField
+            ? {
+                ...field,
+                value: currentField.value,
+                placeholder: currentField.placeholder ?? field.placeholder,
+                readonly: currentField.readonly ?? field.readonly,
+            }
+            : { ...field };
+    });
+
+    const customFields = currentFields
+        .filter(field => field.isCustom || !field.id || !targetIds.has(field.id))
+        .map(field => {
+            const targetField = field.id ? targetById.get(field.id) : undefined;
+            return targetField ? { ...targetField, ...field } : { ...field };
+        });
+
+    return [...mergedDefaults, ...customFields];
+};
+
 export const createTemplateBaseline = (templateId: string): ClinicalRecord => {
     const selectedTemplateId = TEMPLATES[templateId] ? templateId : DEFAULT_TEMPLATE_ID;
     const title = getAutoTitleForTemplate(selectedTemplateId, '');

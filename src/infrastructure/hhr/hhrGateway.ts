@@ -15,27 +15,70 @@ import {
 import { runWithResilience } from '../shared/resilience';
 import { appLogger } from '../shared/logger';
 
+const getErrorMessage = (error: unknown, fallbackMessage: string): string =>
+    error instanceof Error ? error.message : fallbackMessage;
+
+const getErrorCode = (error: unknown): string =>
+    typeof (error as { code?: unknown })?.code === 'string' ? String((error as { code: string }).code) : '';
+
+const isCancelledHhrAuthError = (error: unknown): boolean => {
+    const code = getErrorCode(error);
+    return code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request';
+};
+
+const getHhrSignInErrorMessage = (error: unknown, fallbackMessage: string): string => {
+    const code = getErrorCode(error);
+    switch (code) {
+        case 'auth/popup-blocked':
+            return 'El navegador bloqueó la ventana de inicio de sesión HHR.';
+        case 'auth/popup-closed-by-user':
+        case 'auth/cancelled-popup-request':
+            return 'Inicio de sesión HHR cancelado.';
+        default:
+            return getErrorMessage(error, fallbackMessage);
+    }
+};
+
 const isRetryableHhrError = (error: unknown): boolean => {
+    if (isCancelledHhrAuthError(error)) {
+        return false;
+    }
+
     const message = error instanceof Error ? error.message.toLowerCase() : '';
     return !message.includes('permission') && !message.includes('unauthorized');
 };
 
-const toHhrError = (error: unknown, fallbackMessage: string, operation: string, code: string): AppResult<never> => ({
+const toHhrError = (
+    error: unknown,
+    fallbackMessage: string,
+    operation: string,
+    code: string,
+    options?: {
+        status?: 'timeout' | 'cancelled' | 'error';
+        message?: string;
+        retryable?: boolean;
+        transient?: boolean;
+    },
+): AppResult<never> => ({
     ok: false,
-    status: error instanceof Error && error.message.toLowerCase().includes('tiempo de espera') ? 'timeout' : 'error',
+    status: options?.status ?? (error instanceof Error && error.message.toLowerCase().includes('tiempo de espera') ? 'timeout' : 'error'),
     error: {
         source: 'hhr',
         code,
         operation,
-        message: error instanceof Error ? error.message : fallbackMessage,
-        transient: isRetryableHhrError(error),
-        retryable: isRetryableHhrError(error),
+        message: options?.message ?? getErrorMessage(error, fallbackMessage),
+        transient: options?.transient ?? isRetryableHhrError(error),
+        retryable: options?.retryable ?? isRetryableHhrError(error),
         httpStatus: typeof (error as { status?: unknown })?.status === 'number' ? (error as { status: number }).status : undefined,
         details: [fallbackMessage],
     },
 });
 
 const logGatewayEvent = (label: string) => (event: { type: string; attempt: number; error?: string }) => {
+    if (event.type === 'start' || event.type === 'success') {
+        return;
+    }
+
     const suffix = event.error ? ` (${event.error})` : '';
     appLogger.warn('hhr-gateway', `${label} :: ${event.type} intento ${event.attempt}${suffix}`);
 };
@@ -61,18 +104,24 @@ export const createHhrGateway = (): HhrGateway => ({
             return {
                 ok: true,
                 status: 'complete',
-                data: await runWithResilience(
-                    () => signInToHhrWithGoogle(),
-                    {
-                        attempts: GATEWAY_RETRY_ATTEMPTS,
-                        timeoutMs: GATEWAY_TIMEOUT_MS,
-                        label: 'Inicio de sesión HHR',
-                        shouldRetry: isRetryableHhrError,
-                        onEvent: logGatewayEvent('sign_in'),
-                    },
-                ),
+                data: await signInToHhrWithGoogle(),
             };
         } catch (error) {
+            if (isCancelledHhrAuthError(error)) {
+                return toHhrError(
+                    error,
+                    'Inicio de sesión HHR cancelado.',
+                    'sign_in',
+                    'sign_in_cancelled',
+                    {
+                        status: 'cancelled',
+                        message: getHhrSignInErrorMessage(error, 'Inicio de sesión HHR cancelado.'),
+                        retryable: false,
+                        transient: false,
+                    },
+                );
+            }
+
             return toHhrError(error, 'No fue posible iniciar sesión en HHR.', 'sign_in', 'sign_in');
         }
     },

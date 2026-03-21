@@ -19,6 +19,7 @@ import {
     getAutoTitleForTemplate,
     getReportDateValue,
     normalizePatientFields,
+    remapPatientFieldsForTemplate,
 } from '../utils/recordTemplates';
 
 export type ClinicalRecordCommand =
@@ -380,7 +381,7 @@ export const executeClinicalRecordCommand = (
                 templateId: baseline.templateId,
                 title: shouldKeepCustomTitle ? record.title : baseline.title,
                 titleMode: shouldKeepCustomTitle ? 'custom' : baseline.titleMode,
-                patientFields: baseline.patientFields,
+                patientFields: remapPatientFieldsForTemplate(record.patientFields, baseline.templateId),
                 sections: baseline.sections,
             }, metadata, [{ type: 'reset_hhr_sync' }]);
         }

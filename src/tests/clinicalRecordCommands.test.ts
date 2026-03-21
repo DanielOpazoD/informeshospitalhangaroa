@@ -68,6 +68,31 @@ describe('clinicalRecordCommands', () => {
         }
     });
 
+    it('preserva los datos del paciente al cambiar plantilla', () => {
+        const result = executeClinicalRecordCommand(buildRecord({
+            patientFields: [
+                { id: 'nombre', label: 'Nombre', value: 'Jane Roe', type: 'text' },
+                { id: 'rut', label: 'Rut', value: '11.111.111-1', type: 'text' },
+                { id: 'fecnac', label: 'Fecha de nacimiento', value: '1992-03-20', type: 'date' },
+                { id: 'finf', label: 'Fecha del informe', value: '2026-03-21', type: 'date' },
+                { id: 'edad', label: 'Edad', value: '34', type: 'text', readonly: true },
+                { label: 'Alergias', value: 'Penicilina', type: 'text', isCustom: true },
+            ],
+        }), {
+            type: 'change_template',
+            templateId: '3',
+        });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.record.patientFields.find(field => field.id === 'nombre')?.value).toBe('Jane Roe');
+            expect(result.record.patientFields.find(field => field.id === 'rut')?.value).toBe('11.111.111-1');
+            expect(result.record.patientFields.find(field => field.id === 'finf')?.value).toBe('2026-03-21');
+            expect(result.record.patientFields.find(field => field.id === 'finf')?.label).toBe('Fecha de alta');
+            expect(result.record.patientFields.find(field => field.label === 'Alergias')?.value).toBe('Penicilina');
+        }
+    });
+
     it('marca como no-op los comandos válidos que no cambian el documento', () => {
         const current = normalizeClinicalRecordSnapshot(buildRecord()).record;
         const result = executeClinicalRecordCommand(current, {

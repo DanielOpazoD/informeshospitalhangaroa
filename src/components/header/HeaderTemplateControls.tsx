@@ -1,5 +1,5 @@
 import React from 'react';
-import { TEMPLATES } from '../../constants';
+import { TEMPLATE_SELECTOR_ORDER, TEMPLATES } from '../../constants';
 import { CalendarPlusIcon } from '../icons';
 
 interface HeaderTemplateControlsProps {
@@ -19,7 +19,7 @@ const HeaderTemplateControls: React.FC<HeaderTemplateControlsProps> = ({
             value={templateId}
             onChange={event => onTemplateChange(event.target.value)}
         >
-            {Object.values(TEMPLATES).map(template => (
+            {TEMPLATE_SELECTOR_ORDER.map(templateId => TEMPLATES[templateId]).filter(Boolean).map(template => (
                 <option key={template.id} value={template.id}>
                     {template.name}
                 </option>

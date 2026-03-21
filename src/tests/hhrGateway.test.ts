@@ -27,6 +27,25 @@ describe('hhrGateway', () => {
         expect(result).toEqual({ ok: true, status: 'complete', data: { uid: 'user-1' } });
     });
 
+    it('no reintenta login interactivo cancelado y lo marca como cancelled', async () => {
+        const { createHhrGateway } = await import('../infrastructure/hhr/hhrGateway');
+        const popupCancelledError = Object.assign(new Error('Popup closed by user'), {
+            code: 'auth/popup-closed-by-user',
+        });
+        signInToHhrWithGoogle.mockRejectedValueOnce(popupCancelledError);
+
+        const gateway = createHhrGateway();
+        const result = await gateway.signIn();
+
+        expect(signInToHhrWithGoogle).toHaveBeenCalledTimes(1);
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.status).toBe('cancelled');
+            expect(result.error.code).toBe('sign_in_cancelled');
+            expect(result.error.retryable).toBe(false);
+        }
+    });
+
     it('normaliza errores al guardar documentos clínicos', async () => {
         const { createHhrGateway } = await import('../infrastructure/hhr/hhrGateway');
         saveClinicalDocumentToHhr.mockRejectedValue(new Error('save failed'));

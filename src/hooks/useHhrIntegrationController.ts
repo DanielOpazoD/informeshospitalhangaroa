@@ -115,6 +115,9 @@ export const useHhrIntegrationController = ({
                 setIsHhrAuthLoading(true);
                 const signInResult = await hhrGateway.signIn();
                 if (!signInResult.ok) {
+                    if (signInResult.status === 'cancelled') {
+                        return;
+                    }
                     showToast(signInResult.error.message, 'error');
                     return;
                 }
