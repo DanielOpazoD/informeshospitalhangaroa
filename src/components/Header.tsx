@@ -65,6 +65,14 @@ export interface HeaderSaveProps {
     onOpenHistory: () => void;
 }
 
+export interface HeaderHhrProps {
+    isEnabled: boolean;
+    canSave: boolean;
+    isSaving: boolean;
+    disabledReason?: string;
+    onSaveToHhr: () => void;
+}
+
 interface HeaderProps {
     templateId: string;
     onTemplateChange: (id: string) => void;
@@ -77,6 +85,7 @@ interface HeaderProps {
     drive: HeaderDriveProps;
     editing: HeaderEditingProps;
     save: HeaderSaveProps;
+    hhr: HeaderHhrProps;
 }
 
 type ActionMenu = 'archivo' | 'drive' | 'herramientas';
@@ -93,6 +102,7 @@ const Header: React.FC<HeaderProps> = ({
     drive,
     editing,
     save,
+    hhr,
 }) => {
     const {
         isEditing, onToggleEdit,
@@ -258,6 +268,18 @@ const Header: React.FC<HeaderProps> = ({
                                 {!hasUnsavedChanges && lastSaveTime && <div className="status-meta">Último guardado: {lastSaveTime}</div>}
                             </div>
                         </div>
+                        {hhr.isEnabled && (
+                            <button
+                                type="button"
+                                className="action-btn hhr-cloud-save"
+                                onClick={hhr.onSaveToHhr}
+                                disabled={!hhr.canSave || hhr.isSaving}
+                                title={!hhr.canSave ? hhr.disabledReason : 'Guardar borrador clínico en la ficha HHR'}
+                            >
+                                <UploadIcon />
+                                <span>{hhr.isSaving ? 'Guardando HHR…' : 'Guardar en Ficha HHR'}</span>
+                            </button>
+                        )}
                         <button
                             type="button"
                             className={`ai-launch-btn ${isAiAssistantVisible ? 'is-active' : ''}`}

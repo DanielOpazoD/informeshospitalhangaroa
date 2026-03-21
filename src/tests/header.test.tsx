@@ -55,6 +55,13 @@ const createProps = (): React.ComponentProps<typeof Header> => ({
         onQuickSave: vi.fn(),
         onOpenHistory: vi.fn(),
     },
+    hhr: {
+        isEnabled: true,
+        canSave: true,
+        isSaving: false,
+        disabledReason: undefined,
+        onSaveToHhr: vi.fn(),
+    },
 });
 
 describe('Header', () => {
@@ -85,6 +92,7 @@ describe('Header', () => {
         fireEvent.click(screen.getByText('Cartola de medicamentos'));
         fireEvent.change(screen.getByRole('combobox'), { target: { value: '5' } });
         fireEvent.click(screen.getByText('Act. clínica'));
+        fireEvent.click(screen.getByText('Guardar en Ficha HHR'));
         fireEvent.click(screen.getByTitle('Desactivar edición avanzada'));
         fireEvent.click(screen.getByLabelText('Abrir asistente clínico'));
         fireEvent.click(screen.getByText('toolbar-bold'));
@@ -92,6 +100,7 @@ describe('Header', () => {
         expect(props.onOpenCartolaApp).toHaveBeenCalled();
         expect(props.onTemplateChange).toHaveBeenCalledWith('5');
         expect(props.onAddClinicalUpdateSection).toHaveBeenCalled();
+        expect(props.hhr.onSaveToHhr).toHaveBeenCalled();
         expect(props.editing.onToggleAdvancedEditing).toHaveBeenCalled();
         expect(props.editing.onToggleAiAssistant).toHaveBeenCalled();
         expect(props.editing.onToolbarCommand).toHaveBeenCalledWith('bold');

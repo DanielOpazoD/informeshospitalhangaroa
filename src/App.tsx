@@ -1,9 +1,9 @@
-import React, { lazy, useCallback, useEffect, useState, Suspense } from 'react';
+import React, { lazy, useCallback, useEffect, useMemo, useState, Suspense } from 'react';
 import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { generateSectionId, TEMPLATES } from './constants';
 import { formatDateDMY } from './utils/dateUtils';
 import { getEnvGeminiApiKey, getEnvGeminiModel, getEnvGeminiProjectId } from './utils/env';
-import { DEFAULT_GOOGLE_CLIENT_ID } from './appConstants';
+import { DEFAULT_GOOGLE_CLIENT_ID, FIELD_IDS } from './appConstants';
 import { appDisplayName, buildInstitutionTitle } from './institutionConfig';
 import { useToast, type ToastState } from './hooks/useToast';
 import { useConfirmDialog } from './hooks/useConfirmDialog';
@@ -21,6 +21,18 @@ import { RecordProvider, useRecordContext } from './contexts/RecordContext';
 import { generatePdfAsBlob } from './utils/pdfGenerator';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AppShellContent from './components/app/AppShellContent';
+import HhrIntegrationPanel from './components/hhr/HhrIntegrationPanel';
+import HhrCensusModal from './components/hhr/HhrCensusModal';
+import type { HhrAuthenticatedUser, HhrClinicalSyncState, HhrCensusPatient } from './hhrTypes';
+import { useHospitalCensus } from './hooks/useHospitalCensus';
+import {
+    getHhrFirebaseMissingEnvKeys,
+    isHhrFirebaseConfigured,
+    saveClinicalDocumentToHhr,
+    signInToHhrWithGoogle,
+    signOutFromHhr,
+    subscribeToHhrAuthState,
+} from './services/hhrFirebaseService';
 import {
     buildClinicalUpdateSection,
     createTemplateBaseline,
@@ -28,6 +40,11 @@ import {
     normalizePatientFields,
     RECOMMENDED_GEMINI_MODEL,
 } from './utils/recordTemplates';
+import {
+    applyHhrPatientToRecord,
+    getClinicalRecordPatientFieldValue,
+    getHhrTodayKey,
+} from './utils/hhrIntegration';
 
 const CartolaMedicamentosView = lazy(() => import('./components/CartolaMedicamentosView'));
 const AIAssistant = lazy(() => import('./components/AIAssistant'));
@@ -157,6 +174,20 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
     });
 
     const getReportDate = useCallback(() => record.patientFields.find(f => f.id === 'finf')?.value || '', [record.patientFields]);
+    const hhrConfigured = isHhrFirebaseConfigured();
+    const hhrMissingEnvKeys = getHhrFirebaseMissingEnvKeys();
+    const hhrDateKey = getHhrTodayKey();
+    const [hhrUser, setHhrUser] = useState<HhrAuthenticatedUser | null>(null);
+    const [isHhrAuthLoading, setIsHhrAuthLoading] = useState(hhrConfigured);
+    const [selectedHhrPatient, setSelectedHhrPatient] = useState<HhrCensusPatient | null>(null);
+    const [isHhrCensusModalOpen, setIsHhrCensusModalOpen] = useState(false);
+    const [hhrSyncState, setHhrSyncState] = useState<HhrClinicalSyncState | null>(null);
+    const [isSavingToHhr, setIsSavingToHhr] = useState(false);
+    const [lastHhrSyncAt, setLastHhrSyncAt] = useState<string | null>(null);
+    const { patients: hhrPatients, isLoading: isHhrCensusLoading, error: hhrCensusError } = useHospitalCensus({
+        enabled: hhrConfigured && Boolean(hhrUser),
+        dateKey: hhrDateKey,
+    });
 
     useEffect(() => {
         const template = TEMPLATES[record.templateId];
@@ -170,6 +201,40 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         markRecordAsReplaced();
         setRecord(current => ({ ...current, title: newTitle }));
     }, [getReportDate, markRecordAsReplaced, record.templateId, setRecord]);
+
+    useEffect(() => {
+        if (!hhrConfigured) {
+            setIsHhrAuthLoading(false);
+            setHhrUser(null);
+            return;
+        }
+
+        setIsHhrAuthLoading(true);
+        const unsubscribe = subscribeToHhrAuthState(
+            user => {
+                setHhrUser(user);
+                setIsHhrAuthLoading(false);
+            },
+            error => {
+                console.error('No se pudo resolver la sesión HHR:', error);
+                setHhrUser(null);
+                setIsHhrAuthLoading(false);
+                showToast('No fue posible restaurar la sesión HHR.', 'error');
+            }
+        );
+
+        return unsubscribe;
+    }, [hhrConfigured, showToast]);
+
+    useEffect(() => {
+        if (hhrUser) {
+            return;
+        }
+
+        setSelectedHhrPatient(null);
+        setHhrSyncState(null);
+        setLastHhrSyncAt(null);
+    }, [hhrUser]);
 
     const handleTemplateChange = useCallback((id: string) => {
         const template = TEMPLATES[id];
@@ -188,6 +253,8 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
                 sections: baseline.sections,
             };
         });
+        setHhrSyncState(null);
+        setLastHhrSyncAt(null);
     }, [setRecord]);
 
     const handleAddSection = useCallback(() => hookAddSection({ id: generateSectionId(), title: 'Sección personalizada', content: '' }), [hookAddSection]);
@@ -213,6 +280,8 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
             markRecordAsReplaced();
             setRecord(blankRecord);
             setHasUnsavedChanges(true);
+            setHhrSyncState(null);
+            setLastHhrSyncAt(null);
             showToast('Formulario restablecido.', 'warning');
         })();
     }, [confirm, markRecordAsReplaced, record.templateId, setHasUnsavedChanges, setRecord, showToast]);
@@ -223,6 +292,117 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         onToggleEdit: toggleGlobalStructureEditing,
         onRestore: restoreAll,
     });
+
+    const handleHhrSignIn = useCallback(() => {
+        void (async () => {
+            try {
+                setIsHhrAuthLoading(true);
+                const signedUser = await signInToHhrWithGoogle();
+                setHhrUser(signedUser);
+                showToast('Sesión HHR iniciada correctamente.');
+            } catch (error) {
+                console.error('No se pudo iniciar sesión en HHR:', error);
+                showToast(error instanceof Error ? error.message : 'No fue posible iniciar sesión en HHR.', 'error');
+            } finally {
+                setIsHhrAuthLoading(false);
+            }
+        })();
+    }, [showToast]);
+
+    const handleHhrSignOut = useCallback(() => {
+        void (async () => {
+            try {
+                await signOutFromHhr();
+                setSelectedHhrPatient(null);
+                setHhrSyncState(null);
+                setLastHhrSyncAt(null);
+                showToast('Sesión HHR cerrada.');
+            } catch (error) {
+                console.error('No se pudo cerrar la sesión HHR:', error);
+                showToast('No fue posible cerrar la sesión HHR.', 'error');
+            }
+        })();
+    }, [showToast]);
+
+    const handleSelectHhrPatient = useCallback((patient: HhrCensusPatient) => {
+        markRecordAsReplaced();
+        setRecord(current => applyHhrPatientToRecord(current, patient, hhrDateKey));
+        setHasUnsavedChanges(true);
+        setSelectedHhrPatient(patient);
+        setHhrSyncState(null);
+        setLastHhrSyncAt(null);
+        setIsHhrCensusModalOpen(false);
+        showToast(`Paciente ${patient.patientName} cargado desde HHR.`);
+    }, [hhrDateKey, markRecordAsReplaced, setHasUnsavedChanges, setRecord, showToast]);
+
+    const handleClearSelectedHhrPatient = useCallback(() => {
+        setSelectedHhrPatient(null);
+        setHhrSyncState(null);
+        setLastHhrSyncAt(null);
+    }, []);
+
+    const patientRut = getClinicalRecordPatientFieldValue(record, FIELD_IDS.rut);
+    const patientName = getClinicalRecordPatientFieldValue(record, FIELD_IDS.nombre);
+    const hhrSaveDisabledReason = !hhrConfigured
+        ? 'Configura las variables de Firebase para habilitar HHR.'
+        : !hhrUser
+            ? 'Inicia sesión en HHR para guardar en la ficha clínica.'
+            : !patientName || !patientRut
+                ? 'Completa nombre y RUT antes de guardar en HHR.'
+                : undefined;
+    const canSaveToHhr = !hhrSaveDisabledReason && !isSavingToHhr;
+
+    const handleSaveToHhr = useCallback(() => {
+        if (!hhrConfigured || !hhrUser) {
+            showToast(hhrSaveDisabledReason || 'La sesión HHR no está disponible.', 'warning');
+            return;
+        }
+
+        if (!patientName || !patientRut) {
+            showToast('Completa nombre y RUT antes de guardar en HHR.', 'warning');
+            return;
+        }
+
+        void (async () => {
+            try {
+                setIsSavingToHhr(true);
+                const result = await saveClinicalDocumentToHhr({
+                    record,
+                    actor: hhrUser,
+                    sourcePatient: selectedHhrPatient,
+                    syncState: hhrSyncState,
+                });
+                setHhrSyncState(result.syncState);
+                setLastHhrSyncAt(result.savedAt);
+                showToast(
+                    hhrSyncState
+                        ? 'Documento clínico actualizado en la ficha HHR.'
+                        : 'Documento clínico guardado en la ficha HHR.'
+                );
+            } catch (error) {
+                console.error('Error guardando documento en HHR:', error);
+                showToast(
+                    error instanceof Error
+                        ? error.message
+                        : 'No fue posible guardar el documento en la ficha HHR.',
+                    'error'
+                );
+            } finally {
+                setIsSavingToHhr(false);
+            }
+        })();
+    }, [hhrConfigured, hhrSaveDisabledReason, hhrSyncState, hhrUser, patientName, patientRut, record, selectedHhrPatient, showToast]);
+
+    const lastHhrSyncLabel = useMemo(() => {
+        if (!lastHhrSyncAt) {
+            return null;
+        }
+
+        return `Último guardado HHR: ${new Date(lastHhrSyncAt).toLocaleTimeString('es-CL', {
+            hour: '2-digit',
+            minute: '2-digit',
+        })}`;
+    }, [lastHhrSyncAt]);
 
     const appWorkspaceAiAssistant = (
         <AIAssistant
@@ -282,6 +462,41 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
             handleToolbarCommand={handleToolbarCommand}
             onOpenCartola={onOpenCartola}
             aiAssistantPanel={appWorkspaceAiAssistant}
+            hhrHeader={{
+                isEnabled: hhrConfigured,
+                canSave: Boolean(canSaveToHhr),
+                isSaving: isSavingToHhr,
+                disabledReason: hhrSaveDisabledReason,
+                onSaveToHhr: handleSaveToHhr,
+            }}
+            hhrPanel={
+                <HhrIntegrationPanel
+                    isConfigured={hhrConfigured}
+                    missingEnvKeys={hhrMissingEnvKeys}
+                    isAuthLoading={isHhrAuthLoading}
+                    user={hhrUser}
+                    censusDateKey={hhrDateKey}
+                    censusCount={hhrPatients.length}
+                    isCensusLoading={isHhrCensusLoading}
+                    censusError={hhrCensusError}
+                    selectedPatient={selectedHhrPatient}
+                    lastSyncLabel={lastHhrSyncLabel}
+                    onSignIn={handleHhrSignIn}
+                    onSignOut={handleHhrSignOut}
+                    onOpenCensusModal={() => setIsHhrCensusModalOpen(true)}
+                    onClearSelectedPatient={handleClearSelectedHhrPatient}
+                />
+            }
+            hhrModal={
+                <HhrCensusModal
+                    isOpen={isHhrCensusModalOpen}
+                    isLoading={isHhrCensusLoading}
+                    error={hhrCensusError}
+                    patients={hhrPatients}
+                    onClose={() => setIsHhrCensusModalOpen(false)}
+                    onSelectPatient={handleSelectHhrPatient}
+                />
+            }
         />
     );
 };

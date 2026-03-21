@@ -7,6 +7,7 @@ import { useFileOperations } from '../../hooks/useFileOperations';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDrive } from '../../contexts/DriveContext';
 import { useRecordContext } from '../../contexts/RecordContext';
+import type { HeaderHhrProps } from '../Header';
 import AppModals from './AppModals';
 import AppWorkspace from './AppWorkspace';
 
@@ -50,6 +51,9 @@ interface AppShellContentProps {
     handleToolbarCommand: (command: string) => void;
     onOpenCartola: () => void;
     aiAssistantPanel: React.ReactNode;
+    hhrHeader: HeaderHhrProps;
+    hhrPanel: React.ReactNode;
+    hhrModal: React.ReactNode;
 }
 
 const AppShellContent: React.FC<AppShellContentProps> = ({
@@ -70,6 +74,9 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
     handleToolbarCommand,
     onOpenCartola,
     aiAssistantPanel,
+    hhrHeader,
+    hhrPanel,
+    hhrModal,
 }) => (
     <>
         <AppModals
@@ -202,6 +209,7 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
                 onQuickSave: fileOperations.handleManualSave,
                 onOpenHistory: () => recordState.setIsHistoryModalOpen(true),
             }}
+            hhrHeader={hhrHeader}
             templateId={recordState.record.templateId}
             onTemplateChange={handleTemplateChange}
             onAddClinicalUpdateSection={handleAddClinicalUpdateSection}
@@ -226,7 +234,9 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
             onAddSection={handleAddSection}
             sheetZoom={editorUi.sheetZoom}
             aiAssistant={aiAssistantPanel}
+            integrationPanel={hhrPanel}
         />
+        {hhrModal}
     </>
 );
 

@@ -30,4 +30,5 @@ export const FIELD_IDS = Object.freeze({
     fing: 'fing',
     finf: 'finf',
     hinf: 'hinf',
+    cama: 'cama',
 } as const);

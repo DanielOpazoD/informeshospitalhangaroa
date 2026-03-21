@@ -5,7 +5,7 @@ import PatientInfo from '../PatientInfo';
 import ClinicalSection from '../ClinicalSection';
 import Footer from '../Footer';
 import { logoUrls } from '../../institutionConfig';
-import type { HeaderAuthProps, HeaderDriveProps, HeaderEditingProps, HeaderSaveProps } from '../Header';
+import type { HeaderAuthProps, HeaderDriveProps, HeaderEditingProps, HeaderHhrProps, HeaderSaveProps } from '../Header';
 
 interface AppWorkspaceProps {
     record: ClinicalRecord;
@@ -14,6 +14,7 @@ interface AppWorkspaceProps {
     driveHeader: HeaderDriveProps;
     editingHeader: HeaderEditingProps;
     saveHeader: HeaderSaveProps;
+    hhrHeader: HeaderHhrProps;
     templateId: string;
     onTemplateChange: (id: string) => void;
     onAddClinicalUpdateSection: () => void;
@@ -38,6 +39,7 @@ interface AppWorkspaceProps {
     onAddSection: () => void;
     sheetZoom: number;
     aiAssistant: React.ReactNode;
+    integrationPanel: React.ReactNode;
 }
 
 const AppWorkspace: React.FC<AppWorkspaceProps> = ({
@@ -47,6 +49,7 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
     driveHeader,
     editingHeader,
     saveHeader,
+    hhrHeader,
     templateId,
     onTemplateChange,
     onAddClinicalUpdateSection,
@@ -71,6 +74,7 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
     onAddSection,
     sheetZoom,
     aiAssistant,
+    integrationPanel,
 }) => (
     <div className="wrap">
         <Header
@@ -85,7 +89,9 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
             drive={driveHeader}
             editing={editingHeader}
             save={saveHeader}
+            hhr={hhrHeader}
         />
+        {integrationPanel}
         <div className="workspace">
             <div className="sheet-shell">
                 <div

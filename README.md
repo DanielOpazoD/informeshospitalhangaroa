@@ -18,8 +18,25 @@ Usa la versión definida en [.nvmrc](.nvmrc) (`20.19.0` o superior) para evitar 
 1. Install dependencies:
    `npm install`
 2. Set the `VITE_GEMINI_API_KEY` (or legacy `GEMINI_API_KEY`) in [.env.local](.env.local) to your Gemini API key for the Generative Language API. If your key was created inside Google Cloud Console (instead of Google AI Studio), also set `VITE_GEMINI_PROJECT_ID`/`GEMINI_PROJECT_ID` to the numeric project ID so the app can send the required `X-Goog-User-Project` header. Google Cloud keys also need the **serviceusage.serviceUsageConsumer** role (or a custom role with `serviceusage.services.use`) on that project; if you can't grant it, leave the project field empty and rely on an AI Studio key instead. Optionally, define `VITE_GEMINI_MODEL`/`GEMINI_MODEL` to force a specific model. The assistant now probes the Gemini catalog before every session: it autodetects whether the model should be called through `v1` or `v1beta`, automatically retries with the alternate endpoint if the API reports an incompatible combination, and—if the requested model is missing—first surfaces the list of models that *are* enabled for your key and then automatically switches to the best available option whenever you left the model field blank. If you need to force a specific endpoint, add the suffix `@v1` or `@v1beta` (e.g., `gemini-1.5-flash-latest@v1beta`).
+   Si vas a usar la integración bidireccional con HHR/Firebase, agrega además las variables del proyecto clínico central:
+   `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID` y opcionalmente `VITE_HHR_FIREBASE_HOSPITAL_ID` (por defecto usamos `hanga_roa`).
 3. Run the app:
    `npm run dev`
+
+### Integración HHR / Firebase
+
+La app ahora puede:
+
+1. Iniciar sesión con Google en Firebase para usar el mismo acceso clínico del proyecto HHR.
+2. Leer en tiempo real el censo diario desde `hospitals/{hospitalId}/dailyRecords/{YYYY-MM-DD}`.
+3. Auto-completar el formulario clínico con nombre, RUT, edad, fecha de nacimiento, fecha de ingreso y cama.
+4. Guardar un borrador clínico en `hospitals/{hospitalId}/clinicalDocuments/{documentId}` con versionado básico por sesión.
+
+Notas de implementación:
+
+- El botón `Guardar en Ficha HHR` requiere sesión HHR activa y al menos `Nombre` + `RUT`.
+- La escritura usa `clinicalDocuments`, porque las reglas permiten guardar borradores clínicos para médicos y administradores.
+- La subida a `Firebase Storage` para documentos tipo cartola/entrega no se fuerza desde este editor, ya que ese flujo depende de metadatos de turno que este formulario no conoce todavía.
 
 ## Validación de calidad
 

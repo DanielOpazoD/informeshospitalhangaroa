@@ -127,6 +127,13 @@ const createProps = (): React.ComponentProps<typeof AppWorkspace> => ({
         onQuickSave: vi.fn(),
         onOpenHistory: vi.fn(),
     },
+    hhrHeader: {
+        isEnabled: true,
+        canSave: true,
+        isSaving: false,
+        disabledReason: undefined,
+        onSaveToHhr: vi.fn(),
+    },
     templateId: '2',
     onTemplateChange: vi.fn(),
     onAddClinicalUpdateSection: vi.fn(),
@@ -151,6 +158,7 @@ const createProps = (): React.ComponentProps<typeof AppWorkspace> => ({
     onAddSection: vi.fn(),
     sheetZoom: 1.25,
     aiAssistant: <div>assistant-panel</div>,
+    integrationPanel: <div>integration-panel</div>,
 });
 
 describe('AppWorkspace', () => {
@@ -165,6 +173,7 @@ describe('AppWorkspace', () => {
         expect(screen.getByText('section-1')).toBeTruthy();
         expect(screen.getByText('footer')).toBeTruthy();
         expect(screen.getByText('assistant-panel')).toBeTruthy();
+        expect(screen.getByText('integration-panel')).toBeTruthy();
 
         fireEvent.click(screen.getByText('header-template'));
         fireEvent.click(screen.getByText('header-add-update'));
@@ -229,6 +238,7 @@ describe('AppWorkspace', () => {
         expect(clinicalSectionProps[0]?.activeEditTarget).toBeNull();
         expect(clinicalSectionProps[1]?.activeEditTarget).toEqual({ type: 'section-title', index: 1 });
         expect(headerProps?.templateId).toBe('2');
+        expect(headerProps?.hhr.isEnabled).toBe(true);
         expect(footerProps?.medico).toBe('Dr. Test');
         expect(footerProps?.especialidad).toBe('Medicina');
         expect(document.getElementById('sheet')?.className).toContain('edit-mode');
