@@ -3,6 +3,7 @@ import type { ClinicalRecord, ClinicalSectionData } from '../../types';
 import Header from '../Header';
 import PatientInfo from '../PatientInfo';
 import ClinicalSection from '../ClinicalSection';
+import EditorToolbar from '../EditorToolbar';
 import Footer from '../Footer';
 import { logoUrls } from '../../institutionConfig';
 import type { HeaderAuthProps, HeaderDriveProps, HeaderEditingProps, HeaderSaveProps } from '../Header';
@@ -151,6 +152,11 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
                     />
                 </div>
             </div>
+            {editingHeader.isAdvancedEditing && (
+                <div className="sticky-toolbar-container">
+                    <EditorToolbar onToolbarCommand={editingHeader.onToolbarCommand} />
+                </div>
+            )}
             <div id="editPanel" className={`edit-panel ${isGlobalStructureEditing ? 'visible' : 'hidden'}`}>
                 <div>Edición</div>
                 <button onClick={onAddPatientField} className="btn" type="button">Agregar campo</button>

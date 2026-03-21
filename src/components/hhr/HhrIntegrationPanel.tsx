@@ -2,7 +2,7 @@ import React from 'react';
 import type { AsyncJobState } from '../../types';
 import type { HhrAuthenticatedUser, HhrCensusPatient } from '../../hhrTypes';
 import { formatHhrDisplayDate } from '../../utils/hhrIntegration';
-import { UploadIcon } from '../icons';
+import { UploadIcon, SignOutIcon, SearchIcon } from '../icons';
 
 interface HhrIntegrationPanelProps {
     isConfigured: boolean;
@@ -49,95 +49,87 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
 }) => {
     if (!user) {
         return (
-            <section className="hhr-auth-hero" aria-label="Integración HHR">
-                <div className="hhr-auth-content">
-                    <h2 className="hhr-auth-title">Ficha Clínica HHR</h2>
-                    <p className="hhr-auth-desc">Inicia sesión para sincronizar pacientes y guardar registros en la base de datos central.</p>
+            <div className="hhr-compact-bar" aria-label="Integración HHR">
+                <div className="hhr-compact-brand">
+                    <span className="brand-badge">HHR</span>
+                    <span className="brand-text">Sistema Central</span>
+                </div>
+                <div className="hhr-compact-actions">
+                    <span className="hhr-compact-status">Desconectado</span>
                     <button
                         type="button"
-                        className="btn primary lg"
+                        className="btn primary round btn-sm"
                         onClick={onSignIn}
                         disabled={!isConfigured || isAuthLoading}
                     >
-                        {isAuthLoading ? 'Conectando…' : 'Iniciar sesión en HHR'}
+                        {isAuthLoading ? 'Conectando…' : 'Conectar con HHR'}
                     </button>
                     {!isConfigured && (
-                        <div className="hhr-panel-notice warning mt-4">
-                            Faltan variables: {missingEnvKeys.join(', ')}
+                        <div className="hhr-compact-notice warning" title={`Faltan variables configurables: ${missingEnvKeys.join(', ')}`}>
+                            ⚠️ Faltan config
                         </div>
                     )}
                 </div>
-            </section>
+            </div>
         );
     }
 
     return (
-        <section className="hhr-panel" aria-label="Integración HHR">
-            <div className="hhr-panel-top">
-                <div className="hhr-panel-brand">HHR</div>
-                <div className="hhr-session-inline">
-                    <span className="hhr-session-dot" aria-hidden="true" />
-                    <span className="hhr-session-email">{user.email}</span>
-                    <button type="button" className="action-btn-plain hhr-logout-btn" onClick={onSignOut} title="Cerrar sesión HHR">
-                        Cerrar sesión
+        <div className="hhr-compact-bar connected" aria-label="Integración HHR">
+            <div className="hhr-compact-left">
+                <div className="hhr-compact-brand">
+                    <span className="brand-badge active">HHR</span>
+                    <span className="hhr-session-email" title={user.email}>{user.email}</span>
+                    <button type="button" className="btn secondary round btn-sm hhr-logout-btn" onClick={onSignOut} title="Cerrar sesión">
+                       <SignOutIcon />
+                       <span>Cerrar sesión</span>
                     </button>
                 </div>
             </div>
 
-            <div className="hhr-panel-main">
-                <div className="hhr-census-block">
-                    <div className="hhr-panel-meta">
-                        <span>{formatHhrDisplayDate(censusDateKey)}</span>
-                        <span>{isCensusLoading ? 'Actualizando pacientes…' : `${censusCount} pacientes visibles`}</span>
+            <div className="hhr-compact-center">
+                {selectedPatient ? (
+                    <div className="hhr-compact-patient">
+                        <span className="patient-name">{selectedPatient.patientName}</span>
+                        <span className="patient-rut">{selectedPatient.rut || 'Sin RUT'}</span>
+                        <button
+                            type="button"
+                            className="action-btn-plain hhr-clear-icon"
+                            onClick={onClearSelectedPatient}
+                            title="Desvincular"
+                        >
+                            ✕
+                        </button>
                     </div>
-                    <button type="button" className="action-btn hhr-select-btn" onClick={onOpenCensusModal}>
-                        Buscar paciente
-                    </button>
-                    {censusError && <div className="hhr-panel-notice error">{censusError}</div>}
-                </div>
-
-                <div className="hhr-patient-block">
-                    {selectedPatient ? (
-                        <div className="hhr-patient-summary">
-                            <div className="hhr-patient-summary-title">{selectedPatient.patientName}</div>
-                            <div className="hhr-patient-summary-meta">
-                                <span>{selectedPatient.rut || 'Sin RUT'}</span>
-                                {selectedPatient.admissionDate && (
-                                    <span>Ingreso {formatHhrDisplayDate(selectedPatient.admissionDate)}</span>
-                                )}
-                            </div>
-                            <button
-                                type="button"
-                                className="action-btn-plain hhr-clear-btn"
-                                onClick={onClearSelectedPatient}
-                                title="Desvincular paciente"
-                            >
-                                Limpiar
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="hhr-panel-empty">Sin paciente seleccionado</div>
-                    )}
-                </div>
-
-                <div className="hhr-save-block">
-                    <button
-                        type="button"
-                        className={`action-btn primary hhr-cloud-save ${!canSave ? 'disabled' : ''}`}
-                        onClick={onSaveToHhr}
-                        disabled={!canSave || isSaving}
-                        title={!canSave ? disabledReason : 'Guardar borrador clínico en la ficha HHR'}
-                    >
-                        <UploadIcon />
-                        <span>{isSaving ? 'Guardando HHR…' : 'Guardar en Ficha HHR'}</span>
-                    </button>
-                    <div className="hhr-save-meta">
-                        {lastSyncLabel && <span>{lastSyncLabel}</span>}
-                        {saveJob.message && <span>{saveJob.message}</span>}
+                ) : (
+                    <div className="hhr-compact-census" title={`Última carga: ${formatHhrDisplayDate(censusDateKey)}`}>
+                        <span className="census-info">{isCensusLoading ? 'Actualizando' : `${censusCount} pctes.`}</span>
+                        <button type="button" className="btn secondary round btn-sm" onClick={onOpenCensusModal}>
+                            <SearchIcon />
+                            <span>Buscar paciente</span>
+                        </button>
+                        {censusError && <span className="hhr-compact-error" title={censusError}>⚠️</span>}
                     </div>
-                </div>
+                )}
             </div>
-        </section>
+
+            <div className="hhr-compact-right">
+                <div className="hhr-save-meta-compact">
+                    {lastSyncLabel && <span className="sync-time">{lastSyncLabel}</span>}
+                    {saveJob.message && <span className="sync-msg" title={saveJob.message}>💬</span>}
+                </div>
+                <button
+                    type="button"
+                    className={`btn hhr-upload-btn round btn-sm ${!canSave ? 'disabled' : ''}`}
+                    onClick={onSaveToHhr}
+                    disabled={!canSave || isSaving}
+                    title={!canSave ? disabledReason : 'Guardar borrador clínico en la ficha HHR'}
+                >
+                    <UploadIcon />
+                    <span>{isSaving ? 'Guardando…' : 'Guardar ficha HHR'}</span>
+                </button>
+            </div>
+        </div>
     );
 };
 

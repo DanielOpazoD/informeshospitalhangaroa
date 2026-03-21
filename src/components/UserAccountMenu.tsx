@@ -5,7 +5,7 @@ import {
     GmailIcon,
     SwitchUserIcon,
     SignOutIcon,
-    DriveIcon,
+    GoogleDriveColoredIcon,
 } from './icons';
 
 interface UserAccountMenuProps {
@@ -77,7 +77,9 @@ const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
                 disabled={!isGisReady || !isGapiReady || !tokenClient}
                 title="Conectar Google Drive"
             >
-                <DriveIcon />
+                <div style={{ transform: 'scale(1.1)', display: 'flex' }}>
+                    <GoogleDriveColoredIcon />
+                </div>
             </button>
         );
     }

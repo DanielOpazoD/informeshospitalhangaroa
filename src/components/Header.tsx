@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { GoogleUserProfile, GoogleTokenClient } from '../types';
 import { TEMPLATES } from '../constants';
 import UserAccountMenu from './UserAccountMenu';
-import EditorToolbar from './EditorToolbar';
 import {
     GridIcon,
     BloodTestIcon,
@@ -55,7 +54,6 @@ export interface HeaderEditingProps {
     onToggleAdvancedEditing: () => void;
     isAiAssistantVisible: boolean;
     onToggleAiAssistant: () => void;
-    onToolbarCommand: (command: string) => void;
 }
 
 /** Props related to save status */
@@ -93,7 +91,7 @@ interface HeaderProps {
     save: HeaderSaveProps;
 }
 
-type ActionMenu = 'archivo' | 'drive' | 'herramientas';
+type ActionMenu = 'archivo' | 'drive';
 
 const Header: React.FC<HeaderProps> = ({
     templateId,
@@ -112,7 +110,6 @@ const Header: React.FC<HeaderProps> = ({
         isEditing, onToggleEdit,
         isAdvancedEditing, onToggleAdvancedEditing,
         isAiAssistantVisible, onToggleAiAssistant,
-        onToolbarCommand,
     } = editing;
     const {
         isSignedIn, isPickerApiReady,
@@ -131,7 +128,6 @@ const Header: React.FC<HeaderProps> = ({
     const launcherRef = useRef<HTMLDivElement>(null);
     const archivoMenuRef = useRef<HTMLDivElement>(null);
     const driveMenuRef = useRef<HTMLDivElement>(null);
-    const herramientasMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!isLauncherOpen && !openActionMenu) {
@@ -140,8 +136,7 @@ const Header: React.FC<HeaderProps> = ({
 
         const menuRefs: Record<ActionMenu, React.RefObject<HTMLDivElement | null>> = {
             archivo: archivoMenuRef,
-            drive: driveMenuRef,
-            herramientas: herramientasMenuRef
+            drive: driveMenuRef
         };
 
         const handleClickOutside = (event: MouseEvent) => {
@@ -173,7 +168,7 @@ const Header: React.FC<HeaderProps> = ({
             document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('keydown', handleEscape);
         };
-    }, [archivoMenuRef, driveMenuRef, herramientasMenuRef, isLauncherOpen, openActionMenu]);
+    }, [archivoMenuRef, driveMenuRef, isLauncherOpen, openActionMenu]);
 
     useEffect(() => {
         if (!isSignedIn) {
@@ -276,6 +271,22 @@ const Header: React.FC<HeaderProps> = ({
                             <button
                                 type="button"
                                 className="action-btn action-btn-plain"
+                                onClick={onPrint}
+                                title="Imprimir PDF"
+                            >
+                                <PrintIcon />
+                            </button>
+                            <button
+                                type="button"
+                                className="action-btn action-btn-plain"
+                                onClick={onRestoreTemplate}
+                                title="Restablecer planilla"
+                            >
+                                <RefreshIcon />
+                            </button>
+                            <button
+                                type="button"
+                                className="action-btn action-btn-plain"
                                 onClick={onUndo}
                                 disabled={!canUndo}
                                 title={!canUndo ? 'No hay cambios previos para deshacer' : 'Deshacer último cambio persistido'}
@@ -303,9 +314,6 @@ const Header: React.FC<HeaderProps> = ({
                             <span className="ai-launch-icon" aria-hidden="true">🤖</span>
                             <span className="ai-launch-label">IA</span>
                         </button>
-                        {isAdvancedEditing && (
-                            <EditorToolbar onToolbarCommand={onToolbarCommand} />
-                        )}
                     </div>
                 </div>
                 <div className="topbar-actions">
@@ -341,10 +349,6 @@ const Header: React.FC<HeaderProps> = ({
                                     <SaveIcon />
                                     <span>Guardar borrador</span>
                                 </button>
-                                <button type="button" onClick={() => handleDropdownAction(onPrint)}>
-                                    <PrintIcon />
-                                    <span>Imprimir PDF</span>
-                                </button>
                                 <button type="button" onClick={() => handleDropdownAction(onDownloadJson)}>
                                     <DownloadIcon />
                                     <span>Guardar JSON</span>
@@ -358,14 +362,12 @@ const Header: React.FC<HeaderProps> = ({
                                     onClick={() => handleDropdownAction(() => document.getElementById('importJson')?.click())}
                                 >
                                     <UploadIcon />
-                                    <span>Importar</span>
+                                    <span>Importar JSON</span>
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleDropdownAction(onRestoreTemplate)}
-                                >
-                                    <RefreshIcon />
-                                    <span>Restablecer planilla</span>
+                                <div className="action-dropdown-divider" style={{height: '1px', background: 'var(--border-color)', margin: '4px 0'}}></div>
+                                <button type="button" onClick={() => handleDropdownAction(onOpenSettings)} title="Configuración de Google API">
+                                    <SettingsIcon />
+                                    <span>Google API {hasApiKey && <span className="api-badge" style={{color: 'var(--success-color)', marginLeft: '4px'}}>✓</span>}</span>
                                 </button>
                             </div>
                         )}
@@ -379,7 +381,6 @@ const Header: React.FC<HeaderProps> = ({
                         title={isAdvancedEditing ? 'Desactivar edición avanzada' : 'Activar edición avanzada'}
                     >
                         <PenIcon />
-                        <span>Editar</span>
                     </button>
                     <div className={`action-group ${openActionMenu === 'drive' ? 'open' : ''}`} ref={driveMenuRef}>
                         <button
@@ -408,29 +409,6 @@ const Header: React.FC<HeaderProps> = ({
                                 >
                                     <FolderOpenIcon />
                                     <span>Abrir desde Drive</span>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                    <div className={`action-group ${openActionMenu === 'herramientas' ? 'open' : ''}`} ref={herramientasMenuRef}>
-                        <button
-                            type="button"
-                            className="action-btn action-group-toggle action-btn-plain"
-                            onClick={() => toggleActionMenu('herramientas')}
-                            aria-haspopup="true"
-                            aria-expanded={openActionMenu === 'herramientas'}
-                            aria-label="Herramientas"
-                            title="Herramientas"
-                        >
-                            <span aria-hidden="true" className="action-icon-emoji">⚙️</span>
-                            <ChevronDownIcon />
-                        </button>
-                        {openActionMenu === 'herramientas' && (
-                            <div className="action-dropdown" role="menu">
-                                <button type="button" onClick={() => handleDropdownAction(onOpenSettings)} title="Configuración de Google API">
-                                    <SettingsIcon />
-                                    <span>Google API</span>
-                                    {hasApiKey && <span className="api-badge">✓</span>}
                                 </button>
                             </div>
                         )}

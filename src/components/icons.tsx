@@ -1,4 +1,11 @@
+import React from 'react';
 
+export const SearchIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+);
 
 export const GridIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -88,6 +95,14 @@ export const UploadIcon = () => (
         <path d="M12 5v14" />
         <path d="m5 12 7-7 7 7" />
         <path d="M5 19h14" />
+    </svg>
+);
+
+export const GoogleDriveColoredIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" width="24" height="24" fill="none">
+        <path fill="#34A853" d="M23 109.5L47.5 24l24.5 42.5-24.5 43z"/>
+        <path fill="#4285F4" d="M121 66.5L96.5 109H47.5l24.5-42.5z"/>
+        <path fill="#FBBC05" d="M47.5 24h49L121 66.5h-49z"/>
     </svg>
 );
 

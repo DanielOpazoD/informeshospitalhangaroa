@@ -697,7 +697,23 @@
       transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
     }
 
-    .action-btn svg { width: 16px; height: 16px; }
+    .action-btn svg,
+    .action-btn-plain svg,
+    .template-update-btn svg,
+    .user-menu-btn svg,
+    .hhr-upload-btn svg,
+    .hhr-logout-btn svg,
+    .hhr-search-btn svg,
+    .btn svg { 
+        width: 18px; 
+        height: 18px; 
+        flex-shrink: 0;
+    }
+
+    .hhr-search-btn svg {
+        width: 15px; 
+        height: 15px;
+    }
 
     .action-btn:hover {
       background: var(--topbar-action-hover-bg);
@@ -1537,8 +1553,43 @@
     .workspace {
       display: flex;
       gap: 18px;
-      align-items: center;
+      align-items: flex-start;
       position: relative;
+    }
+
+    .sticky-toolbar-container {
+      position: sticky;
+      top: 80px;
+      height: max-content;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 9999px; /* Pill shape */
+      padding: 12px 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      backdrop-filter: blur(8px);
+    }
+    
+    body[data-theme='dark'] .sticky-toolbar-container {
+      background: rgba(15, 23, 42, 0.95);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    .sticky-toolbar-container .editor-toolbar {
+      flex-direction: column;
+      border: none;
+      background: transparent;
+      box-shadow: none;
+      padding: 0;
+      overflow: visible;
+    }
+
+    .sticky-toolbar-container .toolbar-divider {
+      width: 16px;
+      height: 1px;
+      margin: 4px auto;
     }
 
     .sheet-shell {
@@ -2584,228 +2635,167 @@
       *::-webkit-scrollbar { display: none !important; }
     }
 
-    .hhr-auth-hero {
+    .hhr-compact-bar {
       display: flex;
-      justify-content: center;
       align-items: center;
-      padding: 40px 20px;
-      margin: 10px auto 24px;
-      width: min(800px, calc(100% - 24px));
-      border-radius: 20px;
-      background: linear-gradient(135deg, rgba(236, 253, 245, 0.96), rgba(224, 242, 254, 0.94));
-      border: 1px solid rgba(20, 184, 166, 0.2);
-      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
-      text-align: center;
-    }
-
-    .hhr-auth-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      max-width: 480px;
-    }
-
-    .hhr-auth-title {
-      font-size: 26px;
-      font-weight: 800;
-      color: #0f172a;
-      margin: 0;
-      letter-spacing: -0.02em;
-    }
-
-    .hhr-auth-desc {
-      font-size: 15px;
-      color: #475569;
-      line-height: 1.5;
-      margin: 0 0 8px;
-    }
-
-    .hhr-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      margin: 10px auto 24px;
-      width: min(1040px, calc(100% - 24px));
-      padding: 20px 24px;
-      border-radius: 20px;
-      border: 1px solid rgba(148, 163, 184, 0.15);
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.8));
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
-      backdrop-filter: blur(12px);
-    }
-
-    .hhr-panel-top {
-      display: flex;
       justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
-      padding-bottom: 12px;
-      margin-bottom: 4px;
+      margin: 0;
+      width: 100%;
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      background: var(--surface-bg, #f8fafc);
+      font-family: inherit;
+      color: #334155;
+      font-size: 13px;
     }
-
-    .hhr-panel-brand {
-      font-size: 18px;
-      font-weight: 800;
-      color: #0f172a;
-      letter-spacing: -0.02em;
+    .hhr-compact-bar.connected {
+      background: linear-gradient(90deg, #f0f9ff, #e0f2fe);
     }
-
-    .hhr-panel-main {
-      display: grid;
-      grid-template-columns: 1fr 1.5fr 1fr;
-      gap: 20px;
-      align-items: stretch;
-    }
-
-    .hhr-census-block, .hhr-patient-block, .hhr-save-block {
+    .hhr-compact-brand {
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-badge {
+      background: #94a3b8;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .brand-badge.active {
+      background: #0284c7;
+    }
+    .brand-text {
+      font-weight: 600;
+      color: #475569;
+    }
+    .hhr-compact-actions, .hhr-compact-left, .hhr-compact-center, .hhr-compact-right {
+      display: flex;
+      align-items: center;
       gap: 12px;
+    }
+    .hhr-compact-center {
+      flex: 1;
+      justify-content: center;
+    }
+    .hhr-compact-status {
+      font-weight: 500;
+      color: #64748b;
+    }
+    .hhr-compact-notice {
+      font-size: 12px;
+      color: #ef4444;
+      cursor: help;
+    }
+    .hhr-session-email {
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .hhr-logout-icon {
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      transform: scale(0.9);
+    }
+    .hhr-logout-icon:hover {
+      color: #ef4444;
+    }
+    .hhr-compact-patient {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      border: 1px solid #bae6fd;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .patient-name {
+      font-weight: 700;
+      color: #0c4a6e;
+    }
+    .patient-rut {
+      font-size: 11px;
+      color: #0284c7;
+      background: #e0f2fe;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .hhr-clear-icon {
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: bold;
+      padding: 0 4px;
+    }
+    .hhr-clear-icon:hover {
+      color: #ef4444;
+    }
+    .hhr-compact-census {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .census-info {
+      font-weight: 600;
+      color: #0369a1;
+    }
+    .hhr-save-meta-compact {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: #64748b;
+    }
+    .sync-msg {
+      cursor: help;
+    }
+
+    .hhr-upload-btn {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #f8fafc;
+      border: none;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+      padding: 6px 16px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      transition: all 0.2s ease;
     }
     
-    .hhr-save-block {
-      align-items: flex-end;
-      text-align: right;
+    .hhr-upload-btn:hover:not(.disabled):not(:disabled) {
+      background: linear-gradient(135deg, #0369a1, #075985);
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.3);
+      transform: translateY(-1px);
     }
-
-    .hhr-logout-btn, .hhr-clear-btn {
-      color: #2563eb;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .hhr-logout-btn:hover, .hhr-clear-btn:hover {
-      text-decoration: underline;
-    }
-
-    .hhr-panel-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      color: #475569;
-      font-size: 11px;
-    }
-
-    .hhr-panel-meta span,
-    .hhr-patient-summary-meta span {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      min-height: 26px;
-      border-radius: 999px;
-      padding: 4px 10px;
-      background: rgba(255, 255, 255, 0.78);
-      border: 1px solid rgba(148, 163, 184, 0.18);
-    }
-
-    .hhr-session-inline {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      color: #0f172a;
-      font-size: 12px;
-      font-weight: 600;
-      max-width: 100%;
-    }
-
-    .hhr-session-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: #10b981;
-      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
-      flex: 0 0 auto;
-    }
-
-    .hhr-session-email {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .hhr-patient-summary,
-    .hhr-panel-empty {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      min-width: 0;
-      padding: 12px 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(125, 211, 252, 0.4);
-      background: rgba(240, 249, 255, 0.6);
-      height: 100%;
-    }
-
-    .hhr-patient-summary-title {
-      font-size: 15px;
-      font-weight: 800;
-      color: #0f172a;
-      line-height: 1.2;
-      word-break: break-word;
-    }
-
-    .hhr-patient-summary-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      color: #334155;
-      font-size: 11px;
-    }
-
-    .hhr-panel-empty {
-      justify-content: center;
-      align-items: center;
-      color: #64748b;
-      font-size: 13px;
-      line-height: 1.3;
-      border-style: dashed;
-    }
-
-    .hhr-panel-actions {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 6px;
-      flex: 0 0 auto;
-      max-width: 260px;
-    }
-
-    .hhr-cloud-save {
-      background: linear-gradient(135deg, #0f766e, #0ea5a4);
-      border-color: rgba(15, 118, 110, 0.8);
-      color: #f8fafc;
-      box-shadow: 0 12px 28px rgba(13, 148, 136, 0.28);
-      padding: 10px 18px;
-      font-size: 13px;
-    }
-
-    .hhr-cloud-save:hover {
-      background: linear-gradient(135deg, #115e59, #0f766e);
-      box-shadow: 0 16px 34px rgba(13, 148, 136, 0.36);
-    }
-
-    .hhr-cloud-save:disabled, .hhr-cloud-save.disabled {
-      background: rgba(148, 163, 184, 0.2);
-      border-color: rgba(148, 163, 184, 0.2);
-      color: #64748b;
-      cursor: not-allowed;
+    
+    .hhr-upload-btn.disabled,
+    .hhr-upload-btn:disabled {
+      background: #e2e8f0;
+      color: #94a3b8;
       box-shadow: none;
     }
     
-    .hhr-save-meta {
+    .hhr-logout-btn {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 11px;
-      color: #475569;
-      margin-top: 8px;
+      align-items: center;
+      gap: 6px;
+      color: #64748b;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      font-weight: 500;
+    }
+    .hhr-logout-btn:hover {
+      background: #fee2e2;
+      color: #ef4444;
+      border-color: #fca5a5;
     }
 
+
     .hhr-census-modal {
-      width: min(700px, calc(100vw - 28px));
-      max-height: min(76vh, 680px);
+      width: min(900px, calc(100vw - 40px));
+      max-height: min(85vh, 800px);
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -2843,9 +2833,10 @@
     .hhr-census-item-main,
     .hhr-census-item-meta {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 8px;
       align-items: center;
+      white-space: nowrap;
     }
 
     .hhr-census-item-main {
@@ -2865,7 +2856,11 @@
       font-size: 14px;
       font-weight: 700;
       color: #0f172a;
-      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
     }
 
     .hhr-census-item-meta {
@@ -2880,60 +2875,6 @@
       background: rgba(241, 245, 249, 0.92);
       color: #475569;
       text-align: center;
-    }
-
-    body[data-theme='dark'] .hhr-panel {
-      background:
-        radial-gradient(circle at top left, rgba(34, 211, 238, 0.14), transparent 40%),
-        linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.98));
-      border-color: rgba(45, 212, 191, 0.2);
-      box-shadow: 0 18px 42px rgba(2, 8, 23, 0.45);
-    }
-
-    body[data-theme='dark'] .hhr-panel-title,
-    body[data-theme='dark'] .hhr-session-inline,
-    body[data-theme='dark'] .hhr-patient-summary-title,
-    body[data-theme='dark'] .hhr-census-name {
-      color: #e2e8f0;
-    }
-
-    body[data-theme='dark'] .hhr-panel-meta,
-    body[data-theme='dark'] .hhr-patient-summary-meta,
-    body[data-theme='dark'] .hhr-panel-empty,
-    body[data-theme='dark'] .hhr-census-item-meta {
-      color: #94a3b8;
-    }
-
-    body[data-theme='dark'] .hhr-panel-meta span,
-    body[data-theme='dark'] .hhr-patient-summary-meta span,
-    body[data-theme='dark'] .hhr-patient-summary,
-    body[data-theme='dark'] .hhr-panel-empty,
-    body[data-theme='dark'] .hhr-census-item {
-      background: rgba(15, 23, 42, 0.74);
-      border-color: rgba(148, 163, 184, 0.2);
-    }
-
-    body[data-theme='dark'] .hhr-panel-action {
-      background: rgba(15, 23, 42, 0.8);
-      color: #e2e8f0;
-      border-color: rgba(148, 163, 184, 0.35);
-    }
-
-    body[data-theme='dark'] .hhr-panel-action:hover:not(:disabled) {
-      background: rgba(30, 41, 59, 0.96);
-      border-color: rgba(96, 165, 250, 0.4);
-      box-shadow: 0 14px 28px rgba(2, 8, 23, 0.32);
-    }
-
-    body[data-theme='dark'] .hhr-panel-action.primary {
-      background: linear-gradient(135deg, #2563eb, #1d4ed8);
-      color: #eff6ff;
-      border-color: rgba(96, 165, 250, 0.34);
-    }
-
-    body[data-theme='dark'] .hhr-panel-action.danger {
-      background: rgba(2, 6, 23, 0.92);
-      border-color: rgba(51, 65, 85, 0.85);
     }
 
     body[data-theme='dark'] .hhr-empty-state {

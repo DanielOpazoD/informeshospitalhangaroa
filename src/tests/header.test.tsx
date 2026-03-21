@@ -7,11 +7,7 @@ vi.mock('../components/UserAccountMenu', () => ({
     default: () => <div>user-account-menu</div>,
 }));
 
-vi.mock('../components/EditorToolbar', () => ({
-    default: ({ onToolbarCommand }: { onToolbarCommand: (command: string) => void }) => (
-        <button onClick={() => onToolbarCommand('bold')}>toolbar-bold</button>
-    ),
-}));
+// EditorToolbar was moved to AppWorkspace
 
 const createProps = (): React.ComponentProps<typeof Header> => ({
     templateId: '2',
@@ -46,7 +42,6 @@ const createProps = (): React.ComponentProps<typeof Header> => ({
         onToggleAdvancedEditing: vi.fn(),
         isAiAssistantVisible: false,
         onToggleAiAssistant: vi.fn(),
-        onToolbarCommand: vi.fn(),
     },
     save: {
         saveStatusLabel: 'Guardado',
@@ -75,7 +70,6 @@ describe('Header', () => {
     it('renderiza launcher, toolbar y menú de cuenta', () => {
         render(<Header {...createProps()} />);
 
-        expect(screen.getByText('toolbar-bold')).toBeTruthy();
         expect(screen.getByText('user-account-menu')).toBeTruthy();
         expect(screen.getByText('Guardado')).toBeTruthy();
         expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('2');
@@ -93,7 +87,6 @@ describe('Header', () => {
         fireEvent.click(screen.getByTitle('Rehacer cambio revertido'));
         fireEvent.click(screen.getByTitle('Desactivar edición avanzada'));
         fireEvent.click(screen.getByLabelText('Abrir asistente clínico'));
-        fireEvent.click(screen.getByText('toolbar-bold'));
 
         expect(props.onOpenCartolaApp).toHaveBeenCalled();
         expect(props.onTemplateChange).toHaveBeenCalledWith('5');
@@ -102,7 +95,6 @@ describe('Header', () => {
         expect(props.save.onRedo).toHaveBeenCalled();
         expect(props.editing.onToggleAdvancedEditing).toHaveBeenCalled();
         expect(props.editing.onToggleAiAssistant).toHaveBeenCalled();
-        expect(props.editing.onToolbarCommand).toHaveBeenCalledWith('bold');
     });
 
     it('ejecuta acciones de los menús Archivo, Drive y Herramientas', () => {
@@ -115,15 +107,16 @@ describe('Header', () => {
         fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Guardar borrador'));
         fireEvent.click(screen.getByLabelText('Archivo'));
-        fireEvent.click(screen.getByText('Imprimir PDF'));
-        fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Guardar JSON'));
         fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Historial'));
         fireEvent.click(screen.getByLabelText('Archivo'));
-        fireEvent.click(screen.getByText('Importar'));
+        fireEvent.click(screen.getByText('Importar JSON'));
         fireEvent.click(screen.getByLabelText('Archivo'));
-        fireEvent.click(screen.getByText('Restablecer planilla'));
+        fireEvent.click(screen.getByTitle('Configuración de Google API'));
+
+        fireEvent.click(screen.getByTitle('Imprimir PDF'));
+        fireEvent.click(screen.getByTitle('Restablecer planilla'));
 
         fireEvent.click(screen.getByLabelText('Google Drive'));
         fireEvent.click(screen.getByText('Guardar en Drive'));
@@ -131,8 +124,6 @@ describe('Header', () => {
         fireEvent.click(screen.getByText('Abrir desde Drive'));
 
         fireEvent.click(screen.getByTitle('Desactivar edición avanzada'));
-        fireEvent.click(screen.getByLabelText('Herramientas'));
-        fireEvent.click(screen.getByText('Google API'));
 
         expect(props.editing.onToggleEdit).toHaveBeenCalled();
         expect(props.save.onQuickSave).toHaveBeenCalled();
