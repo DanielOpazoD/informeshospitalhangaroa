@@ -8,22 +8,27 @@ La aplicación está construida sobre React (TypeScript + Vite) y sigue una arqu
 ### Capas del Proyecto (`src/`)
 - **/components:** Presentación y composición visual. La carpeta `components/app/` concentra el ensamblaje del editor principal (`AppShellContent`, `AppWorkspace`, `AppModals`).
 - **/contexts:** Estado global y contratos compartidos (`RecordContext`, `AuthContext`, `DriveContext`).
-- **/hooks:** Coordinación React reutilizable (`useEditorUiState`, `useDocumentEffects`, `useDriveModals`, `useDriveOperations`, `useToolbarCommands`).
-- **/services:** Fronteras con proveedores externos; actualmente `driveGateway.ts` encapsula la interacción con Google Drive.
-- **/utils:** Funciones puras, validación y clientes desacoplados (`validationUtils`, `settingsStorage`, familia `gemini*`, `pdfGenerator`, etc.).
+- **/hooks:** Coordinación React reutilizable y adaptadores de UI (`useDriveModals`, `useRecordTitleController`, `useHhrIntegrationController`, etc.).
+- **/domain:** Reglas clínicas puras, versionado y pipeline de carga del `ClinicalRecord`.
+- **/application:** Casos de uso puros y reducer del workflow del editor.
+- **/infrastructure:** Gateways browser-side tipados para Drive, Google Auth y HHR.
+- **/services / utils:** Integraciones legacy y utilidades puras reutilizadas por las capas superiores.
 
 ## 2. Flujo de Datos Principal (RecordContext)
 El estado de la "Ficha Clínica Actual" (el paciente que se está editando) reside centralmente en `RecordContext`.
 1. `App.tsx` crea providers y rutas; `AppShellContent` ensambla el editor.
 2. La UI lee datos mediante `useRecordContext()`.
-3. Las mutaciones del formulario viajan por `useRecordForm` y la persistencia local por `useClinicalRecord`.
-4. La persistencia local ya no depende directamente de `window.localStorage` en cada módulo; pasa por adaptadores compartidos.
+3. Las mutaciones del formulario viajan por `useRecordForm`, y la persistencia local por `useClinicalRecord`.
+4. `useClinicalRecord` usa un reducer de workflow para coordinar `dirty/saving/restoring/importing/syncing/error`.
+5. La persistencia local ya no depende directamente de `window.localStorage` en cada módulo; pasa por adaptadores compartidos y por un caso de uso común para snapshots.
 
 ## 3. Manejo de Almacenamiento y Archivos Remotos
 1. **Google Drive:** `AuthContext` mantiene la sesión y `DriveContext` orquesta el estado de navegación.
-2. **Gateway tipado:** `services/driveGateway.ts` encapsula `window.gapi` y la subida multipart.
-3. **UI de Drive:** `useDriveModals` coordina modales/Picker y `useDriveSearch` resuelve búsqueda y caché.
+2. **Gateway tipado:** `infrastructure/drive/driveGateway.ts` encapsula `window.gapi` y devuelve `Result` explícito.
+3. **UI de Drive:** `useDriveModals` coordina modales/Picker y `useDriveSearch` resuelve búsqueda, caché, progreso y cancelación.
+   La búsqueda ahora distingue entre modo rápido por metadata y búsqueda profunda por contenido con presupuesto/cancelación.
 4. **Persistencia local:** `storageAdapter.ts`, `settingsStorage.ts` y `driveFolderStorage.ts` concentran lectura/escritura en navegador.
+   Las API keys sensibles se mantienen en sesión; la configuración estable sigue persistiendo localmente.
 
 ## 4. IA Asistida (Gemini API)
 La capa de IA está separada por responsabilidad:
@@ -42,3 +47,16 @@ Se usa `react-router-dom` para separar vistas pesadas:
 - `components/cartola/useCartolaState.ts` concentra estado y casos de uso del módulo.
 - `components/cartola/cartolaDomain.ts` contiene reglas puras: normalización, naming de exportación y utilidades de dominio.
 - `components/cartola/CartolaApp.tsx` quedó como componente de composición, sin la mayor parte de la lógica de negocio inline.
+
+## 7. Frontera de Datos Clínicos
+- `domain/clinicalRecord.ts` define el pipeline oficial:
+  `parseClinicalRecordInput -> migrateClinicalRecord -> normalizeClinicalRecord -> sanitizeClinicalRecord`.
+- `validationUtils.ts` mantiene compatibilidad hacia afuera, pero delega la frontera principal en `loadClinicalRecord`.
+- `clinicalContentSanitizer.ts` define el HTML permitido en secciones clínicas antes de persistir o renderizar.
+- `useClinicalRecord`, `useFileOperations` y `useDriveOperations` consumen esa frontera para drafts locales, importaciones y aperturas remotas.
+
+## 8. Casos De Uso Y Gateways
+- `application/clinicalRecordUseCases.ts` concentra `changeTemplate`, `changeRecordTitle`, `saveDraftSnapshot`, `restoreHistoryEntry`, `importRecordFromJson`, `importRecordFromDrive` y `syncRecordWithHhr`.
+- `application/editorWorkflow.ts` centraliza el estado operativo del editor sin acoplarlo a componentes concretos.
+- `infrastructure/auth/googleAuthGateway.ts` aísla el acceso a `window.google` y `window.gapi` del `AuthContext`.
+- `infrastructure/hhr/hhrGateway.ts` envuelve login, logout y persistencia clínica HHR con resultados tipados.

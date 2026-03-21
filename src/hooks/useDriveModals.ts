@@ -115,7 +115,7 @@ export function useDriveModals({
             markRecordAsReplaced();
             setRecord(importedRecord);
             setHasUnsavedChanges(false);
-            saveDraft('import');
+            saveDraft('import', importedRecord);
             setIsOpenModalOpen(false);
         } catch (error) {
             showToast(buildContextualErrorMessage(`No se pudo abrir "${file.name}"`, error), 'error');

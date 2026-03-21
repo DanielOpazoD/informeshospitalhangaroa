@@ -1,4 +1,4 @@
-import type { ClinicalRecord, DriveFolder, GoogleDriveFileResource } from '../types';
+import type { DriveFolder, GoogleDriveFileResource } from '../types';
 
 export interface DriveSearchFilters {
     searchTerm: string;
@@ -13,7 +13,7 @@ export interface DriveGateway {
     listFolderContents: (folderId: string) => Promise<{ folders: DriveFolder[]; files: DriveFolder[] }>;
     searchJsonFiles: (filters: DriveSearchFilters) => Promise<DriveFolder[]>;
     getFileContent: (fileId: string) => Promise<string>;
-    getJsonRecord: (fileId: string) => Promise<ClinicalRecord>;
+    getJsonRecord: (fileId: string) => Promise<unknown>;
     createFolder: (name: string, parentId: string) => Promise<void>;
     uploadFile: (params: { fileName: string; mimeType: string; content: Blob; parentId: string }) => Promise<{ id?: string; name?: string }>;
 }
@@ -89,7 +89,7 @@ export const createDriveGateway = (): DriveGateway => {
         getFileContent,
         getJsonRecord: async (fileId: string) => {
             const body = await getFileContent(fileId);
-            return JSON.parse(body) as ClinicalRecord;
+            return JSON.parse(body) as unknown;
         },
         createFolder: async (name: string, parentId: string) => {
             await getDriveClient().create({

@@ -70,7 +70,10 @@ export const useAppSettings = ({
         if (settings.geminiApiKey) setAiApiKey(settings.geminiApiKey);
         if (settings.geminiProjectId) setAiProjectId(settings.geminiProjectId);
         if (settings.geminiModel) setAiModel(settings.geminiModel);
-    }, [setClientId]);
+        if (settings.migratedSensitiveKeys) {
+            onToast('Las API keys heredadas se cargaron solo para esta sesión y dejarán de persistirse en el navegador.', 'warning');
+        }
+    }, [onToast, setClientId]);
 
     const openSettingsModal = useCallback(() => {
         setTempApiKey(apiKey);

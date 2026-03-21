@@ -40,7 +40,7 @@ describe('useDriveSearch', () => {
     it('usa resultados cacheados cuando el TTL sigue vigente', async () => {
         vi.spyOn(Date, 'now').mockReturnValue(10_000);
         const params = createParams();
-        params.driveCacheRef.current.set('search:jane|2026-03-01|2026-03-19|dx', {
+        params.driveCacheRef.current.set('search:metadata:jane|2026-03-01|2026-03-19|dx', {
             folders: [],
             files: [{ id: 'cached-1', name: 'cache.json' }],
             timestamp: 10_000,
@@ -89,6 +89,7 @@ describe('useDriveSearch', () => {
 
         act(() => {
             result.current.setDriveSearchTerm('Paciente');
+            result.current.setDriveSearchMode('deepContent');
             result.current.setDriveContentTerm('diagnostico');
         });
 
@@ -102,7 +103,7 @@ describe('useDriveSearch', () => {
             dateTo: '',
         });
         expect(params.setDriveJsonFiles).toHaveBeenCalledWith([{ id: 'file-2', name: 'dos.json' }]);
-        expect(params.driveCacheRef.current.get('search:paciente|||diagnostico')?.files).toEqual([{ id: 'file-2', name: 'dos.json' }]);
+        expect(params.driveCacheRef.current.get('search:deepContent:paciente|||diagnostico')?.files).toEqual([{ id: 'file-2', name: 'dos.json' }]);
         expect(params.showToast).toHaveBeenCalledWith('Se encontraron 1 archivo(s).');
     });
 
@@ -145,6 +146,7 @@ describe('useDriveSearch', () => {
             result.current.setDriveDateFrom('2026-03-01');
             result.current.setDriveDateTo('2026-03-19');
             result.current.setDriveContentTerm('dx');
+            result.current.setDriveSearchMode('deepContent');
         });
 
         act(() => {
@@ -155,6 +157,8 @@ describe('useDriveSearch', () => {
         expect(result.current.driveDateFrom).toBe('');
         expect(result.current.driveDateTo).toBe('');
         expect(result.current.driveContentTerm).toBe('');
+        expect(result.current.driveSearchWarnings).toEqual([]);
+        expect(result.current.isDriveSearchPartial).toBe(false);
         expect(params.setFolderPath).toHaveBeenCalledWith([{ id: 'root', name: 'Mi unidad' }]);
         expect(params.fetchFolderContents).toHaveBeenCalledWith('root');
     });

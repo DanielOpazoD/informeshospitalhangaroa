@@ -94,7 +94,7 @@ describe('driveGateway', () => {
         const record = await gateway.getJsonRecord('file-1');
 
         expect(get).toHaveBeenCalledWith({ fileId: 'file-1', alt: 'media' });
-        expect(record.title).toBe('Importado');
+        expect((record as { title: string }).title).toBe('Importado');
     });
 
     it('rechaza uploads sin token de acceso', async () => {

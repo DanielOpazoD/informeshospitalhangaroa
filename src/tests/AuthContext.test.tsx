@@ -4,6 +4,14 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import type { ReactNode } from 'react';
 import type { GoogleTokenClient } from '../types';
 
+vi.mock('../hooks/useGoogleApiBootstrap', () => ({
+    useGoogleApiBootstrap: () => ({
+        isGapiReady: false,
+        isGisReady: false,
+        isPickerApiReady: false,
+    }),
+}));
+
 describe('AuthContext', () => {
     beforeEach(() => {
         const tokenClient: GoogleTokenClient = {

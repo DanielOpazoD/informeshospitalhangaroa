@@ -7,9 +7,11 @@ import { createMockStorage } from './testUtils';
 describe('useAppSettings', () => {
     it('carga configuración persistida y guarda valores sanitizados', () => {
         const { storage, values } = createMockStorage();
+        const { storage: sessionStorage, values: sessionValues } = createMockStorage();
         values.set(LOCAL_STORAGE_KEYS.googleClientId, 'saved-client');
         values.set(LOCAL_STORAGE_KEYS.geminiModel, 'gemini-2.0-flash@v1');
         Object.defineProperty(window, 'localStorage', { configurable: true, value: storage });
+        Object.defineProperty(window, 'sessionStorage', { configurable: true, value: sessionStorage });
         const setClientId = vi.fn();
         const onToast = vi.fn();
 
@@ -44,12 +46,16 @@ describe('useAppSettings', () => {
         expect(result.current.aiApiKey).toBe('ai-key');
         expect(result.current.aiProjectId).toBe('321');
         expect(result.current.aiModel).toBe('gemini-2.0-flash@v1beta');
+        expect(values.has(LOCAL_STORAGE_KEYS.googleApiKey)).toBe(false);
+        expect(sessionValues.get(LOCAL_STORAGE_KEYS.googleApiKey)).toBe('api-key');
         expect(onToast).toHaveBeenCalled();
     });
 
     it('limpia credenciales cuando se confirma la acción', async () => {
         const { storage } = createMockStorage();
+        const { storage: sessionStorage } = createMockStorage();
         Object.defineProperty(window, 'localStorage', { configurable: true, value: storage });
+        Object.defineProperty(window, 'sessionStorage', { configurable: true, value: sessionStorage });
         const setClientId = vi.fn();
         const onToast = vi.fn();
 

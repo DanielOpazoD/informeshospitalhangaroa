@@ -45,6 +45,7 @@ interface AppShellContentProps {
     toggleGlobalStructureEditing: () => void;
     handleTemplateChange: (id: string) => void;
     handleAddClinicalUpdateSection: () => void;
+    handleRecordTitleChange: (title: string) => void;
     handleAddPatientField: () => void;
     handleAddSection: () => void;
     handleRestoreAll: () => void;
@@ -68,6 +69,7 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
     toggleGlobalStructureEditing,
     handleTemplateChange,
     handleAddClinicalUpdateSection,
+    handleRecordTitleChange,
     handleAddPatientField,
     handleAddSection,
     handleRestoreAll,
@@ -112,6 +114,10 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
                 driveDateFrom: drive.driveDateFrom,
                 driveDateTo: drive.driveDateTo,
                 driveContentTerm: drive.driveContentTerm,
+                driveSearchMode: drive.driveSearchMode,
+                driveSearchWarnings: drive.driveSearchWarnings,
+                isDriveSearchPartial: drive.isDriveSearchPartial,
+                deepSearchStatus: drive.deepSearchStatus,
                 favoriteFolders: drive.favoriteFolders,
                 recentFiles: drive.recentFiles,
                 formatDriveDate: drive.formatDriveDate,
@@ -119,6 +125,7 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
                 onSearch: () => {
                     void drive.handleSearchInDrive();
                 },
+                onCancelSearch: drive.cancelDriveSearch,
                 onClearSearch: drive.clearDriveSearch,
                 onAddFavorite: drive.handleAddFavoriteFolder,
                 onRemoveFavorite: drive.handleRemoveFavoriteFolder,
@@ -132,6 +139,7 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
                 onDateFromChange: drive.setDriveDateFrom,
                 onDateToChange: drive.setDriveDateTo,
                 onContentTermChange: drive.setDriveContentTerm,
+                onSearchModeChange: drive.setDriveSearchMode,
             }}
             saveModal={{
                 isOpen: driveModals.isSaveModalOpen,
@@ -230,6 +238,7 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
             handleUpdateSectionMeta={recordState.handleUpdateSectionMeta}
             handleRemoveSection={recordState.handleRemoveSection}
             handleRemovePatientField={recordState.handleRemovePatientField}
+            onRecordTitleChange={handleRecordTitleChange}
             onAddPatientField={handleAddPatientField}
             onAddSection={handleAddSection}
             sheetZoom={editorUi.sheetZoom}

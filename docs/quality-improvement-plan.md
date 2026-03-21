@@ -11,15 +11,15 @@ Evolucionar el sistema de forma segura y gradual hacia una arquitectura más mod
 - **Observabilidad:** errores con mensajes claros y puntos únicos de manejo.
 
 ## Línea base validada
-- `src/App.tsx` sigue concentrando coordinación de editor, efectos de documento, IA y modales.
+- `src/App.tsx` ya delega parte de la política de título y el flujo HHR a hooks dedicados, aunque sigue siendo el ensamblador principal.
 - `src/components/cartola/CartolaApp.tsx` sigue acumulando estado, reglas de dominio, import/export y UI.
-- `src/contexts/DriveContext.tsx` y `src/utils/geminiClient.ts` concentran integraciones externas y manejo de errores.
-- La cobertura histórica reportada en `coverage/index.html` es baja para una base de refactor seguro:
-  - Statements: `31.03%`
-  - Branches: `22.29%`
-  - Functions: `25.51%`
-  - Lines: `31.78%`
-- Existen accesos directos a `localStorage`, `window.gapi`, `window.google`, `fetch` y listeners globales repartidos en varios módulos.
+- `src/contexts/DriveContext.tsx` sigue concentrando el estado de navegación y búsqueda remota, pero ahora expone modos de búsqueda y resultados parciales.
+- La cobertura actual reportada en `coverage/index.html` alcanza una base razonable para refactor seguro:
+  - Statements: `64.92%`
+  - Branches: `56.69%`
+  - Functions: `64.41%`
+  - Lines: `66.74%`
+- La app ya no confía ciegamente en HTML importado y dejó de persistir API keys sensibles en `localStorage`; aún quedan integraciones browser-globales (`window.gapi`, `window.google`, `fetch`) en transición hacia fronteras más testeables.
 
 ## Roadmap por fases
 
@@ -43,6 +43,8 @@ Evolucionar el sistema de forma segura y gradual hacia una arquitectura más mod
    - estado UI/editor,
    - efectos de documento,
    - resolución IA,
+   - política de título,
+   - flujo HHR,
    - composición de modales.
 2. Dejar `App.tsx` como ensamblador de providers, rutas, vistas y hooks.
 3. Aislar listeners globales y cleanup en hooks dedicados.
@@ -50,10 +52,10 @@ Evolucionar el sistema de forma segura y gradual hacia una arquitectura más mod
 **Criterio de salida:** `App.tsx` deja de ser el centro de negocio y pasa a coordinar módulos más pequeños.
 
 ### Iteración 3 — Hardening de fronteras externas
-1. Introducir `StorageAdapter` para encapsular persistencia local.
-2. Introducir `DriveGateway` tipado para aislar llamadas a Google Drive.
+1. Mantener `StorageAdapter` y separar persistencia estable vs sesión para credenciales sensibles.
+2. Mantener `DriveGateway` tipado y endurecer el parser de registros importados.
 3. Dividir `geminiClient.ts` en módulos de catálogo, routing, retries y generación sin romper la API pública.
-4. Centralizar mapeo de errores y remover `any` evitables en la app.
+4. Centralizar mapeo de errores y remover accesos directos evitables a APIs globales en la app.
 
 **Criterio de salida:** las fronteras de storage, Drive y Gemini quedan desacopladas del árbol principal de UI.
 
@@ -67,7 +69,7 @@ Evolucionar el sistema de forma segura y gradual hacia una arquitectura más mod
 ### Iteración 5 — Escalabilidad y budgets
 1. Consolidar lazy loading y `manualChunks` donde realmente ayuden.
 2. Automatizar budget de bundle en CI.
-3. Añadir reglas de prevención de regresión sobre cobertura mínima de áreas críticas y tamaño de módulos.
+3. Añadir reglas de prevención de regresión sobre cobertura mínima de áreas críticas, tamaño de módulos y búsquedas profundas con presupuesto.
 
 **Criterio de salida:** cada PR futuro queda sujeto a límites automáticos de calidad.
 

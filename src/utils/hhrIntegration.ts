@@ -317,8 +317,8 @@ const buildRenderedText = (
         .trim();
 
 const createDocumentId = (): string =>
-    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
+    typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.randomUUID === 'function'
+        ? globalThis.crypto.randomUUID()
         : `hhr-document-${Date.now()}`;
 
 const mapLocalTemplateIdToHhrTemplateId = (templateId: string): string =>

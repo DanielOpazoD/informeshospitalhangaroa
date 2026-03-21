@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import type { ClinicalRecord } from '../types';
 import { TEMPLATES } from '../constants';
 import { formatDateDMY } from './dateUtils';
+import { sanitizeClinicalHtml } from './clinicalContentSanitizer';
 
 interface PdfGeneratorOptions {
     record: ClinicalRecord;
@@ -97,7 +98,7 @@ export async function generatePdfAsBlob({ record }: PdfGeneratorOptions): Promis
 
         type Block = { type: 'text'; text: string } | { type: 'image'; src: string; widthPx?: number };
         const container = document.createElement('div');
-        container.innerHTML = content;
+        container.innerHTML = sanitizeClinicalHtml(content).html;
         container.querySelectorAll('li').forEach(li => {
             const parent = li.parentElement;
             const isOrdered = parent?.tagName === 'OL';

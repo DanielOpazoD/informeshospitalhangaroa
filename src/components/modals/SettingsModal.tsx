@@ -151,7 +151,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     </small>
                 </div>
                 <div style={{ background: '#fef3c7', padding: '8px', borderRadius: '4px', fontSize: '12px' }}>
-                    <strong>⚠️ Privacidad:</strong> Las credenciales se guardan solo en su navegador. Nunca se envían a ningún servidor externo.
+                    <strong>⚠️ Privacidad:</strong> Las API keys sensibles se guardan solo durante la sesión activa del navegador. El proyecto, modelo y client ID sí pueden persistirse localmente. Nunca se envían a ningún servidor externo.
                 </div>
                 <div className="modal-footer">
                     <button onClick={onClearCredentials} className="btn bg-red-600 hover:bg-red-700 text-white">

@@ -38,6 +38,17 @@ Notas de implementación:
 - La escritura usa `clinicalDocuments`, porque las reglas permiten guardar borradores clínicos para médicos y administradores.
 - La subida a `Firebase Storage` para documentos tipo cartola/entrega no se fuerza desde este editor, ya que ese flujo depende de metadatos de turno que este formulario no conoce todavía.
 
+## Frontera de datos clínicos
+
+La carga de registros clínicos quedó unificada. Importación local, apertura desde Drive, restauración de historial y drafts locales pasan por el mismo pipeline:
+
+1. parseo estructural,
+2. migración a `CURRENT_RECORD_VERSION`,
+3. normalización de campos y títulos,
+4. sanitización del HTML clínico permitido.
+
+Esto reduce divergencias entre fuentes de datos y evita persistir snapshots sin normalizar.
+
 ## Validación de calidad
 
 Antes de abrir un PR o desplegar cambios, ejecuta esta secuencia:
@@ -50,6 +61,8 @@ npm run test:ci
 npm run build
 npm run check:bundle
 ```
+
+El editor principal además usa un workflow central (`idle`, `dirty`, `saving`, `restoring`, `importing`, `searching_drive`, `syncing_hhr`, `error`) para mantener coherentes autoguardado, restauración e integraciones remotas.
 
 ### Personaliza el nombre y los logos de la institución
 
@@ -68,7 +81,7 @@ Si no los defines, seguiremos usando el nombre y los logos predeterminados para 
 El modo de edición avanzada ahora incluye un asistente de IA que puede mejorar, resumir o expandir el contenido de cada sección clínica. Para activarlo tienes dos opciones:
 
 1. Define la variable de entorno `GEMINI_API_KEY` antes de iniciar la app (por ejemplo en `.env.local`).
-2. O bien, abre **Configuración → IA** dentro de la aplicación e ingresa tu clave de la API de Gemini; la clave solo se guarda en tu navegador. Si la clave proviene de Google Cloud Console, ingresa también el número del proyecto para adjuntarlo en la cabecera `X-Goog-User-Project` y asegúrate de que tu cuenta tenga el rol **serviceusage.serviceUsageConsumer** en ese proyecto. Desde el mismo modal puedes indicar opcionalmente el modelo de Gemini; si lo dejas vacío usaremos `gemini-1.5-flash-latest`, comprobaremos automáticamente en qué versión (`v1` o `v1beta`) está disponible y, si tu clave no tiene acceso, tomaremos el primer modelo general disponible de tu catálogo y lo activaremos para ti. Si escribes otro modelo también lo validaremos antes del primer uso y, si tu clave no tiene acceso a ese modelo, te mostraremos en pantalla el catálogo de modelos que sí están habilitados para que cambies la configuración sin adivinar.
+2. O bien, abre **Configuración → IA** dentro de la aplicación e ingresa tu clave de la API de Gemini; la API key sensible se conserva solo durante la sesión activa del navegador, mientras que el proyecto/modelo pueden persistirse localmente. Si la clave proviene de Google Cloud Console, ingresa también el número del proyecto para adjuntarlo en la cabecera `X-Goog-User-Project` y asegúrate de que tu cuenta tenga el rol **serviceusage.serviceUsageConsumer** en ese proyecto. Desde el mismo modal puedes indicar opcionalmente el modelo de Gemini; si lo dejas vacío usaremos `gemini-1.5-flash-latest`, comprobaremos automáticamente en qué versión (`v1` o `v1beta`) está disponible y, si tu clave no tiene acceso, tomaremos el primer modelo general disponible de tu catálogo y lo activaremos para ti. Si escribes otro modelo también lo validaremos antes del primer uso y, si tu clave no tiene acceso a ese modelo, te mostraremos en pantalla el catálogo de modelos que sí están habilitados para que cambies la configuración sin adivinar.
 
 ### Configurar Gemini desde cero
 

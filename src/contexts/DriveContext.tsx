@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 import type {
     ClinicalRecord,
     DriveFolder,
+    DriveSearchMode,
     FavoriteFolderEntry,
     RecentDriveFile,
     SaveFormat,
@@ -11,7 +12,7 @@ import type {
 import { useDriveStorage } from '../hooks/useDriveStorage';
 import { useDriveSearch } from '../hooks/useDriveSearch';
 import { useDriveOperations } from '../hooks/useDriveOperations';
-import { createDriveGateway } from '../services/driveGateway';
+import { createDriveGateway } from '../infrastructure/drive/driveGateway';
 import { getRootDriveFolder } from '../utils/driveFolderStorage';
 
 interface DriveCacheEntry {
@@ -30,6 +31,10 @@ interface DriveContextValue {
     driveDateFrom: string;
     driveDateTo: string;
     driveContentTerm: string;
+    driveSearchMode: DriveSearchMode;
+    driveSearchWarnings: string[];
+    isDriveSearchPartial: boolean;
+    deepSearchStatus: string;
     favoriteFolders: FavoriteFolderEntry[];
     recentFiles: RecentDriveFile[];
     selectedFolderId: string;
@@ -43,6 +48,7 @@ interface DriveContextValue {
     handleRemoveFavoriteFolder: (id: string) => void;
     handleGoToFavorite: (favorite: FavoriteFolderEntry, mode: 'save' | 'open') => void;
     handleSearchInDrive: () => Promise<void>;
+    cancelDriveSearch: () => void;
     clearDriveSearch: () => void;
     addRecentFile: (file: DriveFolder) => void;
     formatDriveDate: (value?: string) => string;
@@ -58,6 +64,7 @@ interface DriveContextValue {
     setDriveDateFrom: React.Dispatch<React.SetStateAction<string>>;
     setDriveDateTo: React.Dispatch<React.SetStateAction<string>>;
     setDriveContentTerm: React.Dispatch<React.SetStateAction<string>>;
+    setDriveSearchMode: React.Dispatch<React.SetStateAction<DriveSearchMode>>;
 }
 
 interface DriveProviderProps {
@@ -122,11 +129,17 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         driveDateFrom,
         driveDateTo,
         driveContentTerm,
+        driveSearchMode,
+        driveSearchWarnings,
+        isDriveSearchPartial,
+        deepSearchStatus,
         setDriveSearchTerm,
         setDriveDateFrom,
         setDriveDateTo,
         setDriveContentTerm,
+        setDriveSearchMode,
         handleSearchInDrive,
+        cancelDriveSearch,
         clearDriveSearch,
     } = useDriveSearch({
         setIsDriveLoading,
@@ -150,6 +163,10 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         driveDateFrom,
         driveDateTo,
         driveContentTerm,
+        driveSearchMode,
+        driveSearchWarnings,
+        isDriveSearchPartial,
+        deepSearchStatus,
         favoriteFolders,
         recentFiles,
         selectedFolderId,
@@ -163,6 +180,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         handleRemoveFavoriteFolder,
         handleGoToFavorite,
         handleSearchInDrive,
+        cancelDriveSearch,
         clearDriveSearch,
         addRecentFile,
         formatDriveDate,
@@ -178,19 +196,25 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         setDriveDateFrom,
         setDriveDateTo,
         setDriveContentTerm,
+        setDriveSearchMode,
     }), [
         addRecentFile,
+        cancelDriveSearch,
         clearDriveSearch,
         setDriveContentTerm,
         setDriveDateFrom,
         setDriveDateTo,
+        setDriveSearchMode,
         setDriveSearchTerm,
+        deepSearchStatus,
         driveContentTerm,
         driveDateFrom,
         driveDateTo,
         driveFolders,
         driveJsonFiles,
+        driveSearchMode,
         driveSearchTerm,
+        driveSearchWarnings,
         favoriteFolders,
         fetchDriveFolders,
         fetchFolderContents,
@@ -203,6 +227,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         handleRemoveFavoriteFolder,
         handleSearchInDrive,
         handleSetDefaultFolder,
+        isDriveSearchPartial,
         isDriveLoading,
         isSaving,
         newFolderName,

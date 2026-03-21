@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import type { ClinicalSectionData } from '../types';
+import { sanitizeClinicalHtml } from '../utils/clinicalContentSanitizer';
 
 interface ClinicalSectionProps {
     section: ClinicalSectionData;
@@ -37,8 +38,9 @@ const ClinicalSection: React.FC<ClinicalSectionProps> = ({
     const syncContent = useCallback(() => {
         const node = noteRef.current;
         if (!node) return;
-        if (node.innerHTML !== (section.content || '')) {
-            node.innerHTML = section.content || '';
+        const sanitized = sanitizeClinicalHtml(section.content || '');
+        if (node.innerHTML !== sanitized.html) {
+            node.innerHTML = sanitized.html;
         }
     }, [section.content]);
 
@@ -49,7 +51,11 @@ const ClinicalSection: React.FC<ClinicalSectionProps> = ({
     const handleInput = useCallback(() => {
         const node = noteRef.current;
         if (!node) return;
-        onSectionContentChange(index, node.innerHTML);
+        const sanitized = sanitizeClinicalHtml(node.innerHTML);
+        if (node.innerHTML !== sanitized.html) {
+            node.innerHTML = sanitized.html;
+        }
+        onSectionContentChange(index, sanitized.html);
     }, [index, onSectionContentChange]);
 
     const placeCaretAfterNode = useCallback((node: Node) => {
@@ -65,7 +71,11 @@ const ClinicalSection: React.FC<ClinicalSectionProps> = ({
     const persistEditorContent = useCallback(() => {
         const node = noteRef.current;
         if (!node) return;
-        onSectionContentChange(index, node.innerHTML);
+        const sanitized = sanitizeClinicalHtml(node.innerHTML);
+        if (node.innerHTML !== sanitized.html) {
+            node.innerHTML = sanitized.html;
+        }
+        onSectionContentChange(index, sanitized.html);
     }, [index, onSectionContentChange]);
 
     const insertImageAtCursor = useCallback((dataUrl: string) => {
@@ -201,7 +211,11 @@ const ClinicalSection: React.FC<ClinicalSectionProps> = ({
                 onPaste={handlePaste}
                 onBlur={event => {
                     setIsFocused(false);
-                    onSectionContentChange(index, event.currentTarget.innerHTML);
+                    const sanitized = sanitizeClinicalHtml(event.currentTarget.innerHTML);
+                    if (event.currentTarget.innerHTML !== sanitized.html) {
+                        event.currentTarget.innerHTML = sanitized.html;
+                    }
+                    onSectionContentChange(index, sanitized.html);
                 }}
                 onMouseUp={event => {
                     const target = event.target as HTMLElement;

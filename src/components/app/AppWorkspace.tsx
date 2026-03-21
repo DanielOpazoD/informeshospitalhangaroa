@@ -35,6 +35,7 @@ interface AppWorkspaceProps {
     handleUpdateSectionMeta: (index: number, meta: Partial<ClinicalSectionData>) => void;
     handleRemoveSection: (index: number) => void;
     handleRemovePatientField: (index: number) => void;
+    onRecordTitleChange: (title: string) => void;
     onAddPatientField: () => void;
     onAddSection: () => void;
     sheetZoom: number;
@@ -70,6 +71,7 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
     handleUpdateSectionMeta,
     handleRemoveSection,
     handleRemovePatientField,
+    onRecordTitleChange,
     onAddPatientField,
     onAddSection,
     sheetZoom,
@@ -110,7 +112,7 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
                         contentEditable={record.templateId === '5' || (isEditing && activeEditTarget?.type === 'record-title')}
                         suppressContentEditableWarning
                         onDoubleClick={() => activateEditTarget({ type: 'record-title' })}
-                        onBlur={e => setRecord({ ...record, title: e.currentTarget.innerText })}
+                        onBlur={e => onRecordTitleChange(e.currentTarget.innerText)}
                     >
                         {record.title}
                     </div>

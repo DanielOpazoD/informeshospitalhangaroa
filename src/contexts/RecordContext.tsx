@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useState, useMemo } from 'react';
-import type { ClinicalRecord, ClinicalSectionData, PatientField, ToastFn, VersionHistoryEntry } from '../types';
+import type {
+    ClinicalRecord,
+    ClinicalSectionData,
+    EditorWorkflowState,
+    PatientField,
+    ToastFn,
+    VersionHistoryEntry,
+} from '../types';
+import type { EditorWorkflowAction } from '../application/editorWorkflow';
 import { useClinicalRecord } from '../hooks/useClinicalRecord';
 import { useRecordForm } from '../hooks/useRecordForm';
 
@@ -34,6 +42,8 @@ interface RecordContextValue {
     saveDraft: (reason: 'auto' | 'manual' | 'import', overrideRecord?: ClinicalRecord) => void;
     handleRestoreHistoryEntry: (entry: VersionHistoryEntry) => void;
     markRecordAsReplaced: () => void;
+    workflowState: EditorWorkflowState;
+    dispatchWorkflow: React.Dispatch<EditorWorkflowAction>;
 
     // State from useRecordForm & UI state
     isEditing: boolean;

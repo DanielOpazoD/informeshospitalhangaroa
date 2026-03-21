@@ -154,6 +154,7 @@ const createProps = (): React.ComponentProps<typeof AppWorkspace> => ({
     handleUpdateSectionMeta: vi.fn(),
     handleRemoveSection: vi.fn(),
     handleRemovePatientField: vi.fn(),
+    onRecordTitleChange: vi.fn(),
     onAddPatientField: vi.fn(),
     onAddSection: vi.fn(),
     sheetZoom: 1.25,
@@ -231,7 +232,7 @@ describe('AppWorkspace', () => {
         fireEvent.click(screen.getByText('Agregar nueva sección'));
 
         expect(props.activateEditTarget).toHaveBeenCalledWith({ type: 'record-title' });
-        expect(props.setRecord).toHaveBeenCalledWith(expect.objectContaining({ title: 'Nuevo informe' }));
+        expect(props.onRecordTitleChange).toHaveBeenCalledWith('Nuevo informe');
         expect(props.onAddPatientField).toHaveBeenCalled();
         expect(props.onAddSection).toHaveBeenCalled();
         expect(patientInfoProps?.activeEditTarget).toBeNull();

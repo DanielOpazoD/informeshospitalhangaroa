@@ -1,5 +1,5 @@
 import React from 'react';
-import type { DriveFolder, FavoriteFolderEntry, RecentDriveFile } from '../../types';
+import type { DriveFolder, DriveSearchMode, FavoriteFolderEntry, RecentDriveFile } from '../../types';
 
 interface OpenFromDriveModalProps {
     isOpen: boolean;
@@ -11,11 +11,16 @@ interface OpenFromDriveModalProps {
     driveDateFrom: string;
     driveDateTo: string;
     driveContentTerm: string;
+    driveSearchMode: DriveSearchMode;
+    driveSearchWarnings: string[];
+    isDriveSearchPartial: boolean;
+    deepSearchStatus: string;
     favoriteFolders: FavoriteFolderEntry[];
     recentFiles: RecentDriveFile[];
     formatDriveDate: (value?: string) => string;
     onClose: () => void;
     onSearch: () => void;
+    onCancelSearch: () => void;
     onClearSearch: () => void;
     onAddFavorite: () => void;
     onRemoveFavorite: (id: string) => void;
@@ -27,6 +32,7 @@ interface OpenFromDriveModalProps {
     onDateFromChange: (value: string) => void;
     onDateToChange: (value: string) => void;
     onContentTermChange: (value: string) => void;
+    onSearchModeChange: (value: DriveSearchMode) => void;
 }
 
 const OpenFromDriveModal: React.FC<OpenFromDriveModalProps> = ({
@@ -39,11 +45,16 @@ const OpenFromDriveModal: React.FC<OpenFromDriveModalProps> = ({
     driveDateFrom,
     driveDateTo,
     driveContentTerm,
+    driveSearchMode,
+    driveSearchWarnings,
+    isDriveSearchPartial,
+    deepSearchStatus,
     favoriteFolders,
     recentFiles,
     formatDriveDate,
     onClose,
     onSearch,
+    onCancelSearch,
     onClearSearch,
     onAddFavorite,
     onRemoveFavorite,
@@ -55,6 +66,7 @@ const OpenFromDriveModal: React.FC<OpenFromDriveModalProps> = ({
     onDateFromChange,
     onDateToChange,
     onContentTermChange,
+    onSearchModeChange,
 }) => {
     if (!isOpen) return null;
 
@@ -90,6 +102,14 @@ const OpenFromDriveModal: React.FC<OpenFromDriveModalProps> = ({
                         />
                         <input className="inp" type="date" value={driveDateFrom} onChange={e => onDateFromChange(e.target.value)} />
                         <input className="inp" type="date" value={driveDateTo} onChange={e => onDateToChange(e.target.value)} />
+                        <select
+                            className="inp"
+                            value={driveSearchMode}
+                            onChange={e => onSearchModeChange(e.target.value as DriveSearchMode)}
+                        >
+                            <option value="metadata">Búsqueda rápida por metadata</option>
+                            <option value="deepContent">Búsqueda profunda por contenido</option>
+                        </select>
                         <input
                             className="inp"
                             type="text"
@@ -101,11 +121,28 @@ const OpenFromDriveModal: React.FC<OpenFromDriveModalProps> = ({
                             <button className="btn" onClick={onSearch} disabled={isDriveLoading}>
                                 Buscar
                             </button>
+                            {isDriveLoading && driveSearchMode === 'deepContent' && (
+                                <button className="btn" onClick={onCancelSearch}>
+                                    Cancelar búsqueda
+                                </button>
+                            )}
                             <button className="btn" onClick={onClearSearch} disabled={isDriveLoading}>
                                 Limpiar
                             </button>
                         </div>
                     </div>
+                    {(deepSearchStatus || driveSearchWarnings.length > 0 || isDriveSearchPartial) && (
+                        <div className={`drive-progress ${isDriveSearchPartial ? 'text-amber-700' : ''}`}>
+                            {deepSearchStatus || (isDriveSearchPartial ? 'Resultados parciales por búsqueda profunda.' : 'Resultados completos por metadata.')}
+                            {driveSearchWarnings.length > 0 && (
+                                <div className="mt-2 text-xs">
+                                    {driveSearchWarnings.map(warning => (
+                                        <div key={warning}>- {warning}</div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <div className="favorites-actions">
                         <button className="btn" onClick={onAddFavorite} disabled={isSearchFolder}>
                             Agregar carpeta a favoritos

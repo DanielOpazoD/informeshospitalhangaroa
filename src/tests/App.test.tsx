@@ -72,6 +72,10 @@ vi.mock('../contexts/DriveContext', () => ({
         driveDateFrom: '',
         driveDateTo: '',
         driveContentTerm: '',
+        driveSearchMode: 'metadata',
+        driveSearchWarnings: [],
+        isDriveSearchPartial: false,
+        deepSearchStatus: '',
         selectedFolderId: 'root',
         newFolderName: '',
         fileNameInput: '',
@@ -82,6 +86,7 @@ vi.mock('../contexts/DriveContext', () => ({
         handleRemoveFavoriteFolder: vi.fn(),
         handleGoToFavorite: vi.fn(),
         handleSearchInDrive: vi.fn().mockResolvedValue(undefined),
+        cancelDriveSearch: vi.fn(),
         clearDriveSearch: vi.fn(),
         addRecentFile: vi.fn(),
         formatDriveDate: vi.fn().mockReturnValue('19/03/2026'),
@@ -97,6 +102,7 @@ vi.mock('../contexts/DriveContext', () => ({
         setDriveDateFrom: vi.fn(),
         setDriveDateTo: vi.fn(),
         setDriveContentTerm: vi.fn(),
+        setDriveSearchMode: vi.fn(),
     }),
 }));
 
@@ -253,6 +259,51 @@ vi.mock('../hooks/useAiAssistantController', () => ({
         aiSections: [],
         aiConversationKey: 'conv-1',
         handleAutoSelectAiModel: vi.fn(),
+    }),
+}));
+
+vi.mock('../hooks/useRecordTitleController', () => ({
+    useRecordTitleController: () => ({
+        autoTitle: 'Informe clínico',
+        handleTemplateChange: vi.fn(),
+        handleRecordTitleChange: vi.fn(),
+    }),
+}));
+
+vi.mock('../hooks/useHhrIntegrationController', () => ({
+    useHhrIntegrationController: () => ({
+        hhrHeader: {
+            isEnabled: true,
+            canSave: true,
+            isSaving: false,
+            disabledReason: undefined,
+            onSaveToHhr: vi.fn(),
+        },
+        hhrPanel: {
+            isConfigured: true,
+            missingEnvKeys: [],
+            isAuthLoading: false,
+            user: null,
+            censusDateKey: '2026-03-20',
+            censusCount: 0,
+            isCensusLoading: false,
+            censusError: null,
+            selectedPatient: null,
+            lastSyncLabel: null,
+            onSignIn: vi.fn(),
+            onSignOut: vi.fn(),
+            onOpenCensusModal: vi.fn(),
+            onClearSelectedPatient: vi.fn(),
+        },
+        hhrModal: {
+            isOpen: false,
+            isLoading: false,
+            error: null,
+            patients: [],
+            onClose: vi.fn(),
+            onSelectPatient: vi.fn(),
+        },
+        resetSyncState: vi.fn(),
     }),
 }));
 

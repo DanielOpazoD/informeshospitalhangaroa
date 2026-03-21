@@ -1,5 +1,5 @@
 import React from 'react';
-import type { DriveFolder, FavoriteFolderEntry, RecentDriveFile, VersionHistoryEntry } from '../../types';
+import type { DriveFolder, DriveSearchMode, FavoriteFolderEntry, RecentDriveFile, VersionHistoryEntry } from '../../types';
 import type { ToastState } from '../../hooks/useToast';
 import SettingsModal from '../modals/SettingsModal';
 import OpenFromDriveModal from '../modals/OpenFromDriveModal';
@@ -37,11 +37,16 @@ interface AppModalsProps {
         driveDateFrom: string;
         driveDateTo: string;
         driveContentTerm: string;
+        driveSearchMode: DriveSearchMode;
+        driveSearchWarnings: string[];
+        isDriveSearchPartial: boolean;
+        deepSearchStatus: string;
         favoriteFolders: FavoriteFolderEntry[];
         recentFiles: RecentDriveFile[];
         formatDriveDate: (value?: string) => string;
         onClose: () => void;
         onSearch: () => void;
+        onCancelSearch: () => void;
         onClearSearch: () => void;
         onAddFavorite: () => void;
         onRemoveFavorite: (id: string) => void;
@@ -53,6 +58,7 @@ interface AppModalsProps {
         onDateFromChange: (value: string) => void;
         onDateToChange: (value: string) => void;
         onContentTermChange: (value: string) => void;
+        onSearchModeChange: (value: DriveSearchMode) => void;
     };
     saveModal: {
         isOpen: boolean;
@@ -130,11 +136,16 @@ const AppModals: React.FC<AppModalsProps> = ({
             driveDateFrom={openModal.driveDateFrom}
             driveDateTo={openModal.driveDateTo}
             driveContentTerm={openModal.driveContentTerm}
+            driveSearchMode={openModal.driveSearchMode}
+            driveSearchWarnings={openModal.driveSearchWarnings}
+            isDriveSearchPartial={openModal.isDriveSearchPartial}
+            deepSearchStatus={openModal.deepSearchStatus}
             favoriteFolders={openModal.favoriteFolders}
             recentFiles={openModal.recentFiles}
             formatDriveDate={openModal.formatDriveDate}
             onClose={openModal.onClose}
             onSearch={openModal.onSearch}
+            onCancelSearch={openModal.onCancelSearch}
             onClearSearch={openModal.onClearSearch}
             onAddFavorite={openModal.onAddFavorite}
             onRemoveFavorite={openModal.onRemoveFavorite}
@@ -146,6 +157,7 @@ const AppModals: React.FC<AppModalsProps> = ({
             onDateFromChange={openModal.onDateFromChange}
             onDateToChange={openModal.onDateToChange}
             onContentTermChange={openModal.onContentTermChange}
+            onSearchModeChange={openModal.onSearchModeChange}
         />
 
         <SaveToDriveModal

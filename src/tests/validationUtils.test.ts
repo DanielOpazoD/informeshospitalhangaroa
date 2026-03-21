@@ -2,11 +2,13 @@
 import { describe, it, expect } from 'vitest';
 import type { ClinicalRecord, PatientField } from '../types';
 import { formatTimeSince, isClinicalRecord, parseClinicalRecord, validateCriticalFields } from '../utils/validationUtils';
+import { normalizePatientFields } from '../utils/recordTemplates';
 
 const buildRecord = (fields: PatientField[]): ClinicalRecord => ({
-    version: '1.0',
+    version: 'v14',
     templateId: 'demo',
     title: 'Test',
+    titleMode: 'custom',
     patientFields: fields,
     sections: [],
     medico: 'Dr. Test',
@@ -79,16 +81,24 @@ describe('formatTimeSince', () => {
 
 describe('parseClinicalRecord', () => {
     it('reconoce una ficha clínica válida', () => {
-        const record = buildRecord([
-            { id: 'nombre', label: 'Nombre', value: 'Paciente', type: 'text' },
-        ]);
+        const record = {
+            ...buildRecord([
+                { id: 'nombre', label: 'Nombre', value: 'Paciente', type: 'text' },
+            ]),
+            sections: [{ id: 'sec-1', title: 'Diagnóstico', content: '<p>Contenido</p>' }],
+        };
+        const parsed = parseClinicalRecord(record);
         expect(isClinicalRecord(record)).toBe(true);
-        expect(parseClinicalRecord(record)).toEqual(record);
+        expect(parsed.warnings).toEqual([]);
+        expect(parsed.record).toEqual({
+            ...record,
+            patientFields: normalizePatientFields(record.patientFields),
+        });
     });
 
     it('rechaza payloads incompletos o malformados', () => {
         expect(isClinicalRecord({ version: '1' })).toBe(false);
-        expect(parseClinicalRecord({ version: '1' })).toBeNull();
+        expect(parseClinicalRecord({ version: '1' })).toEqual({ record: null, warnings: [] });
         expect(parseClinicalRecord({
             version: '1',
             templateId: '2',
@@ -97,14 +107,31 @@ describe('parseClinicalRecord', () => {
             sections: [],
             medico: '',
             especialidad: '',
-        })).toBeNull();
+        })).toEqual({ record: null, warnings: [] });
     });
 
     it('normaliza los patientFields cuando se entrega un normalizador', () => {
-        const record = buildRecord([
-            { id: 'nombre', label: 'Nombre', value: 'Paciente', type: 'text' },
-        ]);
+        const record = {
+            ...buildRecord([
+                { id: 'nombre', label: 'Nombre', value: 'Paciente', type: 'text' },
+            ]),
+            sections: [{ id: 'sec-1', title: 'Diagnóstico', content: '<p>Contenido</p>' }],
+        };
         const parsed = parseClinicalRecord(record, fields => [...fields, { label: 'Extra', value: '', type: 'text' }]);
-        expect(parsed?.patientFields).toHaveLength(2);
+        expect(parsed.record?.patientFields).toHaveLength(2);
+    });
+
+    it('sanitiza HTML peligroso y reporta warnings', () => {
+        const parsed = parseClinicalRecord({
+            ...buildRecord([{ id: 'nombre', label: 'Nombre', value: 'Paciente', type: 'text' }]),
+            sections: [{
+                title: 'Plan',
+                content: '<script>alert(1)</script><p onclick="hack()">Seguro</p><img src="https://evil.test/a.png" alt="x" />',
+            }],
+        });
+
+        expect(parsed.record?.sections[0]?.content).toBe('<p>Seguro</p>');
+        expect(parsed.record?.sections[0]?.id).toBeTruthy();
+        expect(parsed.warnings.length).toBeGreaterThan(0);
     });
 });

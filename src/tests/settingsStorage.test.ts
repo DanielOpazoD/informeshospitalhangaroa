@@ -33,11 +33,13 @@ const createMockStorage = () => {
 
 const installMockWindow = () => {
     const { storage, values } = createMockStorage();
+    const { storage: sessionStorage, values: sessionValues } = createMockStorage();
     const previousWindow = (globalThis as { window?: Window }).window;
-    Object.assign(globalThis, { window: { localStorage: storage } });
+    Object.assign(globalThis, { window: { localStorage: storage, sessionStorage } });
 
     return {
         values,
+        sessionValues,
         restore: () => {
             if (previousWindow) {
                 Object.assign(globalThis, { window: previousWindow });
@@ -53,8 +55,8 @@ afterEach(() => {
 });
 
 describe('settingsStorage', () => {
-    it('guarda y carga configuración sanitizando espacios y modelo', () => {
-        const { values, restore } = installMockWindow();
+    it('guarda API keys en sessionStorage y persistencia estable en localStorage', () => {
+        const { values, sessionValues, restore } = installMockWindow();
 
         persistSettings({
             googleApiKey: '  api-key  ',
@@ -71,31 +73,39 @@ describe('settingsStorage', () => {
             geminiApiKey: 'gem-key',
             geminiProjectId: '12345',
             geminiModel: 'gemini-2.0-flash@v1beta',
+            migratedSensitiveKeys: false,
         });
+        expect(values.has(LOCAL_STORAGE_KEYS.googleApiKey)).toBe(false);
+        expect(values.has(LOCAL_STORAGE_KEYS.geminiApiKey)).toBe(false);
+        expect(sessionValues.get(LOCAL_STORAGE_KEYS.googleApiKey)).toBe('api-key');
+        expect(sessionValues.get(LOCAL_STORAGE_KEYS.geminiApiKey)).toBe('gem-key');
         expect(values.get(LOCAL_STORAGE_KEYS.geminiModel)).toBe('gemini-2.0-flash@v1beta');
 
         restore();
     });
 
-    it('elimina claves cuando recibe valores vacíos', () => {
+    it('migra claves sensibles heredadas desde localStorage solo para la sesión activa', () => {
         const { storage, values } = createMockStorage();
+        const { storage: sessionStorage, values: sessionValues } = createMockStorage();
         values.set(LOCAL_STORAGE_KEYS.googleApiKey, 'existing');
         values.set(LOCAL_STORAGE_KEYS.geminiApiKey, 'existing');
-        Object.assign(globalThis, { window: { localStorage: storage } });
+        Object.assign(globalThis, { window: { localStorage: storage, sessionStorage } });
 
-        persistSettings({
-            googleApiKey: '   ',
-            geminiApiKey: '',
-        });
+        const loaded = loadPersistedSettings();
 
-        expect(values.has(LOCAL_STORAGE_KEYS.googleApiKey)).toBe(false);
-        expect(values.has(LOCAL_STORAGE_KEYS.geminiApiKey)).toBe(false);
+        expect(loaded.googleApiKey).toBe('existing');
+        expect(loaded.geminiApiKey).toBe('existing');
+        expect(loaded.migratedSensitiveKeys).toBe(true);
+        expect(sessionValues.has(LOCAL_STORAGE_KEYS.googleApiKey)).toBe(false);
     });
 
     it('limpia toda la configuración persistida', () => {
         const { storage, values } = createMockStorage();
+        const { storage: sessionStorage, values: sessionValues } = createMockStorage();
         Object.values(LOCAL_STORAGE_KEYS).forEach(key => values.set(key, 'value'));
-        Object.assign(globalThis, { window: { localStorage: storage } });
+        Object.assign(globalThis, { window: { localStorage: storage, sessionStorage } });
+        sessionValues.set(LOCAL_STORAGE_KEYS.googleApiKey, 'value');
+        sessionValues.set(LOCAL_STORAGE_KEYS.geminiApiKey, 'value');
 
         clearPersistedSettings();
 
@@ -104,6 +114,8 @@ describe('settingsStorage', () => {
         expect(values.has(LOCAL_STORAGE_KEYS.geminiApiKey)).toBe(false);
         expect(values.has(LOCAL_STORAGE_KEYS.geminiProjectId)).toBe(false);
         expect(values.has(LOCAL_STORAGE_KEYS.geminiModel)).toBe(false);
+        expect(sessionValues.has(LOCAL_STORAGE_KEYS.googleApiKey)).toBe(false);
+        expect(sessionValues.has(LOCAL_STORAGE_KEYS.geminiApiKey)).toBe(false);
     });
 
     it('retorna fallback del client id cuando no hay valor guardado', () => {

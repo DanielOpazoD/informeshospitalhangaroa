@@ -12,6 +12,14 @@ export const getBrowserStorageAdapter = (): StorageAdapter | null => {
     return window.localStorage;
 };
 
+export const getBrowserSessionStorageAdapter = (): StorageAdapter | null => {
+    if (typeof window === 'undefined' || !window.sessionStorage) {
+        return null;
+    }
+
+    return window.sessionStorage;
+};
+
 export const readStoredJson = <T>(storage: StorageAdapter | null, key: string): T | null => {
     if (!storage) {
         return null;

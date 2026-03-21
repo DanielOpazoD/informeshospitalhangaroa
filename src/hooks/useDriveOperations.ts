@@ -1,5 +1,6 @@
 import { useCallback, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 import type {
+    AppResult,
     ClinicalRecord,
     DriveFolder,
     FavoriteFolderEntry,
@@ -8,8 +9,7 @@ import type {
 } from '../types';
 import { buildDriveContextErrorMessage } from '../utils/driveErrorUtils';
 import { getRootDriveFolder } from '../utils/driveFolderStorage';
-import type { DriveGateway } from '../services/driveGateway';
-import { parseClinicalRecord } from '../utils/validationUtils';
+import { importRecordFromDrive } from '../application/clinicalRecordUseCases';
 
 interface DriveCacheEntry {
     folders: DriveFolder[];
@@ -19,7 +19,7 @@ interface DriveCacheEntry {
 
 interface UseDriveOperationsParams {
     showToast: ToastFn;
-    driveGateway: DriveGateway;
+    driveGateway: CompatibleDriveGateway;
     driveCacheRef: MutableRefObject<Map<string, DriveCacheEntry>>;
     folderPath: DriveFolder[];
     selectedFolderId: string;
@@ -32,6 +32,15 @@ interface UseDriveOperationsParams {
     setNewFolderName: Dispatch<SetStateAction<string>>;
     setIsDriveLoading: Dispatch<SetStateAction<boolean>>;
     setIsSaving: Dispatch<SetStateAction<boolean>>;
+}
+
+interface CompatibleDriveGateway {
+    listFolders: (folderId: string) => Promise<DriveFolder[] | AppResult<DriveFolder[]>>;
+    listFolderContents: (folderId: string) => Promise<{ folders: DriveFolder[]; files: DriveFolder[] } | AppResult<{ folders: DriveFolder[]; files: DriveFolder[] }>>;
+    getJsonRecord?: (fileId: string) => Promise<unknown>;
+    readJsonRecord?: (fileId: string) => Promise<unknown | AppResult<unknown>>;
+    createFolder: (name: string, parentId: string) => Promise<void | AppResult<void>>;
+    uploadFile: (params: { fileName: string; mimeType: string; content: Blob; parentId: string }) => Promise<{ id?: string; name?: string } | AppResult<{ id?: string; name?: string }>>;
 }
 
 export const useDriveOperations = ({
@@ -50,6 +59,17 @@ export const useDriveOperations = ({
     setIsDriveLoading,
     setIsSaving,
 }: UseDriveOperationsParams) => {
+    const unwrapGatewayResult = useCallback(async <T,>(value: Promise<T | AppResult<T>>) => {
+        const resolved = await value;
+        if (resolved && typeof resolved === 'object' && 'ok' in resolved) {
+            if (!resolved.ok) {
+                throw new Error(resolved.error.message);
+            }
+            return resolved.data;
+        }
+        return resolved as T;
+    }, []);
+
     const cacheFolders = useCallback((key: string, folders: DriveFolder[], files: DriveFolder[] = []) => {
         driveCacheRef.current.set(key, { folders, files, timestamp: Date.now() });
     }, [driveCacheRef]);
@@ -64,7 +84,7 @@ export const useDriveOperations = ({
                 setSelectedFolderId(folderId);
                 return;
             }
-            const folders = await driveGateway.listFolders(folderId);
+            const folders = await unwrapGatewayResult(driveGateway.listFolders(folderId));
             cacheFolders(cacheKey, folders);
             setDriveFolders(folders);
             setSelectedFolderId(folderId);
@@ -74,7 +94,7 @@ export const useDriveOperations = ({
         } finally {
             setIsDriveLoading(false);
         }
-    }, [cacheFolders, driveCacheRef, driveGateway, setDriveFolders, setIsDriveLoading, setSelectedFolderId, showToast]);
+    }, [cacheFolders, driveCacheRef, driveGateway, setDriveFolders, setIsDriveLoading, setSelectedFolderId, showToast, unwrapGatewayResult]);
 
     const fetchFolderContents = useCallback(async (folderId: string) => {
         setIsDriveLoading(true);
@@ -87,7 +107,7 @@ export const useDriveOperations = ({
                 setSelectedFolderId(folderId);
                 return;
             }
-            const { folders, files } = await driveGateway.listFolderContents(folderId);
+            const { folders, files } = await unwrapGatewayResult(driveGateway.listFolderContents(folderId));
             cacheFolders(cacheKey, folders, files);
             setDriveFolders(folders);
             setDriveJsonFiles(files);
@@ -98,7 +118,7 @@ export const useDriveOperations = ({
         } finally {
             setIsDriveLoading(false);
         }
-    }, [cacheFolders, driveCacheRef, driveGateway, setDriveFolders, setDriveJsonFiles, setIsDriveLoading, setSelectedFolderId, showToast]);
+    }, [cacheFolders, driveCacheRef, driveGateway, setDriveFolders, setDriveJsonFiles, setIsDriveLoading, setSelectedFolderId, showToast, unwrapGatewayResult]);
 
     const handleGoToFavorite = useCallback((favorite: FavoriteFolderEntry, mode: 'save' | 'open') => {
         const clonedPath = favorite.path?.length ? structuredClone(favorite.path) : [getRootDriveFolder()];
@@ -127,7 +147,7 @@ export const useDriveOperations = ({
         setIsDriveLoading(true);
         try {
             const currentFolderId = folderPath[folderPath.length - 1].id;
-            await driveGateway.createFolder(newFolderName.trim(), currentFolderId);
+            await unwrapGatewayResult(driveGateway.createFolder(newFolderName.trim(), currentFolderId));
             setNewFolderName('');
             driveCacheRef.current.delete(`folders:${currentFolderId}`);
             driveCacheRef.current.delete(`contents:${currentFolderId}`);
@@ -139,18 +159,31 @@ export const useDriveOperations = ({
         } finally {
             setIsDriveLoading(false);
         }
-    }, [driveCacheRef, driveGateway, fetchDriveFolders, folderPath, newFolderName, setIsDriveLoading, setNewFolderName, showToast]);
+    }, [driveCacheRef, driveGateway, fetchDriveFolders, folderPath, newFolderName, setIsDriveLoading, setNewFolderName, showToast, unwrapGatewayResult]);
 
     const openJsonFileFromDrive = useCallback(async (file: DriveFolder): Promise<ClinicalRecord | null> => {
         setIsDriveLoading(true);
         try {
-            const importedRecord = parseClinicalRecord(await driveGateway.getJsonRecord(file.id));
+            const rawRecord = driveGateway.readJsonRecord
+                ? await unwrapGatewayResult(driveGateway.readJsonRecord(file.id))
+                : driveGateway.getJsonRecord
+                    ? await unwrapGatewayResult(driveGateway.getJsonRecord(file.id))
+                    : null;
+            if (!rawRecord) {
+                showToast('El archivo JSON seleccionado de Drive no es válido.', 'error');
+                return null;
+            }
+
+            const { record: importedRecord, warnings, errors } = importRecordFromDrive(rawRecord);
             if (importedRecord) {
                 showToast('Archivo cargado exitosamente desde Google Drive.');
+                if (warnings.length) {
+                    showToast(`Contenido protegido al abrir desde Drive:\n- ${warnings.join('\n- ')}`, 'warning');
+                }
                 addRecentFile(file);
                 return importedRecord;
             }
-            showToast('El archivo JSON seleccionado de Drive no es válido.', 'error');
+            showToast(errors.join('\n') || 'El archivo JSON seleccionado de Drive no es válido.', 'error');
             return null;
         } catch (error) {
             console.error('Error al abrir el archivo desde Drive:', error);
@@ -159,7 +192,7 @@ export const useDriveOperations = ({
         } finally {
             setIsDriveLoading(false);
         }
-    }, [addRecentFile, driveGateway, setIsDriveLoading, showToast]);
+    }, [addRecentFile, driveGateway, setIsDriveLoading, showToast, unwrapGatewayResult]);
 
     const saveToDrive = useCallback(async ({ record, baseFileName, format, generatePdf }: SaveOptions) => {
         setIsSaving(true);
@@ -171,12 +204,12 @@ export const useDriveOperations = ({
                 ? await generatePdf()
                 : new Blob([JSON.stringify(record, null, 2)], { type: mimeType });
 
-            await driveGateway.uploadFile({
+            await unwrapGatewayResult(driveGateway.uploadFile({
                 fileName,
                 mimeType,
                 content: fileContent,
                 parentId: selectedFolderId,
-            });
+            }));
 
             return fileName;
         };
@@ -197,7 +230,7 @@ export const useDriveOperations = ({
         } finally {
             setIsSaving(false);
         }
-    }, [driveGateway, selectedFolderId, setIsSaving, showToast]);
+    }, [driveGateway, selectedFolderId, setIsSaving, showToast, unwrapGatewayResult]);
 
     return {
         fetchDriveFolders,

@@ -1,9 +1,10 @@
 import React, { useCallback, useRef, useMemo } from 'react';
 import type { ClinicalRecord, ToastFn } from '../types';
 import { suggestedFilename } from '../utils/stringUtils';
-import { parseClinicalRecord, validateCriticalFields } from '../utils/validationUtils';
+import { validateCriticalFields } from '../utils/validationUtils';
 import { useConfirmDialog } from './useConfirmDialog';
 import { FIELD_IDS } from '../appConstants';
+import { importRecordFromJson } from '../application/clinicalRecordUseCases';
 
 /**
  * Options for configuring file I/O operations.
@@ -56,7 +57,7 @@ export function useFileOperations({
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                const importedRecord = parseClinicalRecord(
+                const { record: importedRecord, warnings, errors } = importRecordFromJson(
                     JSON.parse(e.target?.result as string),
                     normalizePatientFields,
                 );
@@ -67,8 +68,11 @@ export function useFileOperations({
                     setHasUnsavedChanges(false);
                     saveDraft('import', normalizedRecord);
                     showToast('Borrador importado correctamente.');
+                    if (warnings.length) {
+                        showToast(`Importación protegida:\n- ${warnings.join('\n- ')}`, 'warning');
+                    }
                 } else {
-                    showToast('Archivo JSON inválido.', 'error');
+                    showToast(errors.join('\n') || 'Archivo JSON inválido.', 'error');
                 }
             } catch {
                 showToast('Error al leer el archivo JSON.', 'error');

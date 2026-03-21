@@ -157,7 +157,7 @@ describe('useDriveOperations', () => {
 
         expect(imported).toBeNull();
         expect(params.addRecentFile).not.toHaveBeenCalled();
-        expect(params.showToast).toHaveBeenCalledWith('El archivo JSON seleccionado de Drive no es válido.', 'error');
+        expect(params.showToast).toHaveBeenCalledWith('El payload clínico no cumple la estructura mínima requerida.', 'error');
     });
 
     it('guarda dos archivos cuando el formato es both', async () => {

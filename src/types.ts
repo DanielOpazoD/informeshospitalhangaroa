@@ -31,6 +31,7 @@ export interface ClinicalRecord {
     version: string;
     templateId: string;
     title: string;
+    titleMode?: 'auto' | 'custom';
     patientFields: PatientField[];
     sections: ClinicalSectionData[];
     medico: string;
@@ -56,6 +57,25 @@ export interface DriveFolder {
     mimeType?: string;
 }
 
+export type DriveSearchMode = 'metadata' | 'deepContent';
+
+export interface DriveSearchResult {
+    files: DriveFolder[];
+    partial: boolean;
+    warnings: string[];
+}
+
+export interface AppError {
+    source: 'drive' | 'auth' | 'hhr' | 'import';
+    code: string;
+    message: string;
+    retryable: boolean;
+}
+
+export type AppResult<T> =
+    | { ok: true; data: T; warnings?: string[] }
+    | { ok: false; error: AppError };
+
 export interface FavoriteFolderEntry {
     id: string;
     path: DriveFolder[];
@@ -72,6 +92,22 @@ export interface VersionHistoryEntry {
     id: string;
     timestamp: number;
     record: ClinicalRecord;
+}
+
+export type EditorWorkflowStatus =
+    | 'idle'
+    | 'dirty'
+    | 'saving'
+    | 'restoring'
+    | 'importing'
+    | 'searching_drive'
+    | 'syncing_hhr'
+    | 'error';
+
+export interface EditorWorkflowState {
+    status: EditorWorkflowStatus;
+    hasUnsavedChanges: boolean;
+    lastError: string | null;
 }
 
 // ── Google API types ────────────────────────────────
@@ -119,4 +155,3 @@ export interface SaveOptions {
     format: SaveFormat;
     generatePdf: () => Promise<Blob>;
 }
-
