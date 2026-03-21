@@ -89,5 +89,26 @@ describe('UserAccountMenu', () => {
             expect(screen.getByText('Dr. Juan Pérez')).toBeDefined();
             expect(screen.getByText('juan@hospital.cl')).toBeDefined();
         });
+
+        it('closes the dropdown on outside click', () => {
+            renderMenu();
+            fireEvent.click(screen.getByTitle('juan@hospital.cl'));
+            expect(screen.getByText('Ir a Google Drive')).toBeDefined();
+
+            fireEvent.mouseDown(document.body);
+
+            expect(screen.queryByText('Ir a Google Drive')).toBeNull();
+        });
+
+        it('opens external links from the account menu', () => {
+            const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+            renderMenu();
+
+            fireEvent.click(screen.getByTitle('juan@hospital.cl'));
+            fireEvent.click(screen.getByText('Ir a Google Drive'));
+
+            expect(openSpy).toHaveBeenCalledWith('https://drive.google.com', '_blank', 'noopener,noreferrer');
+            openSpy.mockRestore();
+        });
     });
 });

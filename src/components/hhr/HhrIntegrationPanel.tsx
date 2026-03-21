@@ -2,7 +2,7 @@ import React from 'react';
 import type { AsyncJobState } from '../../types';
 import type { HhrAuthenticatedUser, HhrCensusPatient } from '../../hhrTypes';
 import { formatHhrDisplayDate } from '../../utils/hhrIntegration';
-import { UploadIcon, SignOutIcon, SearchIcon } from '../icons';
+import { CloseIcon, MessageIcon, SearchIcon, SignOutIcon, UploadIcon, WarningIcon } from '../icons';
 
 interface HhrIntegrationPanelProps {
     isConfigured: boolean;
@@ -65,8 +65,12 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
                         {isAuthLoading ? 'Conectando…' : 'Conectar con HHR'}
                     </button>
                     {!isConfigured && (
-                        <div className="hhr-compact-notice warning" title={`Faltan variables configurables: ${missingEnvKeys.join(', ')}`}>
-                            ⚠️ Faltan config
+                        <div
+                            className="hhr-compact-notice warning"
+                            title={`Faltan variables configurables: ${missingEnvKeys.join(', ')}`}
+                        >
+                            <WarningIcon />
+                            <span>Faltan config</span>
                         </div>
                     )}
                 </div>
@@ -79,10 +83,17 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
             <div className="hhr-compact-left">
                 <div className="hhr-compact-brand">
                     <span className="brand-badge active">HHR</span>
-                    <span className="hhr-session-email" title={user.email}>{user.email}</span>
-                    <button type="button" className="btn secondary round btn-sm hhr-logout-btn" onClick={onSignOut} title="Cerrar sesión">
-                       <SignOutIcon />
-                       <span>Cerrar sesión</span>
+                    <span className="hhr-session-email" title={user.email}>
+                        {user.email}
+                    </span>
+                    <button
+                        type="button"
+                        className="btn secondary round btn-sm hhr-logout-btn"
+                        onClick={onSignOut}
+                        title="Cerrar sesión"
+                    >
+                        <SignOutIcon />
+                        <span>Cerrar sesión</span>
                     </button>
                 </div>
             </div>
@@ -98,17 +109,23 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
                             onClick={onClearSelectedPatient}
                             title="Desvincular"
                         >
-                            ✕
+                            <CloseIcon />
                         </button>
                     </div>
                 ) : (
                     <div className="hhr-compact-census" title={`Última carga: ${formatHhrDisplayDate(censusDateKey)}`}>
-                        <span className="census-info">{isCensusLoading ? 'Actualizando' : `${censusCount} pctes.`}</span>
+                        <span className="census-info">
+                            {isCensusLoading ? 'Actualizando' : `${censusCount} pctes.`}
+                        </span>
                         <button type="button" className="btn secondary round btn-sm" onClick={onOpenCensusModal}>
                             <SearchIcon />
                             <span>Buscar paciente</span>
                         </button>
-                        {censusError && <span className="hhr-compact-error" title={censusError}>⚠️</span>}
+                        {censusError && (
+                            <span className="hhr-compact-error" title={censusError}>
+                                <WarningIcon />
+                            </span>
+                        )}
                     </div>
                 )}
             </div>
@@ -116,7 +133,11 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
             <div className="hhr-compact-right">
                 <div className="hhr-save-meta-compact">
                     {lastSyncLabel && <span className="sync-time">{lastSyncLabel}</span>}
-                    {saveJob.message && <span className="sync-msg" title={saveJob.message}>💬</span>}
+                    {saveJob.message && (
+                        <span className="sync-msg" title={saveJob.message}>
+                            <MessageIcon />
+                        </span>
+                    )}
                 </div>
                 <button
                     type="button"

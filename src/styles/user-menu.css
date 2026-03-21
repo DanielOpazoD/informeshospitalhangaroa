@@ -1,0 +1,150 @@
+.drive-login-icon {
+    transform: scale(1.1);
+    display: flex;
+}
+
+.user-menu {
+    position: relative;
+    overflow: visible;
+}
+
+.user-menu-button {
+    width: 38px;
+    height: 38px;
+    border-radius: 9999px;
+    border: 2px solid var(--topbar-action-border);
+    background: var(--topbar-action-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--topbar-action-text);
+    cursor: pointer;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s,
+        transform 0.2s;
+    overflow: hidden;
+}
+
+.user-menu-button img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-menu-button span {
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.user-menu-button:hover,
+.user-menu-button.open {
+    border-color: var(--topbar-select-hover-border);
+    box-shadow: 0 10px 24px rgba(59, 130, 246, 0.35);
+    transform: translateY(-1px);
+}
+
+.user-menu-dropdown {
+    position: absolute;
+    right: 0;
+    margin-top: 12px;
+    background: var(--user-menu-bg);
+    color: var(--topbar-text);
+    border: 1px solid var(--user-menu-border);
+    border-radius: 16px;
+    padding: 16px;
+    width: 280px;
+    box-shadow: var(--user-menu-shadow);
+    z-index: 15000;
+    animation: fade-in 0.18s ease-out;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.user-menu-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.user-menu-avatar-large {
+    width: 52px;
+    height: 52px;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #2563eb, #38bdf8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    color: #f8fafc;
+}
+
+.user-menu-avatar-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-menu-name {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.user-menu-email {
+    font-size: 12px;
+    color: var(--user-menu-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.user-menu-divider {
+    border-top: 1px solid rgba(148, 163, 184, 0.25);
+    margin: 12px 0;
+}
+
+.user-menu-option {
+    width: 100%;
+    background: none;
+    border: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    transition:
+        background 0.2s,
+        color 0.2s;
+}
+
+.user-menu-option svg {
+    width: 18px;
+    height: 18px;
+    color: var(--topbar-select-hover-border);
+}
+
+.user-menu-option:hover {
+    background: var(--topbar-select-hover-bg);
+    color: var(--topbar-text);
+}
+
+.user-menu-option:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}

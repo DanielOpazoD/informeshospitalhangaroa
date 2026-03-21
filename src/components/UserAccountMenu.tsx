@@ -1,12 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { GoogleUserProfile, GoogleTokenClient } from '../types';
-import {
-    LaunchIcon,
-    GmailIcon,
-    SwitchUserIcon,
-    SignOutIcon,
-    GoogleDriveColoredIcon,
-} from './icons';
+import { LaunchIcon, GmailIcon, SwitchUserIcon, SignOutIcon, GoogleDriveColoredIcon } from './icons';
+import { useDismissibleLayer } from '../hooks/useDismissibleLayer';
 
 interface UserAccountMenuProps {
     isSignedIn: boolean;
@@ -30,25 +25,10 @@ const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
     onChangeUser,
 }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const menuRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!isMenuOpen) return;
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setIsMenuOpen(false);
-            }
-        };
-        const handleEscape = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') setIsMenuOpen(false);
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('keydown', handleEscape);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-            document.removeEventListener('keydown', handleEscape);
-        };
-    }, [isMenuOpen]);
+    const menuRef = useDismissibleLayer<HTMLDivElement>({
+        isOpen: isMenuOpen,
+        onDismiss: () => setIsMenuOpen(false),
+    });
 
     useEffect(() => {
         if (!isSignedIn) setIsMenuOpen(false);
@@ -77,7 +57,7 @@ const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
                 disabled={!isGisReady || !isGapiReady || !tokenClient}
                 title="Conectar Google Drive"
             >
-                <div style={{ transform: 'scale(1.1)', display: 'flex' }}>
+                <div className="drive-login-icon">
                     <GoogleDriveColoredIcon />
                 </div>
             </button>
@@ -112,15 +92,25 @@ const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
                         </div>
                         <div>
                             <div className="user-menu-name">{userProfile?.name || displayEmail}</div>
-                            <div className="user-menu-email" title={displayEmail}>{displayEmail}</div>
+                            <div className="user-menu-email" title={displayEmail}>
+                                {displayEmail}
+                            </div>
                         </div>
                     </div>
                     <div className="user-menu-divider" />
-                    <button type="button" className="user-menu-option" onClick={() => handleMenuAction(() => openExternalLink('https://drive.google.com'))}>
+                    <button
+                        type="button"
+                        className="user-menu-option"
+                        onClick={() => handleMenuAction(() => openExternalLink('https://drive.google.com'))}
+                    >
                         <LaunchIcon />
                         <span>Ir a Google Drive</span>
                     </button>
-                    <button type="button" className="user-menu-option" onClick={() => handleMenuAction(() => openExternalLink('https://mail.google.com'))}>
+                    <button
+                        type="button"
+                        className="user-menu-option"
+                        onClick={() => handleMenuAction(() => openExternalLink('https://mail.google.com'))}
+                    >
                         <GmailIcon />
                         <span>Abrir Gmail</span>
                     </button>

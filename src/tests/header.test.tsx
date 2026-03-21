@@ -42,6 +42,7 @@ const createProps = (): React.ComponentProps<typeof Header> => ({
         onToggleAdvancedEditing: vi.fn(),
         isAiAssistantVisible: false,
         onToggleAiAssistant: vi.fn(),
+        onToolbarCommand: vi.fn(),
     },
     save: {
         saveStatusLabel: 'Guardado',
