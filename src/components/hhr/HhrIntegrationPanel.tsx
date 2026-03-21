@@ -39,15 +39,12 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
         <div className="hhr-panel-main">
             <div className="hhr-panel-header">
                 <div className="hhr-panel-heading">
-                    <div className="hhr-panel-title">Acceso clínico HHR</div>
-                    <div className="hhr-panel-subtitle">
-                        Selecciona pacientes desde el censo activo y guarda borradores clínicos en la ficha electrónica.
-                    </div>
+                    <div className="hhr-panel-title">HHR</div>
                 </div>
             </div>
 
             <div className="hhr-panel-meta">
-                <span>Censo {formatHhrDisplayDate(censusDateKey)}</span>
+                <span>{formatHhrDisplayDate(censusDateKey)}</span>
                 <span>{isCensusLoading ? 'Actualizando pacientes…' : `${censusCount} pacientes visibles`}</span>
                 {lastSyncLabel && <span>{lastSyncLabel}</span>}
                 {user && <span>{formatHhrRoleLabel(user.role)}</span>}
@@ -64,7 +61,6 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
                 <div className="hhr-patient-summary">
                     <div className="hhr-patient-summary-title">{selectedPatient.patientName}</div>
                     <div className="hhr-patient-summary-meta">
-                        <span>{selectedPatient.bedLabel}</span>
                         <span>{selectedPatient.rut || 'Sin RUT'}</span>
                         {selectedPatient.admissionDate && (
                             <span>Ingreso {formatHhrDisplayDate(selectedPatient.admissionDate)}</span>
@@ -73,7 +69,7 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
                 </div>
             ) : (
                 <div className="hhr-panel-empty">
-                    No hay un paciente HHR seleccionado todavía.
+                    Sin paciente seleccionado
                 </div>
             )}
 
@@ -110,7 +106,7 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
                     onClick={onSignIn}
                     disabled={!isConfigured || isAuthLoading}
                 >
-                    {isAuthLoading ? 'Conectando…' : 'Iniciar sesión con Google HHR'}
+                    {isAuthLoading ? 'Conectando…' : 'Iniciar sesión'}
                 </button>
             )}
         </div>

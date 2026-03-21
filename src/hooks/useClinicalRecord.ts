@@ -4,6 +4,7 @@ import type { ClinicalRecord, ToastFn, VersionHistoryEntry } from '../types';
 import { AUTO_SAVE_IDLE_DELAY, AUTO_SAVE_INTERVAL, LOCAL_STORAGE_KEYS, MAX_HISTORY_ENTRIES } from '../appConstants';
 import { useConfirmDialog } from './useConfirmDialog';
 import { getBrowserStorageAdapter, readStoredJson, writeStoredJson, type StorageAdapter } from '../utils/storageAdapter';
+import { normalizePatientFields } from '../utils/recordTemplates';
 
 interface UseClinicalRecordOptions {
     onToast: ToastFn;
@@ -26,6 +27,11 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
     const [versionHistory, setVersionHistory] = useState<VersionHistoryEntry[]>([]);
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const suppressedRecordChangeCountRef = useRef(1);
+
+    const normalizeRecord = useCallback((snapshot: ClinicalRecord): ClinicalRecord => ({
+        ...snapshot,
+        patientFields: normalizePatientFields(snapshot.patientFields),
+    }), []);
 
     const markRecordAsReplaced = useCallback(() => {
         suppressedRecordChangeCountRef.current += 1;
@@ -66,8 +72,9 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
         try {
             const parsed = readStoredJson<{ timestamp?: number; record?: ClinicalRecord }>(storage, LOCAL_STORAGE_KEYS.draft);
             if (parsed?.record) {
+                const normalizedRecord = normalizeRecord(parsed.record);
                 markRecordAsReplaced();
-                setRecord(parsed.record);
+                setRecord(normalizedRecord);
                 if (parsed.timestamp) setLastLocalSave(parsed.timestamp);
                 setHasUnsavedChanges(false);
                 onToast('Borrador recuperado automáticamente.', 'success');
@@ -79,12 +86,16 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
         try {
             const parsedHistory = readStoredJson<VersionHistoryEntry[]>(storage, LOCAL_STORAGE_KEYS.history);
             if (parsedHistory) {
-                setVersionHistory(parsedHistory.slice(0, MAX_HISTORY_ENTRIES));
+                setVersionHistory(
+                    parsedHistory
+                        .slice(0, MAX_HISTORY_ENTRIES)
+                        .map(entry => ({ ...entry, record: normalizeRecord(entry.record) }))
+                );
             }
         } catch (error) {
             console.warn('No se pudo leer el historial local:', error);
         }
-    }, [markRecordAsReplaced, onToast, storage]);
+    }, [markRecordAsReplaced, normalizeRecord, onToast, storage]);
 
     useEffect(() => {
         if (suppressedRecordChangeCountRef.current > 0) {
@@ -120,7 +131,7 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
                 tone: 'warning',
             });
             if (!confirmed) return;
-            const snapshot = structuredClone(entry.record);
+            const snapshot = normalizeRecord(structuredClone(entry.record));
             markRecordAsReplaced();
             setRecord(snapshot);
             setHasUnsavedChanges(false);
@@ -129,7 +140,7 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
             onToast('Versión restaurada desde el historial.');
             setIsHistoryModalOpen(false);
         })();
-    }, [confirm, markRecordAsReplaced, onToast, storage]);
+    }, [confirm, markRecordAsReplaced, normalizeRecord, onToast, storage]);
 
     return {
         record,

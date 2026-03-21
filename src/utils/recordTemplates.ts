@@ -5,17 +5,19 @@ import {
     getDefaultPatientFieldsByTemplate,
     getDefaultSectionsByTemplate,
 } from '../constants';
+import { FIELD_IDS } from '../appConstants';
 import type { ClinicalRecord, ClinicalSectionData, PatientField } from '../types';
 
 export const DEFAULT_TEMPLATE_ID = '2';
 export const RECOMMENDED_GEMINI_MODEL = 'gemini-1.5-flash-latest';
 
 export const normalizePatientFields = (fields: PatientField[]): PatientField[] => {
+    const filteredFields = fields.filter(field => field.id !== FIELD_IDS.cama && field.label !== 'Cama');
     const defaultById = new Map(DEFAULT_PATIENT_FIELDS.map(field => [field.id, field]));
     const defaultByLabel = new Map(DEFAULT_PATIENT_FIELDS.map(field => [field.label, field]));
     const seenDefaultIds = new Set<string>();
 
-    const normalizedFields = fields.map(field => {
+    const normalizedFields = filteredFields.map(field => {
         const matchingDefault = field.id ? defaultById.get(field.id) : defaultByLabel.get(field.label);
         if (matchingDefault?.id) {
             seenDefaultIds.add(matchingDefault.id);

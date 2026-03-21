@@ -227,7 +227,7 @@ export const applyHhrPatientToRecord = (
     patient: HhrCensusPatient,
     todayKey: string = getHhrTodayKey()
 ): ClinicalRecord => {
-    let nextFields = clonePatientFields(record.patientFields);
+    let nextFields = clonePatientFields(record.patientFields).filter(field => field.id !== HHR_CAMA_FIELD_ID);
     const reportDate = getClinicalRecordPatientFieldValue(record, FIELD_IDS.finf) || todayKey;
     const computedAge = patient.birthDate ? calcEdadY(patient.birthDate, reportDate) : '';
 
@@ -271,14 +271,6 @@ export const applyHhrPatientToRecord = (
             type: 'date',
         });
     }
-
-    nextFields = upsertPatientField(nextFields, {
-        id: HHR_CAMA_FIELD_ID,
-        label: 'Cama',
-        value: patient.bedLabel,
-        type: 'text',
-        isCustom: true,
-    });
 
     return {
         ...record,

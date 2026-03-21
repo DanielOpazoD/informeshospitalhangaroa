@@ -1,5 +1,6 @@
 import type { ClinicalRecord, PatientField } from '../types';
 import { FIELD_IDS } from '../appConstants';
+import { normalizePatientFields as normalizeClinicalRecordPatientFields } from './recordTemplates';
 
 const findFieldValue = (fields: PatientField[], id: string) =>
     fields.find(field => field.id === id)?.value?.trim() || '';
@@ -79,7 +80,7 @@ export const parseClinicalRecord = (
 
     return {
         ...value,
-        patientFields: normalizePatientFields ? normalizePatientFields(value.patientFields) : value.patientFields,
+        patientFields: (normalizePatientFields || normalizeClinicalRecordPatientFields)(value.patientFields),
     };
 };
 
