@@ -38,6 +38,9 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, history, onClose, o
                                     <div className="history-item-info">
                                         <div className="history-item-title">{patientName}</div>
                                         <div className="history-item-meta">{templateName}</div>
+                                        {entry.metadata?.summary ? (
+                                            <div className="history-item-meta">{entry.metadata.summary}</div>
+                                        ) : null}
                                         <div className="history-item-meta">Guardado: {timestampLabel}</div>
                                     </div>
                                     <div className="history-item-actions">

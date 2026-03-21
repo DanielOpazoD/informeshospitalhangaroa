@@ -1,11 +1,19 @@
 import { generateSectionId } from '../constants';
 import type { HhrCensusPatient } from '../hhrTypes';
-import type { ClinicalRecord, ClinicalSectionData, EditorWorkflowStatus, PatientField, VersionHistoryEntry } from '../types';
+import type {
+    ClinicalRecord,
+    ClinicalSectionData,
+    ClinicalRecordCommandCategory,
+    ClinicalRecordCommandType,
+    EditorEffect,
+    EditorWorkflowStatus,
+    HistoryEntryMetadata,
+    PatientField,
+    VersionHistoryEntry,
+} from '../types';
 import { loadClinicalRecord } from '../domain/clinicalRecord';
 import { calcEdadY } from '../utils/dateUtils';
-import {
-    applyHhrPatientToRecord,
-} from '../utils/hhrIntegration';
+import { applyHhrPatientToRecord } from '../utils/hhrIntegration';
 import {
     createTemplateBaseline,
     getAutoTitleForTemplate,
@@ -32,14 +40,23 @@ export type ClinicalRecordCommand =
     | { type: 'replace_record_from_history'; entry: VersionHistoryEntry };
 
 export type ClinicalRecordCommandResult =
-    | { ok: true; record: ClinicalRecord; warnings: string[]; changed: boolean }
-    | { ok: false; record: ClinicalRecord; errors: string[]; warnings: string[]; changed: false };
-
-export type ClinicalRecordCommandCategory =
-    | 'document_edit'
-    | 'document_structure'
-    | 'document_replace'
-    | 'external_sync';
+    | {
+        ok: true;
+        record: ClinicalRecord;
+        warnings: string[];
+        changed: boolean;
+        effects: EditorEffect[];
+        metadata: HistoryEntryMetadata;
+    }
+    | {
+        ok: false;
+        record: ClinicalRecord;
+        errors: string[];
+        warnings: string[];
+        changed: false;
+        effects: EditorEffect[];
+        metadata: HistoryEntryMetadata;
+    };
 
 export interface ClinicalRecordCommandPolicy {
     category: ClinicalRecordCommandCategory;
@@ -48,25 +65,97 @@ export interface ClinicalRecordCommandPolicy {
     blockedReason: string;
 }
 
-const success = (record: ClinicalRecord, warnings: string[] = [], changed = true): ClinicalRecordCommandResult => ({
+export const buildHistoryMetadata = (
+    commandType: ClinicalRecordCommandType,
+    commandCategory: ClinicalRecordCommandCategory,
+    summary: string,
+    changed = true,
+    groupKey?: string,
+): HistoryEntryMetadata => ({
+    commandType,
+    commandCategory,
+    changed,
+    summary,
+    ...(groupKey ? { groupKey } : {}),
+});
+
+const warningEffects = (warnings: string[]): EditorEffect[] =>
+    warnings.map(message => ({ type: 'show_warning', message }));
+
+const success = (
+    record: ClinicalRecord,
+    metadata: HistoryEntryMetadata,
+    warnings: string[] = [],
+    changed = true,
+    effects: EditorEffect[] = [],
+): ClinicalRecordCommandResult => ({
     ok: true,
     record,
     warnings,
     changed,
+    effects: [...warningEffects(warnings), ...effects],
+    metadata: { ...metadata, changed },
 });
 
-const failure = (record: ClinicalRecord, errors: string[], warnings: string[] = []): ClinicalRecordCommandResult => ({
+const failure = (
+    record: ClinicalRecord,
+    metadata: HistoryEntryMetadata,
+    errors: string[],
+    warnings: string[] = [],
+    effects: EditorEffect[] = [],
+): ClinicalRecordCommandResult => ({
     ok: false,
     record,
     errors,
     warnings,
     changed: false,
+    effects: [...warningEffects(warnings), ...effects],
+    metadata: { ...metadata, changed: false },
 });
 
 const serializeClinicalRecord = (record: ClinicalRecord): string => JSON.stringify(record);
 
 const didRecordChange = (currentRecord: ClinicalRecord, nextRecord: ClinicalRecord): boolean =>
     serializeClinicalRecord(currentRecord) !== serializeClinicalRecord(nextRecord);
+
+const getCommandMetadata = (command: ClinicalRecordCommand): HistoryEntryMetadata => {
+    switch (command.type) {
+        case 'edit_patient_field':
+            return buildHistoryMetadata(command.type, 'document_edit', 'Edición de campo del paciente', true, `patient-field:${command.index}`);
+        case 'edit_patient_label':
+            return buildHistoryMetadata(command.type, 'document_edit', 'Edición de etiqueta del paciente', true, `patient-label:${command.index}`);
+        case 'edit_section_content':
+            return buildHistoryMetadata(command.type, 'document_edit', 'Edición de contenido clínico', true, `section-content:${command.index}`);
+        case 'edit_section_title':
+            return buildHistoryMetadata(command.type, 'document_edit', 'Edición de título de sección', true, `section-title:${command.index}`);
+        case 'update_section_meta':
+            return buildHistoryMetadata(command.type, 'document_edit', 'Actualización de metadatos de sección', true, `section-meta:${command.index}`);
+        case 'add_section':
+            return buildHistoryMetadata(command.type, 'document_structure', 'Se agregó una sección clínica', true, 'section-structure');
+        case 'remove_section':
+            return buildHistoryMetadata(command.type, 'document_structure', 'Se eliminó una sección clínica', true, 'section-structure');
+        case 'add_patient_field':
+            return buildHistoryMetadata(command.type, 'document_structure', 'Se agregó un campo del paciente', true, 'patient-structure');
+        case 'remove_patient_field':
+            return buildHistoryMetadata(command.type, 'document_structure', 'Se eliminó un campo del paciente', true, 'patient-structure');
+        case 'change_template':
+            return buildHistoryMetadata(command.type, 'document_structure', 'Se cambió la plantilla del documento', true, 'template');
+        case 'change_record_title':
+            return buildHistoryMetadata(command.type, 'document_edit', 'Se actualizó el título del documento', true, 'record-title');
+        case 'edit_professional_field':
+            return buildHistoryMetadata(command.type, 'document_edit', `Se actualizó ${command.field}`, true, `professional:${command.field}`);
+        case 'reset_record':
+            return buildHistoryMetadata(command.type, 'document_structure', 'Se restableció la plantilla', true, 'reset');
+        case 'apply_hhr_patient':
+            return buildHistoryMetadata(command.type, 'external_sync', 'Se cargaron datos del paciente desde HHR', true, 'hhr-patient');
+        case 'replace_record_from_import':
+            return buildHistoryMetadata(command.type, 'document_replace', 'Se importó un registro clínico', true, 'import');
+        case 'replace_record_from_history':
+            return buildHistoryMetadata(command.type, 'document_replace', 'Se restauró una versión del historial', true, 'restore');
+        default:
+            return buildHistoryMetadata('save_manual', 'persistence', 'Operación clínica', true);
+    }
+};
 
 export const getClinicalRecordCommandPolicy = (command: ClinicalRecordCommand): ClinicalRecordCommandPolicy => {
     switch (command.type) {
@@ -157,38 +246,54 @@ const syncDerivedPatientFields = (fields: PatientField[]): PatientField[] => {
     return nextFields;
 };
 
-const finalizeRecord = (currentRecord: ClinicalRecord, candidateRecord: ClinicalRecord): ClinicalRecordCommandResult => {
+const finalizeRecord = (
+    currentRecord: ClinicalRecord,
+    candidateRecord: ClinicalRecord,
+    metadata: HistoryEntryMetadata,
+    effects: EditorEffect[] = [],
+): ClinicalRecordCommandResult => {
     const loaded = loadClinicalRecord(candidateRecord, normalizePatientFields);
     if (!loaded.record) {
-        return failure(currentRecord, loaded.errors, loaded.warnings);
+        return failure(currentRecord, metadata, loaded.errors, loaded.warnings, effects);
     }
 
     const nextRecord = syncAutoTitle(loaded.record);
-    return success(nextRecord, loaded.warnings, didRecordChange(currentRecord, nextRecord));
+    return success(nextRecord, metadata, loaded.warnings, didRecordChange(currentRecord, nextRecord), effects);
 };
 
-const finalizeLoadedRecord = (currentRecord: ClinicalRecord, value: unknown): ClinicalRecordCommandResult => {
+const finalizeLoadedRecord = (
+    currentRecord: ClinicalRecord,
+    value: unknown,
+    metadata: HistoryEntryMetadata,
+    effects: EditorEffect[] = [],
+): ClinicalRecordCommandResult => {
     const loaded = loadClinicalRecord(value, normalizePatientFields);
     if (!loaded.record) {
-        return failure(currentRecord, loaded.errors, loaded.warnings);
+        return failure(currentRecord, metadata, loaded.errors, loaded.warnings, effects);
     }
 
     const nextRecord = syncAutoTitle(loaded.record);
-    return success(nextRecord, loaded.warnings, didRecordChange(currentRecord, nextRecord));
+    return success(nextRecord, metadata, loaded.warnings, didRecordChange(currentRecord, nextRecord), effects);
 };
 
 export const normalizeClinicalRecordSnapshot = (record: ClinicalRecord): ClinicalRecordCommandResult =>
-    finalizeRecord(record, record);
+    finalizeRecord(
+        record,
+        record,
+        buildHistoryMetadata('save_auto', 'persistence', 'Normalización de snapshot', true, 'snapshot'),
+    );
 
 export const executeClinicalRecordCommand = (
     record: ClinicalRecord,
     command: ClinicalRecordCommand,
 ): ClinicalRecordCommandResult => {
+    const metadata = getCommandMetadata(command);
+
     switch (command.type) {
         case 'edit_patient_field': {
             const field = getFieldAtIndex(record, command.index);
             if (!field) {
-                return failure(record, ['El campo de paciente que intenta editar no existe.']);
+                return failure(record, metadata, ['El campo de paciente que intenta editar no existe.']);
             }
 
             const patientFields = [...record.patientFields];
@@ -196,76 +301,76 @@ export const executeClinicalRecordCommand = (
             return finalizeRecord(record, {
                 ...record,
                 patientFields: syncDerivedPatientFields(patientFields),
-            });
+            }, metadata);
         }
         case 'edit_patient_label': {
             const field = getFieldAtIndex(record, command.index);
             if (!field) {
-                return failure(record, ['El campo de paciente que intenta renombrar no existe.']);
+                return failure(record, metadata, ['El campo de paciente que intenta renombrar no existe.']);
             }
 
             const patientFields = [...record.patientFields];
             patientFields[command.index] = { ...field, label: command.label };
-            return finalizeRecord(record, { ...record, patientFields });
+            return finalizeRecord(record, { ...record, patientFields }, metadata);
         }
         case 'edit_section_content': {
             const section = getSectionAtIndex(record, command.index);
             if (!section) {
-                return failure(record, ['La sección que intenta editar no existe.']);
+                return failure(record, metadata, ['La sección que intenta editar no existe.']);
             }
 
             const sections = [...record.sections];
             sections[command.index] = { ...section, content: command.content };
-            return finalizeRecord(record, { ...record, sections });
+            return finalizeRecord(record, { ...record, sections }, metadata);
         }
         case 'edit_section_title': {
             const section = getSectionAtIndex(record, command.index);
             if (!section) {
-                return failure(record, ['La sección que intenta renombrar no existe.']);
+                return failure(record, metadata, ['La sección que intenta renombrar no existe.']);
             }
 
             const sections = [...record.sections];
             sections[command.index] = { ...section, title: command.title };
-            return finalizeRecord(record, { ...record, sections });
+            return finalizeRecord(record, { ...record, sections }, metadata);
         }
         case 'update_section_meta': {
             const section = getSectionAtIndex(record, command.index);
             if (!section) {
-                return failure(record, ['La sección que intenta actualizar no existe.']);
+                return failure(record, metadata, ['La sección que intenta actualizar no existe.']);
             }
 
             const sections = [...record.sections];
             sections[command.index] = { ...section, ...command.meta };
-            return finalizeRecord(record, { ...record, sections });
+            return finalizeRecord(record, { ...record, sections }, metadata);
         }
         case 'add_section':
             return finalizeRecord(record, {
                 ...record,
                 sections: [...record.sections, { ...command.section, id: command.section.id || generateSectionId() }],
-            });
+            }, metadata);
         case 'remove_section':
             if (!getSectionAtIndex(record, command.index)) {
-                return failure(record, ['La sección que intenta eliminar no existe.']);
+                return failure(record, metadata, ['La sección que intenta eliminar no existe.']);
             }
 
             return finalizeRecord(record, {
                 ...record,
                 sections: record.sections.filter((_, index) => index !== command.index),
-            });
+            }, metadata);
         case 'add_patient_field':
             return finalizeRecord(record, {
                 ...record,
                 patientFields: syncDerivedPatientFields([...record.patientFields, command.field]),
-            });
+            }, metadata);
         case 'remove_patient_field':
             if (!getFieldAtIndex(record, command.index)) {
-                return failure(record, ['El campo de paciente que intenta eliminar no existe.']);
+                return failure(record, metadata, ['El campo de paciente que intenta eliminar no existe.']);
             }
 
             return finalizeRecord(record, {
                 ...record,
                 patientFields: syncDerivedPatientFields(record.patientFields.filter((_, index) => index !== command.index)),
-            });
+            }, metadata);
         case 'change_template': {
             const baseline = createTemplateBaseline(command.templateId);
             const shouldKeepCustomTitle = record.titleMode === 'custom' || command.templateId === '5';
@@ -277,28 +382,28 @@ export const executeClinicalRecordCommand = (
                 titleMode: shouldKeepCustomTitle ? 'custom' : baseline.titleMode,
                 patientFields: baseline.patientFields,
                 sections: baseline.sections,
-            });
+            }, metadata, [{ type: 'reset_hhr_sync' }]);
         }
         case 'change_record_title':
             return finalizeRecord(record, {
                 ...record,
                 title: command.title,
                 titleMode: 'custom',
-            });
+            }, metadata);
         case 'edit_professional_field':
             return finalizeRecord(record, {
                 ...record,
                 [command.field]: command.value,
-            });
+            }, metadata);
         case 'reset_record':
-            return finalizeRecord(record, createTemplateBaseline(command.templateId));
+            return finalizeRecord(record, createTemplateBaseline(command.templateId), metadata, [{ type: 'reset_hhr_sync' }]);
         case 'apply_hhr_patient':
-            return finalizeRecord(record, applyHhrPatientToRecord(record, command.patient, command.todayKey));
+            return finalizeRecord(record, applyHhrPatientToRecord(record, command.patient, command.todayKey), metadata, [{ type: 'reset_hhr_sync' }]);
         case 'replace_record_from_import':
-            return finalizeLoadedRecord(record, command.value);
+            return finalizeLoadedRecord(record, command.value, metadata, [{ type: 'mark_import_completed' }]);
         case 'replace_record_from_history':
-            return finalizeLoadedRecord(record, command.entry.record);
+            return finalizeLoadedRecord(record, command.entry.record, metadata, [{ type: 'mark_restore_completed' }, { type: 'close_history_modal' }, { type: 'reset_hhr_sync' }]);
         default:
-            return failure(record, ['El comando clínico solicitado no está soportado.']);
+            return failure(record, metadata, ['El comando clínico solicitado no está soportado.']);
     }
 };

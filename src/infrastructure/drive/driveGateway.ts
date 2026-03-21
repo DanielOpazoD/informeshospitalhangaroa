@@ -2,6 +2,8 @@ import {
     DRIVE_CONTENT_FETCH_CONCURRENCY,
     DRIVE_DEEP_SEARCH_MAX_FILES,
     DRIVE_DEEP_SEARCH_TIME_BUDGET_MS,
+    GATEWAY_RETRY_ATTEMPTS,
+    GATEWAY_TIMEOUT_MS,
 } from '../../appConstants';
 import type {
     AppResult,
@@ -15,6 +17,7 @@ import {
     type DriveGateway as LegacyDriveGateway,
     type DriveSearchFilters,
 } from '../../services/driveGateway';
+import { runWithResilience } from '../shared/resilience';
 
 export interface DriveSearchRequest extends DriveSearchFilters {
     contentTerm: string;
@@ -44,15 +47,21 @@ const toAppError = (
     error: unknown,
     fallbackMessage: string,
     code = 'unknown',
+    retryable = true,
 ): AppResult<never> => ({
     ok: false,
     error: {
         source,
         code,
         message: error instanceof Error ? error.message : fallbackMessage,
-        retryable: true,
+        retryable,
     },
 });
+
+const isRetryableDriveError = (error: unknown): boolean => {
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    return !message.includes('quota exceeded') && !message.includes('permission') && !message.includes('403');
+};
 
 const runDeepContentSearch = async (
     gateway: LegacyDriveGateway,
@@ -130,47 +139,107 @@ export const createDriveGateway = (): DriveGateway => {
         getAccessToken: legacyGateway.getAccessToken,
         listFolders: async (folderId) => {
             try {
-                return { ok: true, data: await legacyGateway.listFolders(folderId) };
+                return {
+                    ok: true,
+                    data: await runWithResilience(
+                        () => legacyGateway.listFolders(folderId),
+                        {
+                            attempts: GATEWAY_RETRY_ATTEMPTS,
+                            timeoutMs: GATEWAY_TIMEOUT_MS,
+                            label: 'Listado de carpetas de Drive',
+                            shouldRetry: isRetryableDriveError,
+                        },
+                    ),
+                };
             } catch (error) {
-                return toAppError('drive', error, 'No se pudieron listar las carpetas.', 'list_folders');
+                return toAppError('drive', error, 'No se pudieron listar las carpetas.', 'list_folders', isRetryableDriveError(error));
             }
         },
         listFolderContents: async (folderId) => {
             try {
-                return { ok: true, data: await legacyGateway.listFolderContents(folderId) };
+                return {
+                    ok: true,
+                    data: await runWithResilience(
+                        () => legacyGateway.listFolderContents(folderId),
+                        {
+                            attempts: GATEWAY_RETRY_ATTEMPTS,
+                            timeoutMs: GATEWAY_TIMEOUT_MS,
+                            label: 'Contenido de carpeta de Drive',
+                            shouldRetry: isRetryableDriveError,
+                        },
+                    ),
+                };
             } catch (error) {
-                return toAppError('drive', error, 'No se pudo listar el contenido de la carpeta.', 'list_contents');
+                return toAppError('drive', error, 'No se pudo listar el contenido de la carpeta.', 'list_contents', isRetryableDriveError(error));
             }
         },
         readJsonRecord: async (fileId) => {
             try {
-                return { ok: true, data: await legacyGateway.getJsonRecord(fileId) };
+                return {
+                    ok: true,
+                    data: await runWithResilience(
+                        () => legacyGateway.getJsonRecord(fileId),
+                        {
+                            attempts: GATEWAY_RETRY_ATTEMPTS,
+                            timeoutMs: GATEWAY_TIMEOUT_MS,
+                            label: 'Lectura de JSON desde Drive',
+                            shouldRetry: isRetryableDriveError,
+                        },
+                    ),
+                };
             } catch (error) {
-                return toAppError('drive', error, 'No se pudo leer el archivo JSON desde Drive.', 'read_json');
+                return toAppError('drive', error, 'No se pudo leer el archivo JSON desde Drive.', 'read_json', isRetryableDriveError(error));
             }
         },
         createFolder: async (name, parentId) => {
             try {
-                await legacyGateway.createFolder(name, parentId);
+                await runWithResilience(
+                    () => legacyGateway.createFolder(name, parentId),
+                    {
+                        attempts: GATEWAY_RETRY_ATTEMPTS,
+                        timeoutMs: GATEWAY_TIMEOUT_MS,
+                        label: 'Creación de carpeta en Drive',
+                        shouldRetry: isRetryableDriveError,
+                    },
+                );
                 return { ok: true, data: undefined };
             } catch (error) {
-                return toAppError('drive', error, 'No se pudo crear la carpeta.', 'create_folder');
+                return toAppError('drive', error, 'No se pudo crear la carpeta.', 'create_folder', isRetryableDriveError(error));
             }
         },
         uploadFile: async (params) => {
             try {
-                return { ok: true, data: await legacyGateway.uploadFile(params) };
+                return {
+                    ok: true,
+                    data: await runWithResilience(
+                        () => legacyGateway.uploadFile(params),
+                        {
+                            attempts: GATEWAY_RETRY_ATTEMPTS,
+                            timeoutMs: GATEWAY_TIMEOUT_MS,
+                            label: 'Subida de archivo a Drive',
+                            shouldRetry: isRetryableDriveError,
+                        },
+                    ),
+                };
             } catch (error) {
-                return toAppError('drive', error, 'No se pudo subir el archivo a Drive.', 'upload_file');
+                return toAppError('drive', error, 'No se pudo subir el archivo a Drive.', 'upload_file', isRetryableDriveError(error));
             }
         },
         search: async (request, mode, options) => {
             try {
-                const metadataFiles = await legacyGateway.searchJsonFiles({
-                    searchTerm: request.searchTerm.trim(),
-                    dateFrom: request.dateFrom,
-                    dateTo: request.dateTo,
-                });
+                const metadataFiles = await runWithResilience(
+                    () => legacyGateway.searchJsonFiles({
+                        searchTerm: request.searchTerm.trim(),
+                        dateFrom: request.dateFrom,
+                        dateTo: request.dateTo,
+                    }),
+                    {
+                        attempts: GATEWAY_RETRY_ATTEMPTS,
+                        timeoutMs: GATEWAY_TIMEOUT_MS,
+                        label: 'Búsqueda de archivos en Drive',
+                        shouldRetry: isRetryableDriveError,
+                    },
+                );
                 const result = mode === 'deepContent'
                     ? await runDeepContentSearch(legacyGateway, metadataFiles, request.contentTerm, options)
                     : {
@@ -186,7 +255,7 @@ export const createDriveGateway = (): DriveGateway => {
                     warnings: result.warnings,
                 };
             } catch (error) {
-                return toAppError('drive', error, 'No se pudo completar la búsqueda en Drive.', 'search');
+                return toAppError('drive', error, 'No se pudo completar la búsqueda en Drive.', 'search', isRetryableDriveError(error));
             }
         },
     };

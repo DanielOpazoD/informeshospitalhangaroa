@@ -4,7 +4,14 @@ import type {
     GoogleTokenResponse,
     GoogleUserProfile,
 } from '../../types';
+import { GATEWAY_RETRY_ATTEMPTS, GATEWAY_TIMEOUT_MS } from '../../appConstants';
 import { decodeIdToken } from '../../utils/googleAuth';
+import { runWithResilience } from '../shared/resilience';
+
+const isRetryableAuthError = (error: unknown): boolean => {
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    return !message.includes('init') && !message.includes('popup_closed_by_user');
+};
 
 const toAuthError = (error: unknown, fallbackMessage: string, code: string): AppResult<never> => ({
     ok: false,
@@ -12,7 +19,7 @@ const toAuthError = (error: unknown, fallbackMessage: string, code: string): App
         source: 'auth',
         code,
         message: error instanceof Error ? error.message : fallbackMessage,
-        retryable: true,
+        retryable: isRetryableAuthError(error),
     },
 });
 
@@ -51,9 +58,17 @@ export const createGoogleAuthGateway = (): GoogleAuthGateway => ({
     },
     fetchUserProfile: async (accessToken, idToken) => {
         try {
-            const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
-                headers: { Authorization: `Bearer ${accessToken}` },
-            });
+            const response = await runWithResilience(
+                () => fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                }),
+                {
+                    attempts: GATEWAY_RETRY_ATTEMPTS,
+                    timeoutMs: GATEWAY_TIMEOUT_MS,
+                    label: 'Perfil de Google',
+                    shouldRetry: isRetryableAuthError,
+                },
+            );
             const profile = await response.json();
             const fallback = decodeIdToken(idToken);
             return {

@@ -146,4 +146,32 @@ describe('RecordContext', () => {
         expect(values.get(LOCAL_STORAGE_KEYS.history)).toContain('Nuevo título');
         expect(showToast).toHaveBeenCalledWith('Borrador guardado localmente.');
     });
+
+    it('agrupa entradas consecutivas del historial dentro de la ventana configurada', () => {
+        const { values, restore } = installMockWindowStorage();
+        storageRestorers.push(restore);
+        const showToast = vi.fn();
+        const saveWrapper = ({ children }: { children: ReactNode }) => (
+            <RecordProvider showToast={showToast}>{children}</RecordProvider>
+        );
+        const { result } = renderHook(() => useRecordContext(), { wrapper: saveWrapper });
+
+        vi.spyOn(Date, 'now')
+            .mockReturnValueOnce(1_000)
+            .mockReturnValueOnce(2_000);
+
+        act(() => {
+            result.current.dispatchRecordCommand({ type: 'change_record_title', title: 'Primer título' });
+            result.current.saveDraft('manual');
+        });
+
+        act(() => {
+            result.current.dispatchRecordCommand({ type: 'change_record_title', title: 'Segundo título' });
+            result.current.saveDraft('manual');
+        });
+
+        const persistedHistory = JSON.parse(values.get(LOCAL_STORAGE_KEYS.history) || '[]');
+        expect(persistedHistory).toHaveLength(1);
+        expect(persistedHistory[0]?.metadata?.groupKey).toBe('save:manual');
+    });
 });

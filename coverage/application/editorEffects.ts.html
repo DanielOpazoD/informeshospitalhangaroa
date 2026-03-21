@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for utils/validationUtils.ts</title>
+    <title>Code coverage report for application/editorEffects.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../prettify.css" />
     <link rel="stylesheet" href="../base.css" />
@@ -19,20 +19,20 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../index.html">All files</a> / <a href="index.html">utils</a> validationUtils.ts</h1>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">application</a> editorEffects.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">95.65% </span>
+                <span class="strong">31.25% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>22/23</span>
+                <span class='fraction'>5/16</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">92.3% </span>
+                <span class="strong">14.28% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>12/13</span>
+                <span class='fraction'>1/7</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">31.25% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>17/17</span>
+                <span class='fraction'>5/16</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -99,8 +99,11 @@
 <a name='L34'></a><a href='#L34'>34</a>
 <a name='L35'></a><a href='#L35'>35</a>
 <a name='L36'></a><a href='#L36'>36</a>
-<a name='L37'></a><a href='#L37'>37</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -115,61 +118,70 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import type { ClinicalRecord } from '../types';
-import {
-    isClinicalRecord as isClinicalRecordValue,
-    loadClinicalRecord,
-    validateClinicalRecordInvariants,
-} from '../domain/clinicalRecord';
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import type { EditorEffect } from '../types';
 &nbsp;
-export interface ParseClinicalRecordResult {
-    record: ClinicalRecord | null;
-    warnings: string[];
+export interface EditorEffectHandlers {
+    onResetHhrSync?: () =&gt; void;
+    onShowWarning?: (message: string) =&gt; void;
+    onCloseOpenModal?: () =&gt; void;
+    onCloseHistoryModal?: () =&gt; void;
+    onMarkImportCompleted?: () =&gt; void;
+    onMarkRestoreCompleted?: () =&gt; void;
 }
 &nbsp;
-export const parseClinicalRecord = (
-    value: unknown,
-    normalizePatientFields?: (fields: ClinicalRecord['patientFields']) =&gt; ClinicalRecord['patientFields'],
-): ParseClinicalRecordResult =&gt; {
-    const { record, warnings } = loadClinicalRecord(value, normalizePatientFields);
-    return { record, warnings };
-};
-&nbsp;
-export const isClinicalRecord = isClinicalRecordValue;
-export const validateCriticalFields = validateClinicalRecordInvariants;
-&nbsp;
-export const formatTimeSince = (timestamp: number, reference = Date.now()): string =&gt; {
-    const diff = Math.max(0, reference - timestamp);
-    const minutes = Math.floor(diff / 60000);
-    if (minutes &lt; 1) return 'hace instantes';
-    if (minutes === 1) return 'hace 1 minuto';
-    if (minutes &lt; 60) return `hace ${minutes} minutos`;
-    const hours = Math.floor(minutes / 60);
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (hours === 1) <span class="cstat-no" title="statement not covered" >return 'hace 1 hora';</span>
-    if (hours &lt; 24) return `hace ${hours} horas`;
-    const days = Math.floor(hours / 24);
-    if (days === 1) return 'hace 1 día';
-    return `hace ${days} días`;
+export const interpretEditorEffects = (
+    effects: EditorEffect[],
+    handlers: EditorEffectHandlers,
+) =&gt; {
+    effects.forEach((effect) =&gt; {
+        switch (effect.type) {
+<span class="branch-0 cbranch-no" title="branch not covered" >            case 'reset_hhr_sync':</span>
+<span class="cstat-no" title="statement not covered" >                handlers.onResetHhrSync?.();</span>
+<span class="cstat-no" title="statement not covered" >                break;</span>
+<span class="branch-1 cbranch-no" title="branch not covered" >            case 'show_warning':</span>
+<span class="cstat-no" title="statement not covered" >                handlers.onShowWarning?.(effect.message);</span>
+<span class="cstat-no" title="statement not covered" >                break;</span>
+<span class="branch-2 cbranch-no" title="branch not covered" >            case 'close_open_modal':</span>
+<span class="cstat-no" title="statement not covered" >                handlers.onCloseOpenModal?.();</span>
+<span class="cstat-no" title="statement not covered" >                break;</span>
+<span class="branch-3 cbranch-no" title="branch not covered" >            case 'close_history_modal':</span>
+<span class="cstat-no" title="statement not covered" >                handlers.onCloseHistoryModal?.();</span>
+<span class="cstat-no" title="statement not covered" >                break;</span>
+            case 'mark_import_completed':
+                handlers.onMarkImportCompleted?.();
+                break;
+<span class="branch-5 cbranch-no" title="branch not covered" >            case 'mark_restore_completed':</span>
+<span class="cstat-no" title="statement not covered" >                handlers.onMarkRestoreCompleted?.();</span>
+<span class="cstat-no" title="statement not covered" >                break;</span>
+<span class="branch-6 cbranch-no" title="branch not covered" >            default:</span>
+<span class="cstat-no" title="statement not covered" >                break;</span>
+        }
+    });
 };
 &nbsp;</pre></td></tr></table></pre>
 

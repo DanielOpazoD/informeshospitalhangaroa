@@ -18,9 +18,10 @@ La aplicación está construida sobre React (TypeScript + Vite) y sigue una arqu
 El estado de la "Ficha Clínica Actual" (el paciente que se está editando) reside centralmente en `RecordContext`.
 1. `App.tsx` crea providers y rutas; `AppShellContent` ensambla el editor.
 2. La UI lee datos mediante `useRecordContext()`.
-3. Las mutaciones del formulario viajan por `useRecordForm`, y la persistencia local por `useClinicalRecord`.
-4. `useClinicalRecord` usa un reducer de workflow para coordinar `dirty/saving/restoring/importing/syncing/error`.
-5. La persistencia local ya no depende directamente de `window.localStorage` en cada módulo; pasa por adaptadores compartidos y por un caso de uso común para snapshots.
+3. Las mutaciones del formulario viajan por `useRecordForm`, que emite comandos clínicos explícitos.
+4. Los comandos pasan por `application/clinicalRecordCommands.ts`, donde se valida si están permitidos según el workflow, se normaliza el resultado y se emiten `effects` declarativos.
+5. `useClinicalRecord` interpreta efectos locales, mantiene el reducer de workflow (`dirty/saving/restoring/importing/syncing/error`) y coordina persistencia local.
+6. Los casos de uso de editor (`application/editorUseCases.ts`) encapsulan importación, restore, save draft, reset y HHR, devolviendo resultado + transiciones de workflow + effects.
 
 ## 3. Manejo de Almacenamiento y Archivos Remotos
 1. **Google Drive:** `AuthContext` mantiene la sesión y `DriveContext` orquesta el estado de navegación.
@@ -56,7 +57,29 @@ Se usa `react-router-dom` para separar vistas pesadas:
 - `useClinicalRecord`, `useFileOperations` y `useDriveOperations` consumen esa frontera para drafts locales, importaciones y aperturas remotas.
 
 ## 8. Casos De Uso Y Gateways
-- `application/clinicalRecordUseCases.ts` concentra `changeTemplate`, `changeRecordTitle`, `saveDraftSnapshot`, `restoreHistoryEntry`, `importRecordFromJson`, `importRecordFromDrive` y `syncRecordWithHhr`.
+- `application/clinicalRecordCommands.ts` concentra el modelo de comandos, políticas por estado, metadata de historial y efectos declarativos.
+- `application/editorUseCases.ts` resuelve importación, restauración, save draft, reset, carga HHR y preflight de sincronización.
+- `application/editorEffects.ts` interpreta effects en capa React sin mezclar decisión de negocio con side effects.
+- `application/clinicalRecordUseCases.ts` mantiene utilidades puras y compatibilidad con contratos anteriores.
 - `application/editorWorkflow.ts` centraliza el estado operativo del editor sin acoplarlo a componentes concretos.
 - `infrastructure/auth/googleAuthGateway.ts` aísla el acceso a `window.google` y `window.gapi` del `AuthContext`.
 - `infrastructure/hhr/hhrGateway.ts` envuelve login, logout y persistencia clínica HHR con resultados tipados.
+- `infrastructure/shared/resilience.ts` centraliza timeouts y retries para Drive, Auth y HHR.
+
+## 9. Historial Local Inteligente
+- Cada entrada local puede incluir `commandType`, `commandCategory`, `changed`, `summary` y `groupKey`.
+- Los snapshots redundantes no se persisten.
+- Cambios consecutivos compatibles dentro de una ventana de 2 minutos se agrupan en una sola entrada.
+- Internamente `useClinicalRecord` ya mantiene una estructura `past/present/future` para preparar undo/redo futuro sin exponer todavía esa UI.
+
+## 10. Flujo Resumido
+```mermaid
+flowchart LR
+    UI["UI / Hooks"] --> UseCase["Editor Use Case"]
+    UseCase --> Command["Clinical Command"]
+    Command --> Domain["Load / Normalize / Sanitize"]
+    Command --> Effects["Effects declarativos"]
+    UseCase --> Workflow["Workflow actions"]
+    Effects --> Interpreter["Effect interpreter"]
+    Interpreter --> Persistence["Draft / History / Modals / Sync state"]
+```

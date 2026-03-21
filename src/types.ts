@@ -88,10 +88,63 @@ export interface RecentDriveFile {
     openedAt: number;
 }
 
+export type ClinicalRecordCommandType =
+    | 'edit_patient_field'
+    | 'edit_patient_label'
+    | 'edit_section_content'
+    | 'edit_section_title'
+    | 'update_section_meta'
+    | 'add_section'
+    | 'remove_section'
+    | 'add_patient_field'
+    | 'remove_patient_field'
+    | 'change_template'
+    | 'change_record_title'
+    | 'edit_professional_field'
+    | 'reset_record'
+    | 'apply_hhr_patient'
+    | 'replace_record_from_import'
+    | 'replace_record_from_history'
+    | 'save_manual'
+    | 'save_auto'
+    | 'save_import'
+    | 'restore_history'
+    | 'bootstrap_restore';
+
+export type ClinicalRecordCommandCategory =
+    | 'document_edit'
+    | 'document_structure'
+    | 'document_replace'
+    | 'external_sync'
+    | 'persistence';
+
+export type EditorEffect =
+    | { type: 'reset_hhr_sync' }
+    | { type: 'show_warning'; message: string }
+    | { type: 'close_open_modal' }
+    | { type: 'close_history_modal' }
+    | { type: 'mark_import_completed' }
+    | { type: 'mark_restore_completed' };
+
+export interface HistoryEntryMetadata {
+    commandType: ClinicalRecordCommandType;
+    commandCategory: ClinicalRecordCommandCategory;
+    changed: boolean;
+    summary: string;
+    groupKey?: string;
+}
+
 export interface VersionHistoryEntry {
     id: string;
     timestamp: number;
     record: ClinicalRecord;
+    metadata?: HistoryEntryMetadata;
+}
+
+export interface HistoryStacks {
+    past: VersionHistoryEntry[];
+    present: VersionHistoryEntry | null;
+    future: VersionHistoryEntry[];
 }
 
 export type EditorWorkflowStatus =

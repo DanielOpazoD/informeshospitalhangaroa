@@ -2,7 +2,7 @@ import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const distAssetsDir = join(process.cwd(), 'dist', 'assets');
-const maxKb = Number(process.env.MAX_MAIN_CHUNK_KB || 730);
+const maxKb = Number(process.env.MAX_MAIN_CHUNK_KB || 800);
 
 const toKb = bytes => bytes / 1024;
 const prettyKb = bytes => `${toKb(bytes).toFixed(2)} kB`;

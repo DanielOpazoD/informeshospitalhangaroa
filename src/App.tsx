@@ -16,6 +16,8 @@ import { useDocumentEffects } from './hooks/useDocumentEffects';
 import { useAiAssistantController } from './hooks/useAiAssistantController';
 import { useRecordTitleController } from './hooks/useRecordTitleController';
 import { useHhrIntegrationController } from './hooks/useHhrIntegrationController';
+import { interpretEditorEffects } from './application/editorEffects';
+import { executeResetRecord } from './application/editorUseCases';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DriveProvider, useDrive } from './contexts/DriveContext';
 import { RecordProvider, useRecordContext } from './contexts/RecordContext';
@@ -52,6 +54,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         saveDraft,
         handleRestoreHistoryEntry,
         markRecordAsReplaced,
+        workflowState,
         dispatchWorkflow,
         isEditing,
         setIsEditing,
@@ -120,6 +123,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         saveDraft,
         markRecordAsReplaced,
         hasUnsavedChanges,
+        workflowState,
         showToast,
         dispatchWorkflow,
     });
@@ -129,6 +133,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         handleSignIn: auth.handleSignIn,
         showToast,
         record,
+        workflowState,
         dispatchRecordCommand,
         setHasUnsavedChanges,
         saveDraft,
@@ -166,6 +171,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
     });
     const hhrController = useHhrIntegrationController({
         record,
+        workflowState,
         dispatchRecordCommand,
         setHasUnsavedChanges,
         markRecordAsReplaced,
@@ -194,13 +200,21 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
             });
             if (!confirmed) return;
             const blankRecord = createTemplateBaseline(record.templateId);
+            const useCase = executeResetRecord(record, workflowState, blankRecord.templateId);
             markRecordAsReplaced();
-            dispatchRecordCommand({ type: 'reset_record', templateId: blankRecord.templateId });
+            const result = dispatchRecordCommand({ type: 'reset_record', templateId: blankRecord.templateId });
+            interpretEditorEffects(useCase.effects.length ? useCase.effects : result.effects, {
+                onResetHhrSync: resetSyncState,
+                onShowWarning: message => showToast(message, 'warning'),
+            });
+            if (!result.ok) {
+                showToast(result.errors.join('\n') || 'No se pudo restablecer el formulario.', 'error');
+                return;
+            }
             setHasUnsavedChanges(true);
-            resetSyncState();
-            showToast('Formulario restablecido.', 'warning');
+            showToast(useCase.userMessage || 'Formulario restablecido.', 'warning');
         })();
-    }, [confirm, dispatchRecordCommand, markRecordAsReplaced, record.templateId, resetSyncState, setHasUnsavedChanges, showToast]);
+    }, [confirm, dispatchRecordCommand, markRecordAsReplaced, record, resetSyncState, setHasUnsavedChanges, showToast, workflowState]);
 
     useKeyboardShortcuts({
         onSave: fileOperations.handleManualSave,

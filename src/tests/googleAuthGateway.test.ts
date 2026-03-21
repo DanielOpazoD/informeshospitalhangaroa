@@ -66,4 +66,24 @@ describe('googleAuthGateway', () => {
             expect(result.warnings).toEqual(['Se usó el ID token local para completar el perfil de usuario.']);
         }
     });
+
+    it('reintenta la carga del perfil cuando el primer fetch falla', async () => {
+        const fetchMock = vi.fn()
+            .mockRejectedValueOnce(new Error('network'))
+            .mockResolvedValueOnce(new Response(JSON.stringify({
+                name: 'Retry User',
+                email: 'retry@example.com',
+                picture: '',
+            }), { status: 200 }));
+        vi.stubGlobal('fetch', fetchMock);
+
+        const gateway = createGoogleAuthGateway();
+        const result = await gateway.fetchUserProfile('token-1');
+
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.data.email).toBe('retry@example.com');
+        }
+    });
 });

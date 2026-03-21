@@ -1,11 +1,13 @@
 import React, { useCallback, useRef, useMemo } from 'react';
-import type { ClinicalRecord, ToastFn } from '../types';
+import type { ClinicalRecord, EditorWorkflowState, ToastFn } from '../types';
 import { suggestedFilename } from '../utils/stringUtils';
 import { validateCriticalFields } from '../utils/validationUtils';
 import { useConfirmDialog } from './useConfirmDialog';
 import { FIELD_IDS } from '../appConstants';
 import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
 import type { EditorWorkflowAction } from '../application/editorWorkflow';
+import { interpretEditorEffects } from '../application/editorEffects';
+import { executeImportRecord } from '../application/editorUseCases';
 
 /**
  * Options for configuring file I/O operations.
@@ -18,6 +20,7 @@ interface UseFileOperationsOptions {
     saveDraft: (reason: 'auto' | 'manual' | 'import', overrideRecord?: ClinicalRecord) => void;
     markRecordAsReplaced: () => void;
     hasUnsavedChanges: boolean;
+    workflowState: EditorWorkflowState;
     showToast: ToastFn;
     dispatchWorkflow?: React.Dispatch<EditorWorkflowAction>;
 }
@@ -33,6 +36,7 @@ export function useFileOperations({
     saveDraft,
     markRecordAsReplaced,
     hasUnsavedChanges,
+    workflowState,
     showToast,
     dispatchWorkflow,
 }: UseFileOperationsOptions) {
@@ -58,7 +62,13 @@ export function useFileOperations({
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                dispatchWorkflow?.({ type: 'IMPORT_STARTED' });
+                const useCase = executeImportRecord(
+                    record,
+                    workflowState,
+                    JSON.parse(e.target?.result as string),
+                    'local',
+                );
+                useCase.workflowActions.forEach(action => dispatchWorkflow?.(action));
                 markRecordAsReplaced();
                 const result = dispatchRecordCommand({
                     type: 'replace_record_from_import',
@@ -68,13 +78,11 @@ export function useFileOperations({
                     const normalizedRecord: ClinicalRecord = result.record;
                     setHasUnsavedChanges(false);
                     saveDraft('import', normalizedRecord);
-                    dispatchWorkflow?.({ type: 'IMPORT_SUCCEEDED' });
-                    showToast('Borrador importado correctamente.');
-                    if (result.warnings.length) {
-                        showToast(`Importación protegida:\n- ${result.warnings.join('\n- ')}`, 'warning');
-                    }
+                    interpretEditorEffects(useCase.effects, {
+                        onShowWarning: message => showToast(message, 'warning'),
+                    });
+                    showToast(useCase.userMessage || 'Borrador importado correctamente.');
                 } else {
-                    dispatchWorkflow?.({ type: 'IMPORT_FAILED', error: result.errors.join('\n') || 'Archivo JSON inválido.' });
                     showToast(result.errors.join('\n') || 'Archivo JSON inválido.', 'error');
                 }
             } catch {
@@ -84,7 +92,7 @@ export function useFileOperations({
         };
         reader.readAsText(file);
         if (event.target) event.target.value = '';
-    }, [dispatchRecordCommand, dispatchWorkflow, markRecordAsReplaced, saveDraft, setHasUnsavedChanges, showToast]);
+    }, [dispatchRecordCommand, dispatchWorkflow, markRecordAsReplaced, record, saveDraft, setHasUnsavedChanges, showToast, workflowState]);
 
     const handleDownloadJson = useCallback(() => {
         const errors = validateCriticalFields(record);

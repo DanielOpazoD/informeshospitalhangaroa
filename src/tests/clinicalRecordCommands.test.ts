@@ -108,8 +108,10 @@ describe('clinicalRecordCommands', () => {
             entry: historyEntry,
         });
 
-        expect(importResult).toEqual(historyResult);
+        expect(importResult.record).toEqual(historyResult.record);
+        expect(importResult.warnings).toEqual(historyResult.warnings);
         expect(importResult.changed).toBe(true);
+        expect(historyResult.changed).toBe(true);
     });
 
     it('no rompe el documento si se recibe un comando inválido', () => {

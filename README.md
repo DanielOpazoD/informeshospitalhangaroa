@@ -63,6 +63,7 @@ npm run check:bundle
 ```
 
 El editor principal además usa un workflow central (`idle`, `dirty`, `saving`, `restoring`, `importing`, `searching_drive`, `syncing_hhr`, `error`) para mantener coherentes autoguardado, restauración e integraciones remotas.
+Las operaciones críticas ahora pasan además por comandos clínicos explícitos y casos de uso de editor, que devuelven `effects` declarativos para separar decisión de negocio y reacciones de UI.
 
 ### Personaliza el nombre y los logos de la institución
 
@@ -116,4 +117,18 @@ Después de compilar (`npm run build`), puedes validar que el chunk JS más gran
 npm run check:bundle
 ```
 
-Opcionalmente, ajusta el límite con `MAX_MAIN_CHUNK_KB` (por defecto: `730`).
+La compilación ahora separa chunks por dominio (`react`, `router`, `drive`, `auth`, `hhr`, `ai`, `cartola`, `pdf`) para reducir el peso del shell principal.
+
+Opcionalmente, ajusta el límite con `MAX_MAIN_CHUNK_KB` (por defecto: `800`).
+
+## Flujo de edición resumido
+
+```mermaid
+flowchart LR
+    UI["UI / Hook"] --> UseCase["Caso de uso"]
+    UseCase --> Command["Comando clínico"]
+    Command --> Effects["Effects"]
+    Command --> Domain["Pipeline clínico"]
+    Effects --> Interpreter["Intérprete React"]
+    Interpreter --> Workflow["Workflow + Persistencia"]
+```

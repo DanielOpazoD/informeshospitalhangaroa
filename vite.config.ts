@@ -23,13 +23,49 @@ export default defineConfig(({ mode }) => {
             },
         },
         build: {
+            chunkSizeWarningLimit: 500,
             rollupOptions: {
                 output: {
-                    manualChunks: {
-                        react: ['react', 'react-dom'],
-                        router: ['react-router-dom'],
-                        state: ['zustand'],
-                        pdf: ['jspdf'],
+                    manualChunks(id) {
+                        if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+                            return 'react';
+                        }
+                        if (id.includes('node_modules/react-router-dom')) {
+                            return 'router';
+                        }
+                        if (id.includes('node_modules/zustand')) {
+                            return 'state';
+                        }
+                        if (id.includes('node_modules/jspdf') || id.includes('html2canvas')) {
+                            return 'pdf';
+                        }
+                        if (id.includes('node_modules/firebase') || id.includes('/src/services/hhrFirebaseService')) {
+                            return 'hhr';
+                        }
+                        if (
+                            id.includes('/src/infrastructure/drive/') ||
+                            id.includes('/src/services/driveGateway') ||
+                            id.includes('/src/hooks/useDrive') ||
+                            id.includes('/src/contexts/DriveContext') ||
+                            id.includes('/src/infrastructure/auth/') ||
+                            id.includes('/src/contexts/AuthContext') ||
+                            id.includes('/src/hooks/useGoogleApiBootstrap')
+                        ) {
+                            return 'google';
+                        }
+                        if (
+                            id.includes('/src/hooks/useAiAssistantController') ||
+                            id.includes('/src/components/AIAssistant') ||
+                            id.includes('/src/utils/gemini')
+                        ) {
+                            return 'ai';
+                        }
+                        if (
+                            id.includes('/src/components/cartola/') ||
+                            id.includes('/src/components/CartolaMedicamentosView')
+                        ) {
+                            return 'cartola';
+                        }
                     },
                 },
             },

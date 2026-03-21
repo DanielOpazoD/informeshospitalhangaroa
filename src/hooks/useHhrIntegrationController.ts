@@ -18,9 +18,13 @@ import {
 import { createHhrGateway } from '../infrastructure/hhr/hhrGateway';
 import type { EditorWorkflowAction } from '../application/editorWorkflow';
 import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
+import { interpretEditorEffects } from '../application/editorEffects';
+import { executeApplyHhrPatient, executeSyncToHhr } from '../application/editorUseCases';
+import type { EditorWorkflowState } from '../types';
 
 interface UseHhrIntegrationControllerParams {
     record: ClinicalRecord;
+    workflowState: EditorWorkflowState;
     dispatchRecordCommand: (command: ClinicalRecordCommand) => ClinicalRecordCommandResult;
     setHasUnsavedChanges: Dispatch<SetStateAction<boolean>>;
     markRecordAsReplaced: () => void;
@@ -30,6 +34,7 @@ interface UseHhrIntegrationControllerParams {
 
 export const useHhrIntegrationController = ({
     record,
+    workflowState,
     dispatchRecordCommand,
     setHasUnsavedChanges,
     markRecordAsReplaced,
@@ -122,18 +127,23 @@ export const useHhrIntegrationController = ({
     }, [clearSyncState, hhrGateway, showToast]);
 
     const handleSelectHhrPatient = useCallback((patient: HhrCensusPatient) => {
+        const useCase = executeApplyHhrPatient(record, workflowState, patient, hhrDateKey);
         markRecordAsReplaced();
         const result = dispatchRecordCommand({ type: 'apply_hhr_patient', patient, todayKey: hhrDateKey });
         if (!result.ok) {
             showToast(result.errors.join('\n') || 'No se pudo cargar el paciente desde HHR.', 'error');
             return;
         }
+        interpretEditorEffects(useCase.effects, {
+            onResetHhrSync: clearSyncState,
+            onShowWarning: message => showToast(message, 'warning'),
+        });
         setHasUnsavedChanges(true);
         setSelectedHhrPatient(patient);
         clearSyncState();
         setIsHhrCensusModalOpen(false);
-        showToast(`Paciente ${patient.patientName} cargado desde HHR.`);
-    }, [clearSyncState, dispatchRecordCommand, hhrDateKey, markRecordAsReplaced, setHasUnsavedChanges, showToast]);
+        showToast(useCase.userMessage || `Paciente ${patient.patientName} cargado desde HHR.`);
+    }, [clearSyncState, dispatchRecordCommand, hhrDateKey, markRecordAsReplaced, record, setHasUnsavedChanges, showToast, workflowState]);
 
     const handleClearSelectedHhrPatient = useCallback(() => {
         setSelectedHhrPatient(null);
@@ -152,8 +162,9 @@ export const useHhrIntegrationController = ({
     const canSaveToHhr = !hhrSaveDisabledReason && !isSavingToHhr;
 
     const handleSaveToHhr = useCallback(() => {
-        if (!hhrConfigured || !hhrUser) {
-            showToast(hhrSaveDisabledReason || 'La sesión HHR no está disponible.', 'warning');
+        const syncDecision = executeSyncToHhr(workflowState, Boolean(canSaveToHhr), hhrSaveDisabledReason);
+        if (!syncDecision.allowed || !hhrConfigured || !hhrUser) {
+            showToast(syncDecision.userMessage || hhrSaveDisabledReason || 'La sesión HHR no está disponible.', 'warning');
             return;
         }
 
@@ -165,7 +176,7 @@ export const useHhrIntegrationController = ({
         void (async () => {
             try {
                 setIsSavingToHhr(true);
-                dispatchWorkflow?.({ type: 'SYNC_STARTED' });
+                syncDecision.workflowActions.forEach(action => dispatchWorkflow?.(action));
                 const result = await hhrGateway.saveClinicalDocument({
                     record,
                     actor: hhrUser,
@@ -189,7 +200,7 @@ export const useHhrIntegrationController = ({
                 setIsSavingToHhr(false);
             }
         })();
-    }, [dispatchWorkflow, hhrConfigured, hhrGateway, hhrSaveDisabledReason, hhrSyncState, hhrUser, patientName, patientRut, record, selectedHhrPatient, showToast]);
+    }, [canSaveToHhr, dispatchWorkflow, hhrConfigured, hhrGateway, hhrSaveDisabledReason, hhrSyncState, hhrUser, patientName, patientRut, record, selectedHhrPatient, showToast, workflowState]);
 
     const lastHhrSyncLabel = useMemo(() => {
         if (!lastHhrSyncAt) {
