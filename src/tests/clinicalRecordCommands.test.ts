@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { ClinicalRecord, VersionHistoryEntry } from '../types';
-import { executeClinicalRecordCommand } from '../application/clinicalRecordCommands';
+import {
+    canExecuteClinicalRecordCommand,
+    executeClinicalRecordCommand,
+    normalizeClinicalRecordSnapshot,
+} from '../application/clinicalRecordCommands';
 
 const buildRecord = (overrides?: Partial<ClinicalRecord>): ClinicalRecord => ({
     version: 'v14',
@@ -64,6 +68,21 @@ describe('clinicalRecordCommands', () => {
         }
     });
 
+    it('marca como no-op los comandos válidos que no cambian el documento', () => {
+        const current = normalizeClinicalRecordSnapshot(buildRecord()).record;
+        const result = executeClinicalRecordCommand(current, {
+            type: 'edit_section_content',
+            index: 0,
+            content: '<p>Ok</p>',
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.changed).toBe(false);
+        if (result.ok) {
+            expect(result.record).toEqual(current);
+        }
+    });
+
     it('usa el mismo pipeline para importación e historial', () => {
         const importPayload = {
             version: 'v13',
@@ -90,6 +109,7 @@ describe('clinicalRecordCommands', () => {
         });
 
         expect(importResult).toEqual(historyResult);
+        expect(importResult.changed).toBe(true);
     });
 
     it('no rompe el documento si se recibe un comando inválido', () => {
@@ -127,6 +147,18 @@ describe('clinicalRecordCommands', () => {
         if (result.ok) {
             expect(result.record.patientFields.find(field => field.id === 'nombre')?.value).toBe('Jane Roe');
             expect(result.record.patientFields.find(field => field.id === 'rut')?.value).toBe('11.111.111-1');
+        }
+    });
+
+    it('bloquea comandos incompatibles con el workflow actual', () => {
+        const decision = canExecuteClinicalRecordCommand(
+            { type: 'edit_patient_field', index: 0, value: 'Otro nombre' },
+            'saving',
+        );
+
+        expect(decision.allowed).toBe(false);
+        if (!decision.allowed) {
+            expect(decision.reason).toContain('No se puede editar el documento');
         }
     });
 });

@@ -5,6 +5,7 @@ import { validateCriticalFields } from '../utils/validationUtils';
 import { useConfirmDialog } from './useConfirmDialog';
 import { FIELD_IDS } from '../appConstants';
 import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
+import type { EditorWorkflowAction } from '../application/editorWorkflow';
 
 /**
  * Options for configuring file I/O operations.
@@ -18,6 +19,7 @@ interface UseFileOperationsOptions {
     markRecordAsReplaced: () => void;
     hasUnsavedChanges: boolean;
     showToast: ToastFn;
+    dispatchWorkflow?: React.Dispatch<EditorWorkflowAction>;
 }
 
 /**
@@ -32,6 +34,7 @@ export function useFileOperations({
     markRecordAsReplaced,
     hasUnsavedChanges,
     showToast,
+    dispatchWorkflow,
 }: UseFileOperationsOptions) {
     const { confirm } = useConfirmDialog();
     const importInputRef = useRef<HTMLInputElement>(null);
@@ -55,6 +58,7 @@ export function useFileOperations({
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
+                dispatchWorkflow?.({ type: 'IMPORT_STARTED' });
                 markRecordAsReplaced();
                 const result = dispatchRecordCommand({
                     type: 'replace_record_from_import',
@@ -64,20 +68,23 @@ export function useFileOperations({
                     const normalizedRecord: ClinicalRecord = result.record;
                     setHasUnsavedChanges(false);
                     saveDraft('import', normalizedRecord);
+                    dispatchWorkflow?.({ type: 'IMPORT_SUCCEEDED' });
                     showToast('Borrador importado correctamente.');
                     if (result.warnings.length) {
                         showToast(`Importación protegida:\n- ${result.warnings.join('\n- ')}`, 'warning');
                     }
                 } else {
+                    dispatchWorkflow?.({ type: 'IMPORT_FAILED', error: result.errors.join('\n') || 'Archivo JSON inválido.' });
                     showToast(result.errors.join('\n') || 'Archivo JSON inválido.', 'error');
                 }
             } catch {
+                dispatchWorkflow?.({ type: 'IMPORT_FAILED', error: 'Error al leer el archivo JSON.' });
                 showToast('Error al leer el archivo JSON.', 'error');
             }
         };
         reader.readAsText(file);
         if (event.target) event.target.value = '';
-    }, [dispatchRecordCommand, markRecordAsReplaced, saveDraft, setHasUnsavedChanges, showToast]);
+    }, [dispatchRecordCommand, dispatchWorkflow, markRecordAsReplaced, saveDraft, setHasUnsavedChanges, showToast]);
 
     const handleDownloadJson = useCallback(() => {
         const errors = validateCriticalFields(record);

@@ -1,6 +1,6 @@
 import { generateSectionId } from '../constants';
 import type { HhrCensusPatient } from '../hhrTypes';
-import type { ClinicalRecord, ClinicalSectionData, PatientField, VersionHistoryEntry } from '../types';
+import type { ClinicalRecord, ClinicalSectionData, EditorWorkflowStatus, PatientField, VersionHistoryEntry } from '../types';
 import { loadClinicalRecord } from '../domain/clinicalRecord';
 import { calcEdadY } from '../utils/dateUtils';
 import {
@@ -32,13 +32,27 @@ export type ClinicalRecordCommand =
     | { type: 'replace_record_from_history'; entry: VersionHistoryEntry };
 
 export type ClinicalRecordCommandResult =
-    | { ok: true; record: ClinicalRecord; warnings: string[] }
-    | { ok: false; record: ClinicalRecord; errors: string[]; warnings: string[] };
+    | { ok: true; record: ClinicalRecord; warnings: string[]; changed: boolean }
+    | { ok: false; record: ClinicalRecord; errors: string[]; warnings: string[]; changed: false };
 
-const success = (record: ClinicalRecord, warnings: string[] = []): ClinicalRecordCommandResult => ({
+export type ClinicalRecordCommandCategory =
+    | 'document_edit'
+    | 'document_structure'
+    | 'document_replace'
+    | 'external_sync';
+
+export interface ClinicalRecordCommandPolicy {
+    category: ClinicalRecordCommandCategory;
+    mutatesDocument: boolean;
+    allowedStatuses: EditorWorkflowStatus[];
+    blockedReason: string;
+}
+
+const success = (record: ClinicalRecord, warnings: string[] = [], changed = true): ClinicalRecordCommandResult => ({
     ok: true,
     record,
     warnings,
+    changed,
 });
 
 const failure = (record: ClinicalRecord, errors: string[], warnings: string[] = []): ClinicalRecordCommandResult => ({
@@ -46,7 +60,70 @@ const failure = (record: ClinicalRecord, errors: string[], warnings: string[] = 
     record,
     errors,
     warnings,
+    changed: false,
 });
+
+const serializeClinicalRecord = (record: ClinicalRecord): string => JSON.stringify(record);
+
+const didRecordChange = (currentRecord: ClinicalRecord, nextRecord: ClinicalRecord): boolean =>
+    serializeClinicalRecord(currentRecord) !== serializeClinicalRecord(nextRecord);
+
+export const getClinicalRecordCommandPolicy = (command: ClinicalRecordCommand): ClinicalRecordCommandPolicy => {
+    switch (command.type) {
+        case 'replace_record_from_import':
+            return {
+                category: 'document_replace',
+                mutatesDocument: true,
+                allowedStatuses: ['idle', 'dirty', 'error', 'importing'],
+                blockedReason: 'No se puede importar un registro mientras otra operación crítica está en curso.',
+            };
+        case 'replace_record_from_history':
+            return {
+                category: 'document_replace',
+                mutatesDocument: true,
+                allowedStatuses: ['idle', 'dirty', 'error', 'restoring'],
+                blockedReason: 'No se puede restaurar una versión mientras otra operación crítica está en curso.',
+            };
+        case 'apply_hhr_patient':
+            return {
+                category: 'external_sync',
+                mutatesDocument: true,
+                allowedStatuses: ['idle', 'dirty', 'error'],
+                blockedReason: 'No se puede aplicar datos desde HHR mientras el editor está ocupado.',
+            };
+        case 'change_template':
+        case 'reset_record':
+            return {
+                category: 'document_structure',
+                mutatesDocument: true,
+                allowedStatuses: ['idle', 'dirty', 'error'],
+                blockedReason: 'No se puede cambiar la estructura del documento mientras el editor está ocupado.',
+            };
+        default:
+            return {
+                category: 'document_edit',
+                mutatesDocument: true,
+                allowedStatuses: ['idle', 'dirty', 'error'],
+                blockedReason: 'No se puede editar el documento mientras el editor está ocupado.',
+            };
+    }
+};
+
+export const canExecuteClinicalRecordCommand = (
+    command: ClinicalRecordCommand,
+    workflowStatus: EditorWorkflowStatus,
+): { allowed: true; policy: ClinicalRecordCommandPolicy } | { allowed: false; policy: ClinicalRecordCommandPolicy; reason: string } => {
+    const policy = getClinicalRecordCommandPolicy(command);
+    if (policy.allowedStatuses.includes(workflowStatus)) {
+        return { allowed: true, policy };
+    }
+
+    return {
+        allowed: false,
+        policy,
+        reason: policy.blockedReason,
+    };
+};
 
 const getFieldAtIndex = (record: ClinicalRecord, index: number): PatientField | null =>
     index >= 0 && index < record.patientFields.length ? record.patientFields[index] : null;
@@ -86,7 +163,8 @@ const finalizeRecord = (currentRecord: ClinicalRecord, candidateRecord: Clinical
         return failure(currentRecord, loaded.errors, loaded.warnings);
     }
 
-    return success(syncAutoTitle(loaded.record), loaded.warnings);
+    const nextRecord = syncAutoTitle(loaded.record);
+    return success(nextRecord, loaded.warnings, didRecordChange(currentRecord, nextRecord));
 };
 
 const finalizeLoadedRecord = (currentRecord: ClinicalRecord, value: unknown): ClinicalRecordCommandResult => {
@@ -95,7 +173,8 @@ const finalizeLoadedRecord = (currentRecord: ClinicalRecord, value: unknown): Cl
         return failure(currentRecord, loaded.errors, loaded.warnings);
     }
 
-    return success(syncAutoTitle(loaded.record), loaded.warnings);
+    const nextRecord = syncAutoTitle(loaded.record);
+    return success(nextRecord, loaded.warnings, didRecordChange(currentRecord, nextRecord));
 };
 
 export const normalizeClinicalRecordSnapshot = (record: ClinicalRecord): ClinicalRecordCommandResult =>

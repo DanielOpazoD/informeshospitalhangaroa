@@ -121,6 +121,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         markRecordAsReplaced,
         hasUnsavedChanges,
         showToast,
+        dispatchWorkflow,
     });
 
     const driveModals = useDriveModals({
@@ -144,6 +145,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         openJsonFileFromDrive: drive.openJsonFileFromDrive,
         saveToDrive: drive.saveToDrive,
         generatePdf: () => generatePdfAsBlob({ record }),
+        dispatchWorkflow,
     });
 
     const aiAssistant = useAiAssistantController({

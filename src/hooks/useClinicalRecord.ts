@@ -10,7 +10,7 @@ import {
 } from '../application/clinicalRecordUseCases';
 import { editorWorkflowReducer, initialEditorWorkflowState } from '../application/editorWorkflow';
 import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
-import { executeClinicalRecordCommand } from '../application/clinicalRecordCommands';
+import { canExecuteClinicalRecordCommand, executeClinicalRecordCommand } from '../application/clinicalRecordCommands';
 
 interface UseClinicalRecordOptions {
     onToast: ToastFn;
@@ -26,6 +26,7 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [workflowState, dispatchWorkflow] = useReducer(editorWorkflowReducer, initialEditorWorkflowState);
     const suppressedRecordChangeCountRef = useRef(1);
+    const workflowStateRef = useRef(workflowState);
 
     const normalizeRecord = useCallback((snapshot: ClinicalRecord): ClinicalRecord => {
         return saveDraftSnapshot(snapshot, normalizePatientFields);
@@ -41,8 +42,19 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
 
     const dispatchRecordCommand = useCallback((command: ClinicalRecordCommand): ClinicalRecordCommandResult => {
         const snapshot = getRecordSnapshot();
+        const policyDecision = canExecuteClinicalRecordCommand(command, workflowStateRef.current.status);
+        if (!policyDecision.allowed) {
+            return {
+                ok: false,
+                record: snapshot,
+                errors: [policyDecision.reason],
+                warnings: [],
+                changed: false,
+            };
+        }
+
         const result = executeClinicalRecordCommand(snapshot, command);
-        if (result.ok) {
+        if (result.ok && result.changed) {
             recordRef.current = result.record;
             setRecord(result.record);
         }
@@ -52,6 +64,10 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
     useEffect(() => {
         recordRef.current = record;
     }, [record]);
+
+    useEffect(() => {
+        workflowStateRef.current = workflowState;
+    }, [workflowState]);
 
     const pushHistory = useCallback((snapshot: ClinicalRecord, timestamp: number) => {
         setVersionHistory(prev => {

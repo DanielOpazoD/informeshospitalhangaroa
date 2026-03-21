@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LOCAL_STORAGE_KEYS } from '../appConstants';
 import { RecordProvider, useRecordContext } from '../contexts/RecordContext';
 import type { ReactNode } from 'react';
+import type { ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
 import { installMockWindowStorage } from './testUtils';
 
 // Wrapper to provide the RecordContext
@@ -47,6 +48,38 @@ describe('RecordContext', () => {
 
         expect(result.current.record.patientFields[0].value).toBe('John Doe');
         expect(result.current.hasUnsavedChanges).toBe(true);
+    });
+
+    it('no marca cambios sin guardar cuando un comando no altera el documento', () => {
+        const { result } = renderHook(() => useRecordContext(), { wrapper });
+
+        act(() => {
+            result.current.handlePatientFieldChange(0, '');
+        });
+
+        expect(result.current.record.patientFields[0].value).toBe('');
+        expect(result.current.hasUnsavedChanges).toBe(false);
+    });
+
+    it('bloquea comandos de edición mientras el workflow está guardando', () => {
+        const { result } = renderHook(() => useRecordContext(), { wrapper });
+
+        act(() => {
+            result.current.dispatchWorkflow({ type: 'SAVE_REQUESTED' });
+        });
+
+        const blockedResult: ClinicalRecordCommandResult = result.current.dispatchRecordCommand({
+            type: 'edit_patient_field',
+            index: 0,
+            value: 'John Doe',
+        });
+
+        expect(result.current.workflowState.status).toBe('saving');
+        expect(result.current.record.patientFields[0].value).toBe('');
+        expect(blockedResult.ok).toBe(false);
+        if (!blockedResult.ok) {
+            expect(blockedResult.errors[0]).toContain('No se puede editar el documento');
+        }
     });
 
     it('should handle adding and removing sections', () => {

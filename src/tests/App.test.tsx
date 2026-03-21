@@ -134,6 +134,7 @@ vi.mock('../contexts/RecordContext', () => ({
                 especialidad: '',
             },
             warnings: [],
+            changed: true,
         }),
         lastLocalSave: 123,
         hasUnsavedChanges: false,

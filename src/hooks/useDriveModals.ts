@@ -6,6 +6,7 @@ import { buildContextualErrorMessage } from '../utils/errorUtils';
 import { getRootDriveFolder, loadDefaultDriveFolderPath } from '../utils/driveFolderStorage';
 import { getBrowserStorageAdapter, type StorageAdapter } from '../utils/storageAdapter';
 import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
+import type { EditorWorkflowAction } from '../application/editorWorkflow';
 
 interface UseDriveModalsOptions {
     isSignedIn: boolean;
@@ -30,6 +31,7 @@ interface UseDriveModalsOptions {
     saveToDrive: (options: SaveOptions) => Promise<boolean>;
     generatePdf: () => Promise<Blob>;
     storage?: StorageAdapter | null;
+    dispatchWorkflow?: React.Dispatch<EditorWorkflowAction>;
 }
 
 /**
@@ -61,6 +63,7 @@ export function useDriveModals({
     saveToDrive,
     generatePdf,
     storage = getBrowserStorageAdapter(),
+    dispatchWorkflow,
 }: UseDriveModalsOptions) {
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
     const [isOpenModalOpen, setIsOpenModalOpen] = useState(false);
@@ -113,19 +116,23 @@ export function useDriveModals({
         try {
             const importedRecord = await openJsonFileFromDrive(file);
             if (!importedRecord) return;
+            dispatchWorkflow?.({ type: 'IMPORT_STARTED' });
             markRecordAsReplaced();
             const result = dispatchRecordCommand({ type: 'replace_record_from_import', value: importedRecord });
             if (!result.ok) {
+                dispatchWorkflow?.({ type: 'IMPORT_FAILED', error: result.errors.join('\n') || 'No se pudo abrir el archivo seleccionado.' });
                 showToast(result.errors.join('\n') || 'No se pudo abrir el archivo seleccionado.', 'error');
                 return;
             }
             setHasUnsavedChanges(false);
             saveDraft('import', result.record);
+            dispatchWorkflow?.({ type: 'IMPORT_SUCCEEDED' });
             setIsOpenModalOpen(false);
         } catch (error) {
+            dispatchWorkflow?.({ type: 'IMPORT_FAILED', error: buildContextualErrorMessage(`No se pudo abrir "${file.name}"`, error) });
             showToast(buildContextualErrorMessage(`No se pudo abrir "${file.name}"`, error), 'error');
         }
-    }, [dispatchRecordCommand, openJsonFileFromDrive, markRecordAsReplaced, setHasUnsavedChanges, saveDraft, showToast]);
+    }, [dispatchRecordCommand, dispatchWorkflow, openJsonFileFromDrive, markRecordAsReplaced, setHasUnsavedChanges, saveDraft, showToast]);
 
     const handlePickerCallback = useCallback(async (data: GooglePickerCallbackData) => {
         if (data.action === window.google.picker.Action.PICKED) {
