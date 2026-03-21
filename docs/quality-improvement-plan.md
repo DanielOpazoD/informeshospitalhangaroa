@@ -8,6 +8,11 @@ Evolucionar el sistema de forma segura y gradual hacia una arquitectura más mod
 - `2026-03-21`: `App.tsx` dejó de concentrar la coordinación del shell; el wiring principal quedó repartido entre `AppRoot`, `AppShellRoute` y `useAppShellController`.
 - `2026-03-21`: `DriveContext` ahora se divide internamente por responsabilidades de navegación, búsqueda y persistencia, manteniendo `useDrive()` como fachada de compatibilidad.
 - `2026-03-21`: `coverage/` pasa a considerarse artefacto generado y queda fuera del flujo normal del repositorio.
+- `2026-03-21`: existe una baseline operativa explícita en `docs/quality-baseline.md` con suite crítica, cobertura focalizada y presupuesto de bundle.
+- `2026-03-21`: `useClinicalRecord` quedó desacoplado en historial, bootstrap y persistencia local, manteniendo intacta la API pública del `RecordContext`.
+- `2026-03-21`: `useAppShellController` ahora compone features por dominio (`editor`, `drive`, `hhr`, `ai`) en vez de concentrar toda la lógica del shell.
+- `2026-03-21`: HHR ya consume configuración centralizada, validación runtime de payloads y un logger compartido para eventos operativos.
+- `2026-03-21`: el layout del rail lateral del editor vive en un hook dedicado y `src/index.css` dejó de concentrar editor, shell, AI y diálogos en un solo archivo.
 - Referencia operativa: revisar `docs/architecture-guardrails.md` antes de abrir PRs de refactor.
 
 ## Principios de ejecución

@@ -35,7 +35,7 @@ export const useEditorUiState = ({ lastLocalSave, hasUnsavedChanges }: UseEditor
         if (!lastLocalSave) return 'Sin guardados aún';
         if (hasUnsavedChanges) return 'Sin guardar';
         return 'Guardado local';
-    }, [hasUnsavedChanges, lastLocalSave, nowTick]);
+    }, [hasUnsavedChanges, lastLocalSave]);
 
     const lastSaveTime = useMemo(() => {
         if (!lastLocalSave) return '';

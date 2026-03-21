@@ -38,7 +38,7 @@ const AppShellRoute: React.FC<AppShellRouteProps & { onOpenCartola: () => void }
             handleRestoreAll={controller.handlers.handleRestoreAll}
             handleToolbarCommand={controller.handlers.handleToolbarCommand}
             onOpenCartola={onOpenCartola}
-            aiAssistantPanel={(
+            aiAssistantPanel={controller.editorUi.isAiAssistantVisible ? (
                 <AIAssistant
                     sections={controller.aiAssistant.aiSections}
                     apiKey={controller.aiAssistant.resolvedAiApiKey}
@@ -54,17 +54,17 @@ const AppShellRoute: React.FC<AppShellRouteProps & { onOpenCartola: () => void }
                     panelWidth={controller.editorUi.aiPanelWidth}
                     onPanelWidthChange={controller.editorUi.setAiPanelWidth}
                 />
-            )}
+            ) : null}
             hhrPanel={(
                 <Suspense fallback={null}>
                     <HhrIntegrationPanel {...controller.hhrController.hhrPanel} />
                 </Suspense>
             )}
-            hhrModal={(
+            hhrModal={controller.hhrController.hhrModal.isOpen ? (
                 <Suspense fallback={null}>
                     <HhrCensusModal {...controller.hhrController.hhrModal} />
                 </Suspense>
-            )}
+            ) : null}
         />
     );
 };

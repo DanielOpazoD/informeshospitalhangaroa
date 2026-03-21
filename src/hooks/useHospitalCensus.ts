@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { HhrCensusPatient } from '../hhrTypes';
-import { isHhrFirebaseConfigured, subscribeToHospitalCensus } from '../services/hhrFirebaseService';
+import { subscribeToHospitalCensus } from '../services/hhrFirebaseService';
+import { isHhrFirebaseConfigured } from '../infrastructure/hhr/hhrConfig';
 
 interface UseHospitalCensusOptions {
     enabled: boolean;

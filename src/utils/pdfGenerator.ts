@@ -2,6 +2,7 @@ import type { ClinicalRecord } from '../types';
 import { TEMPLATES } from '../constants';
 import { formatDateDMY } from './dateUtils';
 import { sanitizeClinicalHtml } from './clinicalContentSanitizer';
+import { appLogger } from '../infrastructure/shared/logger';
 
 interface PdfGeneratorOptions {
     record: ClinicalRecord;
@@ -174,7 +175,7 @@ export async function generatePdfAsBlob({ record }: PdfGeneratorOptions): Promis
                     reader.readAsDataURL(blob);
                 });
             } catch (error) {
-                console.warn('No se pudo convertir la imagen para PDF', error);
+                appLogger.warn('pdf-generator', 'No se pudo convertir la imagen para PDF.', error);
                 return null;
             }
         };
@@ -215,7 +216,7 @@ export async function generatePdfAsBlob({ record }: PdfGeneratorOptions): Promis
                 pdf.addImage(resolvedSource, properties.fileType || 'PNG', marginX, cursorY, renderWidth, renderHeight, undefined, 'FAST');
                 cursorY += renderHeight + 2;
             } catch (error) {
-                console.warn('No se pudo renderizar una imagen en PDF', error);
+                appLogger.warn('pdf-generator', 'No se pudo renderizar una imagen en PDF.', error);
             }
         };
 

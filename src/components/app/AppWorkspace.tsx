@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense } from 'react';
 import type { ClinicalRecord, ClinicalSectionData } from '../../types';
 import Header from '../Header';
 import PatientInfo from '../PatientInfo';
@@ -7,6 +7,7 @@ import EditorToolbar from '../EditorToolbar';
 import Footer from '../Footer';
 import { logoUrls } from '../../institutionConfig';
 import type { HeaderAuthProps, HeaderDriveProps, HeaderEditingProps, HeaderSaveProps } from '../Header';
+import { useWorkspaceSideRailLayout } from '../../hooks/useWorkspaceSideRailLayout';
 
 interface AppWorkspaceProps {
     record: ClinicalRecord;
@@ -87,55 +88,13 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
     aiAssistant,
     integrationPanel,
 }) => {
-    const headerHostRef = useRef<HTMLDivElement | null>(null);
-    const integrationPanelHostRef = useRef<HTMLDivElement | null>(null);
-    const sheetRef = useRef<HTMLDivElement | null>(null);
-    const [topbarHeight, setTopbarHeight] = useState(0);
-    const [integrationPanelHeight, setIntegrationPanelHeight] = useState(0);
-    const [sideRailLeft, setSideRailLeft] = useState(16);
-    const [sideRailWidth, setSideRailWidth] = useState(220);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-
-        const updateOffsets = () => {
-            setTopbarHeight(headerHostRef.current?.getBoundingClientRect().height ?? 0);
-            setIntegrationPanelHeight(integrationPanelHostRef.current?.getBoundingClientRect().height ?? 0);
-            if (sheetRef.current) {
-                const sheetRect = sheetRef.current.getBoundingClientRect();
-                const nextLeft = Math.max(16, Math.round(sheetRect.right + 18));
-                const availableWidth = Math.max(180, Math.floor(window.innerWidth - nextLeft - 16));
-                setSideRailLeft(nextLeft);
-                setSideRailWidth(Math.min(240, availableWidth));
-            }
-        };
-
-        updateOffsets();
-
-        const resizeObserver = typeof ResizeObserver !== 'undefined'
-            ? new ResizeObserver(() => updateOffsets())
-            : null;
-        if (resizeObserver && headerHostRef.current) resizeObserver.observe(headerHostRef.current);
-        if (resizeObserver && integrationPanelHostRef.current) resizeObserver.observe(integrationPanelHostRef.current);
-        if (resizeObserver && sheetRef.current) resizeObserver.observe(sheetRef.current);
-
-        window.addEventListener('resize', updateOffsets);
-        return () => {
-            resizeObserver?.disconnect();
-            window.removeEventListener('resize', updateOffsets);
-        };
-    }, [sheetZoom]);
-
-    const stickyLayoutStyle = useMemo(() => ({
-        '--topbar-height': `${topbarHeight}px`,
-        '--toolbar-top-offset': `${topbarHeight + integrationPanelHeight + 12}px`,
-    } as React.CSSProperties), [integrationPanelHeight, topbarHeight]);
-
-    const sideRailStyle = useMemo(() => ({
-        '--side-rail-left': `${sideRailLeft}px`,
-        '--side-rail-width': `${sideRailWidth}px`,
-    } as React.CSSProperties), [sideRailLeft, sideRailWidth]);
-
+    const {
+        headerHostRef,
+        integrationPanelHostRef,
+        sheetRef,
+        stickyLayoutStyle,
+        sideRailStyle,
+    } = useWorkspaceSideRailLayout(sheetZoom);
     const showSideRail = editingHeader.isAdvancedEditing || isGlobalStructureEditing;
 
     return (

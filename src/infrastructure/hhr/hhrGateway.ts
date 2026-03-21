@@ -13,6 +13,7 @@ import {
     subscribeToHhrAuthState,
 } from '../../services/hhrFirebaseService';
 import { runWithResilience } from '../shared/resilience';
+import { appLogger } from '../shared/logger';
 
 const isRetryableHhrError = (error: unknown): boolean => {
     const message = error instanceof Error ? error.message.toLowerCase() : '';
@@ -36,7 +37,7 @@ const toHhrError = (error: unknown, fallbackMessage: string, operation: string, 
 
 const logGatewayEvent = (label: string) => (event: { type: string; attempt: number; error?: string }) => {
     const suffix = event.error ? ` (${event.error})` : '';
-    console.warn(`[hhr-gateway] ${label} :: ${event.type} intento ${event.attempt}${suffix}`);
+    appLogger.warn('hhr-gateway', `${label} :: ${event.type} intento ${event.attempt}${suffix}`);
 };
 
 export interface HhrGateway {

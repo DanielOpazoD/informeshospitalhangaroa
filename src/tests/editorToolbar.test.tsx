@@ -66,10 +66,12 @@ describe('EditorToolbar', () => {
         expect(prevented).toBe(true);
     });
 
-    it('renders divider elements', () => {
+    it('renders the advanced toolbar in two rows with a single divider on the second row', () => {
         const onToolbarCommand = vi.fn();
         const { container } = render(React.createElement(EditorToolbar, { onToolbarCommand }));
+        const rows = container.querySelectorAll('.editor-toolbar-row');
         const dividers = container.querySelectorAll('.toolbar-divider');
-        expect(dividers.length).toBeGreaterThanOrEqual(3);
+        expect(rows.length).toBe(2);
+        expect(dividers.length).toBe(1);
     });
 });

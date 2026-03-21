@@ -17,17 +17,11 @@ import type {
 } from '../hhrTypes';
 import { buildHhrClinicalDocumentSave, mapHospitalCensusPatients } from '../utils/hhrIntegration';
 import type { ClinicalRecord } from '../types';
-
-const REQUIRED_ENV_KEYS = [
-    'VITE_FIREBASE_API_KEY',
-    'VITE_FIREBASE_AUTH_DOMAIN',
-    'VITE_FIREBASE_PROJECT_ID',
-    'VITE_FIREBASE_STORAGE_BUCKET',
-    'VITE_FIREBASE_MESSAGING_SENDER_ID',
-    'VITE_FIREBASE_APP_ID',
-] as const;
-
-type RequiredEnvKey = (typeof REQUIRED_ENV_KEYS)[number];
+import {
+    getHhrFirebaseRuntimeConfig,
+    getHhrHospitalId,
+    isHhrFirebaseConfigured,
+} from '../infrastructure/hhr/hhrConfig';
 
 interface HhrFirebaseServices {
     app: FirebaseApp;
@@ -37,24 +31,7 @@ interface HhrFirebaseServices {
 
 let cachedServices: HhrFirebaseServices | null = null;
 
-const getImportMetaEnv = (): Record<string, string | undefined> =>
-    typeof import.meta !== 'undefined'
-        ? ((import.meta as { env?: Record<string, string | undefined> }).env ?? {})
-        : {};
-
 const normalizeEmail = (value: string | null | undefined): string => (value || '').trim().toLowerCase();
-
-const readFirebaseConfig = (): FirebaseOptions => {
-    const env = getImportMetaEnv();
-    return {
-        apiKey: env.VITE_FIREBASE_API_KEY,
-        authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
-        projectId: env.VITE_FIREBASE_PROJECT_ID,
-        storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-        appId: env.VITE_FIREBASE_APP_ID,
-    };
-};
 
 const buildAuthenticatedUser = async (user: User): Promise<HhrAuthenticatedUser> => {
     const tokenResult = await user.getIdTokenResult();
@@ -68,15 +45,6 @@ const buildAuthenticatedUser = async (user: User): Promise<HhrAuthenticatedUser>
     };
 };
 
-export const getHhrFirebaseMissingEnvKeys = (): RequiredEnvKey[] => {
-    const env = getImportMetaEnv();
-    return REQUIRED_ENV_KEYS.filter(key => !env[key]);
-};
-
-export const isHhrFirebaseConfigured = (): boolean => getHhrFirebaseMissingEnvKeys().length === 0;
-
-export const getHhrHospitalId = (): string => getImportMetaEnv().VITE_HHR_FIREBASE_HOSPITAL_ID || 'hanga_roa';
-
 const getHhrFirebaseServices = (): HhrFirebaseServices => {
     if (cachedServices) {
         return cachedServices;
@@ -86,8 +54,9 @@ const getHhrFirebaseServices = (): HhrFirebaseServices => {
         throw new Error('La integración HHR requiere variables de entorno de Firebase.');
     }
 
+    const runtimeConfig = getHhrFirebaseRuntimeConfig();
     const app = getApps().find(existingApp => existingApp.name === 'hhr-integration')
-        || initializeApp(readFirebaseConfig(), 'hhr-integration');
+        || initializeApp(runtimeConfig.firebase as FirebaseOptions, 'hhr-integration');
 
     cachedServices = {
         app,

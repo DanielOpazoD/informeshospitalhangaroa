@@ -10,7 +10,7 @@ import { useHospitalCensus } from './useHospitalCensus';
 import {
     getHhrFirebaseMissingEnvKeys,
     isHhrFirebaseConfigured,
-} from '../services/hhrFirebaseService';
+} from '../infrastructure/hhr/hhrConfig';
 import {
     getClinicalRecordPatientFieldValue,
     getHhrTodayKey,
@@ -21,6 +21,7 @@ import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../appl
 import { interpretEditorEffects } from '../application/editorEffects';
 import { executeApplyHhrPatient, executeSyncToHhr } from '../application/editorUseCases';
 import type { EditorWorkflowState } from '../types';
+import { appLogger } from '../infrastructure/shared/logger';
 
 interface UseHhrIntegrationControllerParams {
     record: ClinicalRecord;
@@ -77,7 +78,7 @@ export const useHhrIntegrationController = ({
                 setIsHhrAuthLoading(false);
             },
             error => {
-                console.error('No se pudo resolver la sesión HHR:', error);
+                appLogger.error('hhr-session', 'No se pudo resolver la sesión HHR.', error);
                 setHhrUser(null);
                 setIsHhrAuthLoading(false);
                 showToast('No fue posible restaurar la sesión HHR.', 'error');
@@ -153,7 +154,7 @@ export const useHhrIntegrationController = ({
             onRequestFocus: () => {
                 document.getElementById('sheet')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             },
-            onLogAuditEvent: effect => console.warn(`[editor-audit] ${effect.event}`, effect.details ?? ''),
+            onLogAuditEvent: effect => appLogger.warn('editor-audit', effect.event, effect.details ?? ''),
         });
         setHasUnsavedChanges(true);
         setSelectedHhrPatient(patient);

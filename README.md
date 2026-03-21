@@ -62,6 +62,20 @@ npm run build
 npm run check:bundle
 ```
 
+Para iteraciones de refactor seguro sobre editor, shell e integraciones críticas, usa la validación mínima consolidada:
+
+```bash
+npm run validate:critical
+```
+
+Y para la validación completa previa a PR:
+
+```bash
+npm run validate:full
+```
+
+La baseline operativa de tests críticos, cobertura focalizada y presupuesto de bundle vive en [`docs/quality-baseline.md`](docs/quality-baseline.md).
+
 El editor principal además usa un workflow central (`idle`, `dirty`, `saving`, `restoring`, `importing`, `searching_drive`, `syncing_hhr`, `error`) para mantener coherentes autoguardado, restauración e integraciones remotas.
 Las operaciones críticas ahora pasan además por comandos clínicos explícitos y casos de uso de editor, que devuelven `effects` declarativos para separar decisión de negocio y reacciones de UI.
 El header expone `Deshacer` / `Rehacer` sobre snapshots persistidos, reutilizando exactamente el mismo pipeline clínico que la restauración desde historial.

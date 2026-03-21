@@ -1,20 +1,16 @@
-import { useCallback, useEffect, useReducer, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import type {
     ClinicalRecord,
     EditorWorkflowState,
-    HistoryStacks,
     ToastFn,
     VersionHistoryEntry,
 } from '../types';
 import {
     AUTO_SAVE_IDLE_DELAY,
     AUTO_SAVE_INTERVAL,
-    HISTORY_GROUP_WINDOW_MS,
-    LOCAL_STORAGE_KEYS,
-    MAX_HISTORY_ENTRIES,
 } from '../appConstants';
 import { useConfirmDialog } from './useConfirmDialog';
-import { getBrowserStorageAdapter, readStoredJson, writeStoredJson, type StorageAdapter } from '../utils/storageAdapter';
+import { getBrowserStorageAdapter, type StorageAdapter } from '../utils/storageAdapter';
 import { createTemplateBaseline, DEFAULT_TEMPLATE_ID } from '../utils/recordTemplates';
 import { editorWorkflowReducer, initialEditorWorkflowState, type EditorWorkflowAction } from '../application/editorWorkflow';
 import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
@@ -30,10 +26,28 @@ import {
     executeSaveDraft,
     type EditorUseCaseResult,
 } from '../application/editorUseCases';
+import {
+    buildHistoryStateFromEntries,
+    flattenHistoryState,
+    pushHistoryEntry,
+    redoHistoryState,
+    restoreHistoryEntryState,
+    type HistoryState,
+    undoHistoryState,
+} from './clinicalRecord/historyState';
+import {
+    createStorageDraftPersistence,
+    type DraftPersistencePort,
+} from './clinicalRecord/draftPersistence';
+import { readRecordBootstrap } from './clinicalRecord/bootstrap';
+import { systemTimeSource, type TimeSource } from './clinicalRecord/timeSource';
+import { appLogger } from '../infrastructure/shared/logger';
 
 interface UseClinicalRecordOptions {
     onToast: ToastFn;
     storage?: StorageAdapter | null;
+    persistence?: DraftPersistencePort;
+    timeSource?: TimeSource;
 }
 
 const serializeRecord = (record: ClinicalRecord) => JSON.stringify(record);
@@ -44,73 +58,24 @@ const normalizeVersionHistoryEntry = (entry: VersionHistoryEntry): VersionHistor
     metadata: entry.metadata ?? buildHistoryMetadata('save_auto', 'persistence', 'Historial legado', true, 'legacy-history'),
 });
 
-const flattenHistoryStacks = (stacks: HistoryStacks): VersionHistoryEntry[] =>
-    Array.from(
-        new Map(
-            [stacks.present, ...stacks.past, ...stacks.future]
-                .filter((entry): entry is VersionHistoryEntry => Boolean(entry))
-                .sort((left, right) => right.timestamp - left.timestamp)
-                .map(entry => [entry.id, entry]),
-        ).values(),
-    );
-
-const updateHistoryStacksOnPush = (
-    stacks: HistoryStacks,
-    nextEntry: VersionHistoryEntry,
-): HistoryStacks => ({
-    past: stacks.present ? [stacks.present, ...stacks.past].slice(0, MAX_HISTORY_ENTRIES - 1) : stacks.past,
-    present: nextEntry,
-    future: [],
-});
-
-const updateHistoryStacksOnRestore = (
-    stacks: HistoryStacks,
-    restored: VersionHistoryEntry,
-): HistoryStacks => ({
-    past: stacks.present && stacks.present.id !== restored.id
-        ? [stacks.present, ...stacks.past.filter(entry => entry.id !== restored.id)].slice(0, MAX_HISTORY_ENTRIES - 1)
-        : stacks.past,
-    present: restored,
-    future: stacks.present && stacks.present.id !== restored.id
-        ? [stacks.present, ...stacks.future].slice(0, MAX_HISTORY_ENTRIES - 1)
-        : stacks.future,
-});
-
-const updateHistoryStacksOnUndo = (stacks: HistoryStacks): HistoryStacks => {
-    const [target, ...remainingPast] = stacks.past;
-    if (!target) {
-        return stacks;
-    }
-
-    return {
-        past: remainingPast,
-        present: target,
-        future: stacks.present ? [stacks.present, ...stacks.future].slice(0, MAX_HISTORY_ENTRIES - 1) : stacks.future,
-    };
-};
-
-const updateHistoryStacksOnRedo = (stacks: HistoryStacks): HistoryStacks => {
-    const [target, ...remainingFuture] = stacks.future;
-    if (!target) {
-        return stacks;
-    }
-
-    return {
-        past: stacks.present ? [stacks.present, ...stacks.past].slice(0, MAX_HISTORY_ENTRIES - 1) : stacks.past,
-        present: target,
-        future: remainingFuture,
-    };
-};
-
-export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter() }: UseClinicalRecordOptions) => {
+export const useClinicalRecord = ({
+    onToast,
+    storage = getBrowserStorageAdapter(),
+    persistence,
+    timeSource = systemTimeSource,
+}: UseClinicalRecordOptions) => {
     const { confirm } = useConfirmDialog();
+    const draftPersistence = useMemo(
+        () => persistence ?? createStorageDraftPersistence(storage),
+        [persistence, storage],
+    );
     const [record, setRecord] = useState<ClinicalRecord>(() => createTemplateBaseline(DEFAULT_TEMPLATE_ID));
     const recordRef = useRef(record);
     const [lastLocalSave, setLastLocalSave] = useState<number | null>(null);
     const [versionHistory, setVersionHistory] = useState<VersionHistoryEntry[]>([]);
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
-    const historyStacksRef = useRef<HistoryStacks>({ past: [], present: null, future: [] });
+    const historyStacksRef = useRef<HistoryState>({ past: [], present: null, future: [] });
     const lastPersistedSnapshotRef = useRef<string | null>(null);
     const lastCommandResultRef = useRef<ClinicalRecordCommandResult | null>(null);
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -134,21 +99,21 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
                 }
             },
             onLogAuditEvent: (effect) => {
-                console.warn(`[editor-audit] ${effect.event}`, effect.details ?? '');
+                appLogger.warn('editor-audit', effect.event, effect.details ?? '');
             },
         });
     }, [onToast]);
 
-    const syncHistoryState = useCallback((nextStacks: HistoryStacks, persist = true) => {
+    const syncHistoryState = useCallback((nextStacks: HistoryState, persist = true) => {
         historyStacksRef.current = nextStacks;
-        const flattened = flattenHistoryStacks(nextStacks);
+        const flattened = flattenHistoryState(nextStacks);
         setVersionHistory(flattened);
         setCanUndo(nextStacks.past.length > 0);
         setCanRedo(nextStacks.future.length > 0);
         if (persist) {
-            writeStoredJson(storage, LOCAL_STORAGE_KEYS.history, flattened);
+            draftPersistence.writeHistory(flattened);
         }
-    }, [storage]);
+    }, [draftPersistence]);
 
     const applyWorkflowActions = useCallback((actions: EditorWorkflowAction[]) => {
         actions.forEach(action => dispatchWorkflow(action));
@@ -164,23 +129,14 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
         return result;
     }, [interpretEffects]);
 
-    const pushHistory = useCallback((snapshot: ClinicalRecord, timestamp: number, entry: VersionHistoryEntry) => {
+    const pushHistory = useCallback((snapshot: ClinicalRecord, entry: VersionHistoryEntry) => {
         const serializedSnapshot = serializeRecord(snapshot);
         if (serializedSnapshot === lastPersistedSnapshotRef.current) {
             return;
         }
 
         lastPersistedSnapshotRef.current = serializedSnapshot;
-        const currentStacks = historyStacksRef.current;
-        const latest = currentStacks.present;
-        const shouldGroup = Boolean(
-            latest?.metadata?.groupKey &&
-            latest.metadata.groupKey === entry.metadata?.groupKey &&
-            timestamp - latest.timestamp <= HISTORY_GROUP_WINDOW_MS,
-        );
-        const nextStacks = shouldGroup
-            ? { ...currentStacks, present: entry, future: [] }
-            : updateHistoryStacksOnPush(currentStacks, entry);
+        const nextStacks = pushHistoryEntry(historyStacksRef.current, entry);
         syncHistoryState(nextStacks);
     }, [syncHistoryState]);
 
@@ -208,8 +164,8 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
         interpretEffects(useCase);
 
         const snapshot = useCase.snapshot ?? useCase.commandResult.record;
-        const timestamp = Date.now();
-        writeStoredJson(storage, LOCAL_STORAGE_KEYS.draft, { timestamp, record: snapshot });
+        const timestamp = timeSource.now();
+        draftPersistence.writeDraft({ timestamp, record: snapshot });
         setLastLocalSave(timestamp);
 
         const historyEntry: VersionHistoryEntry = {
@@ -218,12 +174,12 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
             record: snapshot,
             metadata: useCase.historyMetadata ?? useCase.commandResult.metadata,
         };
-        pushHistory(snapshot, timestamp, historyEntry);
+        pushHistory(snapshot, historyEntry);
 
         if (useCase.userMessage) {
             onToast(useCase.userMessage);
         }
-    }, [applyWorkflowActions, getRecordSnapshot, interpretEffects, onToast, pushHistory, storage]);
+    }, [applyWorkflowActions, draftPersistence, getRecordSnapshot, interpretEffects, onToast, pushHistory, timeSource]);
 
     useEffect(() => {
         recordRef.current = record;
@@ -234,43 +190,30 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
     }, [workflowState]);
 
     useEffect(() => {
-        try {
-            const parsed = readStoredJson<{ timestamp?: number; record?: ClinicalRecord }>(storage, LOCAL_STORAGE_KEYS.draft);
-            if (parsed?.record) {
-                markRecordAsReplaced();
-                const useCase = executeImportRecord(getRecordSnapshot(), workflowStateRef.current, parsed.record, 'bootstrap');
-                const loaded = applyCommandResult(useCase.commandResult);
-                if (loaded.ok) {
-                    if (parsed.timestamp) {
-                        setLastLocalSave(parsed.timestamp);
-                        lastPersistedSnapshotRef.current = serializeRecord(loaded.record);
-                    }
-                    dispatchWorkflow({ type: 'SET_UNSAVED_CHANGES', value: false });
-                    if (useCase.userMessage) {
-                        onToast(useCase.userMessage, 'success');
-                    }
+        const bootstrap = readRecordBootstrap(draftPersistence);
+        bootstrap.warnings.forEach(message => appLogger.warn('clinical-record-bootstrap', message));
+
+        if (bootstrap.draft) {
+            markRecordAsReplaced();
+            const useCase = executeImportRecord(getRecordSnapshot(), workflowStateRef.current, bootstrap.draft.record, 'bootstrap');
+            const loaded = applyCommandResult(useCase.commandResult);
+            if (loaded.ok) {
+                setLastLocalSave(bootstrap.draft.timestamp);
+                lastPersistedSnapshotRef.current = serializeRecord(loaded.record);
+                dispatchWorkflow({ type: 'SET_UNSAVED_CHANGES', value: false });
+                if (useCase.userMessage) {
+                    onToast(useCase.userMessage, 'success');
                 }
             }
-        } catch (error) {
-            console.warn('No se pudo restaurar el borrador local:', error);
         }
 
-        try {
-            const parsedHistory = readStoredJson<VersionHistoryEntry[]>(storage, LOCAL_STORAGE_KEYS.history);
-            if (parsedHistory) {
-                const normalizedHistory = parsedHistory
-                    .slice(0, MAX_HISTORY_ENTRIES)
-                    .map(normalizeVersionHistoryEntry);
-                syncHistoryState({
-                    present: normalizedHistory[0] ?? null,
-                    past: normalizedHistory.slice(1),
-                    future: [],
-                }, false);
-            }
-        } catch (error) {
-            console.warn('No se pudo leer el historial local:', error);
+        if (bootstrap.historyEntries.length > 0) {
+            const normalizedHistory = bootstrap.historyEntries
+                .slice(0)
+                .map(normalizeVersionHistoryEntry);
+            syncHistoryState(buildHistoryStateFromEntries(normalizedHistory), false);
         }
-    }, [applyCommandResult, getRecordSnapshot, markRecordAsReplaced, onToast, storage, syncHistoryState]);
+    }, [applyCommandResult, draftPersistence, getRecordSnapshot, markRecordAsReplaced, onToast, syncHistoryState]);
 
     useEffect(() => {
         if (suppressedRecordChangeCountRef.current > 0) {
@@ -298,7 +241,7 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
 
     const applyHistoryTransition = useCallback((
         entry: VersionHistoryEntry,
-        nextStacks: HistoryStacks,
+        nextStacks: HistoryState,
         useCase: EditorUseCaseResult,
         errorMessage: string,
     ) => {
@@ -311,11 +254,11 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
         }
 
         setLastLocalSave(entry.timestamp);
-        writeStoredJson(storage, LOCAL_STORAGE_KEYS.draft, { timestamp: entry.timestamp, record: restored.record });
+        draftPersistence.writeDraft({ timestamp: entry.timestamp, record: restored.record });
         lastPersistedSnapshotRef.current = serializeRecord(restored.record);
         syncHistoryState(nextStacks);
         return true;
-    }, [applyCommandResult, applyWorkflowActions, markRecordAsReplaced, onToast, storage, syncHistoryState]);
+    }, [applyCommandResult, applyWorkflowActions, draftPersistence, markRecordAsReplaced, onToast, syncHistoryState]);
 
     const handleRestoreHistoryEntry = useCallback((entry: VersionHistoryEntry) => {
         void (async () => {
@@ -329,7 +272,7 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
             if (!confirmed) return;
 
             const normalizedEntry = normalizeVersionHistoryEntry(entry);
-            const nextStacks = updateHistoryStacksOnRestore(historyStacksRef.current, normalizedEntry);
+            const nextStacks = restoreHistoryEntryState(historyStacksRef.current, normalizedEntry);
             const useCase = executeRestoreHistoryEntry(getRecordSnapshot(), workflowStateRef.current, normalizedEntry);
             applyHistoryTransition(normalizedEntry, nextStacks, useCase, 'No se pudo restaurar la versión seleccionada.');
         })();
@@ -344,7 +287,7 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
         }
 
         const normalizedTarget = normalizeVersionHistoryEntry(target);
-        const nextStacks = updateHistoryStacksOnUndo(currentStacks);
+        const nextStacks = undoHistoryState(currentStacks);
         const useCase = executeRestoreHistoryEntry(getRecordSnapshot(), workflowStateRef.current, normalizedTarget, {
             closeHistoryModal: false,
             successToast: 'Se deshizo el último cambio persistido.',
@@ -362,7 +305,7 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
         }
 
         const normalizedTarget = normalizeVersionHistoryEntry(target);
-        const nextStacks = updateHistoryStacksOnRedo(currentStacks);
+        const nextStacks = redoHistoryState(currentStacks);
         const useCase = executeRestoreHistoryEntry(getRecordSnapshot(), workflowStateRef.current, normalizedTarget, {
             closeHistoryModal: false,
             successToast: 'Se rehizo el cambio seleccionado.',

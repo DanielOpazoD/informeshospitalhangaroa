@@ -12,7 +12,7 @@ import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../appl
 import { useClinicalRecord } from '../hooks/useClinicalRecord';
 import { useRecordForm } from '../hooks/useRecordForm';
 
-type EditTarget =
+export type EditTarget =
     | { type: 'patient-section-title' }
     | { type: 'patient-field-label'; index: number }
     | { type: 'section-title'; index: number }

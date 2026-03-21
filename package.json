@@ -14,13 +14,17 @@
     "typecheck": "tsc --noEmit",
     "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
+    "test:critical": "vitest run src/tests/App.test.tsx src/tests/header.test.tsx src/tests/useEditorUiState.test.tsx src/tests/useDocumentEffects.test.tsx src/tests/RecordContext.test.tsx src/tests/editorUseCases.test.ts src/tests/driveGateway.test.ts src/tests/useDriveOperations.test.tsx src/tests/hhrGateway.test.ts src/tests/hhrIntegration.test.ts src/tests/components/app/AppShellContent.test.tsx src/tests/components/app/AppWorkspace.test.tsx",
+    "test:critical:coverage": "vitest run --coverage src/tests/App.test.tsx src/tests/header.test.tsx src/tests/useEditorUiState.test.tsx src/tests/useDocumentEffects.test.tsx src/tests/RecordContext.test.tsx src/tests/editorUseCases.test.ts src/tests/driveGateway.test.ts src/tests/useDriveOperations.test.tsx src/tests/hhrGateway.test.ts src/tests/hhrIntegration.test.ts src/tests/components/app/AppShellContent.test.tsx src/tests/components/app/AppWorkspace.test.tsx",
     "test:ci": "vitest run --coverage",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write 'src/**/*.{ts,tsx,css}'",
-    "check:bundle": "node ./scripts/checkBundleSize.mjs"
+    "check:bundle": "node ./scripts/checkBundleSize.mjs",
+    "validate:critical": "npm run typecheck && npm run test:critical && npm run build && npm run check:bundle",
+    "validate:full": "npm run lint && npm run typecheck && npm run typecheck:test && npm run test:ci && npm run build && npm run check:bundle"
   },
   "dependencies": {
     "firebase": "^12.6.0",

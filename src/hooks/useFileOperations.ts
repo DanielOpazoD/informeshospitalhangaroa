@@ -8,6 +8,7 @@ import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../appl
 import type { EditorWorkflowAction } from '../application/editorWorkflow';
 import { interpretEditorEffects } from '../application/editorEffects';
 import { executeImportRecord } from '../application/editorUseCases';
+import { appLogger } from '../infrastructure/shared/logger';
 
 /**
  * Options for configuring file I/O operations.
@@ -81,7 +82,7 @@ export function useFileOperations({
                     interpretEditorEffects(useCase.effects, {
                         onShowWarning: message => showToast(message, 'warning'),
                         onShowToast: (message, tone) => showToast(message, tone),
-                        onLogAuditEvent: effect => console.warn(`[editor-audit] ${effect.event}`, effect.details ?? ''),
+                        onLogAuditEvent: effect => appLogger.warn('editor-audit', effect.event, effect.details ?? ''),
                     });
                 } else {
                     showToast(result.errors.join('\n') || 'Archivo JSON inválido.', 'error');

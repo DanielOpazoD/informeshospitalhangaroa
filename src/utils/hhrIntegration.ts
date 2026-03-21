@@ -10,6 +10,7 @@ import type {
     HhrClinicalSyncState,
 } from '../hhrTypes';
 import { calcEdadY } from './dateUtils';
+import { parseHhrDailyRecordPayload } from './hhrPayloadValidators';
 
 const CLINICAL_DOCUMENT_SCHEMA_VERSION = 2;
 const HHR_CAMA_FIELD_ID = FIELD_IDS.cama;
@@ -64,9 +65,6 @@ const HHR_SECTION_TEMPLATES: Record<HhrDocumentType, HhrSectionTemplate[]> = {
 };
 
 const patientFieldDefaultsById = new Map(DEFAULT_PATIENT_FIELDS.map(field => [field.id, field]));
-
-const asRecord = (value: unknown): Record<string, unknown> =>
-    value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 
 const normalizeString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
@@ -193,28 +191,26 @@ export const mapHospitalCensusPatients = (
     dailyRecordData: unknown,
     sourceDailyRecordDate: string
 ): HhrCensusPatient[] => {
-    const data = asRecord(dailyRecordData);
-    const beds = asRecord(data.beds);
+    const { beds } = parseHhrDailyRecordPayload(dailyRecordData);
 
     return Object.entries(beds)
         .map(([bedId, patientValue]) => {
-            const patient = asRecord(patientValue);
-            const patientName = normalizeString(patient.patientName);
-            const isBlocked = Boolean(patient.isBlocked);
+            const patientName = normalizeString(patientValue.patientName);
+            const isBlocked = patientValue.isBlocked;
             if (!patientName || isBlocked) {
                 return null;
             }
 
-            const bedName = normalizeString(patient.bedName);
+            const bedName = normalizeString(patientValue.bedName);
             return {
                 bedId,
                 bedLabel: bedName || bedId,
                 patientName,
-                rut: normalizeString(patient.rut),
-                age: normalizeString(patient.age),
-                birthDate: normalizeString(patient.birthDate),
-                admissionDate: normalizeString(patient.admissionDate),
-                specialty: normalizeString(patient.specialty),
+                rut: normalizeString(patientValue.rut),
+                age: normalizeString(patientValue.age),
+                birthDate: normalizeString(patientValue.birthDate),
+                admissionDate: normalizeString(patientValue.admissionDate),
+                specialty: normalizeString(patientValue.specialty),
                 sourceDailyRecordDate,
             } satisfies HhrCensusPatient;
         })
