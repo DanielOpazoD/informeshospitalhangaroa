@@ -205,6 +205,23 @@ body[data-theme='dark'] .app-tile.disabled {
     opacity: 0.7;
 }
 
+.action-btn-icon {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    justify-content: center;
+}
+
+.action-btn-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.action-btn-drive svg {
+    width: 24px;
+    height: 24px;
+}
+
 .action-btn-plain {
     background: transparent;
     border: none;
@@ -370,6 +387,7 @@ body[data-theme='dark'] .app-tile.disabled {
     align-items: center;
     position: relative;
     gap: 12px;
+    min-width: 38px;
 }
 
 .topbar-scroll::-webkit-scrollbar {

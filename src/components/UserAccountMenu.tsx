@@ -1,29 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import type { GoogleUserProfile, GoogleTokenClient } from '../types';
-import { LaunchIcon, GmailIcon, SwitchUserIcon, SignOutIcon, GoogleDriveColoredIcon } from './icons';
+import type { GoogleUserProfile } from '../types';
+import { LaunchIcon, GmailIcon, SwitchUserIcon, SignOutIcon } from './icons';
 import { useDismissibleLayer } from '../hooks/useDismissibleLayer';
 
 interface UserAccountMenuProps {
     isSignedIn: boolean;
-    isGisReady: boolean;
-    isGapiReady: boolean;
-    tokenClient: GoogleTokenClient | null;
     userProfile: GoogleUserProfile | null;
-    onSignIn: () => void;
     onSignOut: () => void;
     onChangeUser: () => void;
 }
 
-const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
-    isSignedIn,
-    isGisReady,
-    isGapiReady,
-    tokenClient,
-    userProfile,
-    onSignIn,
-    onSignOut,
-    onChangeUser,
-}) => {
+const UserAccountMenu: React.FC<UserAccountMenuProps> = ({ isSignedIn, userProfile, onSignOut, onChangeUser }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useDismissibleLayer<HTMLDivElement>({
         isOpen: isMenuOpen,
@@ -49,19 +36,7 @@ const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
     };
 
     if (!isSignedIn) {
-        return (
-            <button
-                onClick={onSignIn}
-                className="action-btn action-btn-plain"
-                type="button"
-                disabled={!isGisReady || !isGapiReady || !tokenClient}
-                title="Conectar Google Drive"
-            >
-                <div className="drive-login-icon">
-                    <GoogleDriveColoredIcon />
-                </div>
-            </button>
-        );
+        return null;
     }
 
     return (

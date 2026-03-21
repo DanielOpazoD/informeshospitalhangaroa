@@ -58,7 +58,7 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
                     <span className="hhr-compact-status">Desconectado</span>
                     <button
                         type="button"
-                        className="btn primary round btn-sm"
+                        className="btn primary round btn-sm hhr-compact-btn"
                         onClick={onSignIn}
                         disabled={!isConfigured || isAuthLoading}
                     >
@@ -88,7 +88,7 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
                     </span>
                     <button
                         type="button"
-                        className="btn secondary round btn-sm hhr-logout-btn"
+                        className="btn secondary round btn-sm hhr-logout-btn hhr-compact-btn"
                         onClick={onSignOut}
                         title="Cerrar sesión"
                     >
@@ -117,7 +117,11 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
                         <span className="census-info">
                             {isCensusLoading ? 'Actualizando' : `${censusCount} pctes.`}
                         </span>
-                        <button type="button" className="btn secondary round btn-sm" onClick={onOpenCensusModal}>
+                        <button
+                            type="button"
+                            className="btn secondary round btn-sm hhr-compact-btn"
+                            onClick={onOpenCensusModal}
+                        >
                             <SearchIcon />
                             <span>Buscar paciente</span>
                         </button>
@@ -141,7 +145,7 @@ const HhrIntegrationPanel: React.FC<HhrIntegrationPanelProps> = ({
                 </div>
                 <button
                     type="button"
-                    className={`btn hhr-upload-btn round btn-sm ${!canSave ? 'disabled' : ''}`}
+                    className={`btn hhr-upload-btn round btn-sm hhr-compact-btn ${!canSave ? 'disabled' : ''}`}
                     onClick={onSaveToHhr}
                     disabled={!canSave || isSaving}
                     title={!canSave ? disabledReason : 'Guardar borrador clínico en la ficha HHR'}

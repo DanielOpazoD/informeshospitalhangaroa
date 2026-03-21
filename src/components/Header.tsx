@@ -6,10 +6,14 @@ import {
     EditIcon,
     FileGroupIcon,
     FolderOpenIcon,
+    GoogleDriveColoredIcon,
     HistoryIcon,
+    LoginIcon,
     PenIcon,
     SaveIcon,
     SettingsIcon,
+    SignOutIcon,
+    SwitchUserIcon,
     UploadIcon,
 } from './icons';
 import AppLauncher from './header/AppLauncher';
@@ -55,6 +59,7 @@ const Header: React.FC<HeaderProps> = ({
     };
 
     const driveOptionDisabled = drive.hasApiKey && !auth.isPickerApiReady;
+    const driveSignInDisabled = !auth.isGisReady || !auth.isGapiReady || !auth.tokenClient;
 
     return (
         <div className="topbar">
@@ -155,36 +160,57 @@ const Header: React.FC<HeaderProps> = ({
                         isOpen={openActionMenu === 'drive'}
                         onToggle={() => setOpenActionMenu(current => (current === 'drive' ? null : 'drive'))}
                         onClose={() => setOpenActionMenu(null)}
-                        icon={<DriveIcon />}
+                        icon={auth.isSignedIn ? <GoogleDriveColoredIcon /> : <DriveIcon />}
+                        showChevron={false}
+                        buttonClassName="action-btn-icon action-btn-drive"
                     >
-                        <button
-                            type="button"
-                            onClick={() => handleDropdownAction(drive.onSaveToDrive)}
-                            disabled={drive.isSaving}
-                        >
-                            <DriveIcon />
-                            <span>{drive.isSaving ? 'Guardando…' : 'Guardar en Drive'}</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleDropdownAction(drive.onOpenFromDrive)}
-                            disabled={driveOptionDisabled}
-                            title={driveOptionDisabled ? 'Cargando Google Picker…' : undefined}
-                        >
-                            <FolderOpenIcon />
-                            <span>Abrir desde Drive</span>
-                        </button>
+                        {auth.isSignedIn ? (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => handleDropdownAction(drive.onSaveToDrive)}
+                                    disabled={drive.isSaving}
+                                >
+                                    <DriveIcon />
+                                    <span>{drive.isSaving ? 'Guardando…' : 'Guardar en Drive'}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleDropdownAction(drive.onOpenFromDrive)}
+                                    disabled={driveOptionDisabled}
+                                    title={driveOptionDisabled ? 'Cargando Google Picker…' : undefined}
+                                >
+                                    <FolderOpenIcon />
+                                    <span>Abrir desde Drive</span>
+                                </button>
+                                <div className="action-dropdown-divider" />
+                                <button type="button" onClick={() => handleDropdownAction(auth.onChangeUser)}>
+                                    <SwitchUserIcon />
+                                    <span>Cambiar usuario Drive</span>
+                                </button>
+                                <button type="button" onClick={() => handleDropdownAction(auth.onSignOut)}>
+                                    <SignOutIcon />
+                                    <span>Cerrar sesión Drive</span>
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => handleDropdownAction(auth.onSignIn)}
+                                disabled={driveSignInDisabled}
+                                title={driveSignInDisabled ? 'Google Drive aún no está disponible' : undefined}
+                            >
+                                <LoginIcon />
+                                <span>Iniciar sesión en Drive</span>
+                            </button>
+                        )}
                     </HeaderActionMenu>
                 </div>
             </div>
             <div className="topbar-account">
                 <UserAccountMenu
                     isSignedIn={auth.isSignedIn}
-                    isGisReady={auth.isGisReady}
-                    isGapiReady={auth.isGapiReady}
-                    tokenClient={auth.tokenClient}
                     userProfile={auth.userProfile}
-                    onSignIn={auth.onSignIn}
                     onSignOut={auth.onSignOut}
                     onChangeUser={auth.onChangeUser}
                 />

@@ -10,6 +10,8 @@ interface HeaderActionMenuProps {
     onClose: () => void;
     icon: React.ReactNode;
     children: React.ReactNode;
+    showChevron?: boolean;
+    buttonClassName?: string;
 }
 
 const HeaderActionMenu: React.FC<HeaderActionMenuProps> = ({
@@ -20,6 +22,8 @@ const HeaderActionMenu: React.FC<HeaderActionMenuProps> = ({
     onClose,
     icon,
     children,
+    showChevron = true,
+    buttonClassName,
 }) => {
     const menuRef = useDismissibleLayer<HTMLDivElement>({
         isOpen,
@@ -30,7 +34,7 @@ const HeaderActionMenu: React.FC<HeaderActionMenuProps> = ({
         <div className={`action-group ${isOpen ? 'open' : ''}`} ref={menuRef}>
             <button
                 type="button"
-                className="action-btn action-group-toggle"
+                className={`action-btn action-group-toggle ${buttonClassName ?? ''}`.trim()}
                 onClick={onToggle}
                 aria-haspopup="true"
                 aria-expanded={isOpen}
@@ -38,7 +42,7 @@ const HeaderActionMenu: React.FC<HeaderActionMenuProps> = ({
                 title={title}
             >
                 {icon}
-                <ChevronDownIcon />
+                {showChevron && <ChevronDownIcon />}
             </button>
             {isOpen && (
                 <div className="action-dropdown" role="menu">

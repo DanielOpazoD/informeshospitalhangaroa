@@ -142,6 +142,13 @@
     color: #64748b;
 }
 
+.hhr-compact-btn {
+    min-height: 28px;
+    padding: 4px 10px;
+    font-size: 11px;
+    gap: 5px;
+}
+
 .hhr-upload-btn {
     background: linear-gradient(135deg, #0284c7, #0369a1);
     color: #f8fafc;
@@ -151,6 +158,10 @@
     font-weight: 600;
     letter-spacing: 0.3px;
     transition: all 0.2s ease;
+}
+
+.hhr-upload-btn.hhr-compact-btn {
+    padding-inline: 12px;
 }
 
 .hhr-upload-btn svg,

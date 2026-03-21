@@ -23,9 +23,17 @@ interface AppWorkspaceProps {
     onOpenCartola: () => void;
     isEditing: boolean;
     isGlobalStructureEditing: boolean;
-    activeEditTarget: { type: 'patient-section-title' } | { type: 'patient-field-label'; index: number } | { type: 'section-title'; index: number } | { type: 'record-title' } | null;
+    activeEditTarget:
+        | { type: 'patient-section-title' }
+        | { type: 'patient-field-label'; index: number }
+        | { type: 'section-title'; index: number }
+        | { type: 'record-title' }
+        | null;
     activateEditTarget: (target: { type: 'record-title' }) => void;
-    handleActivatePatientEdit: (target: { type: 'patient-section-title' | 'patient-field-label'; index?: number }) => void;
+    handleActivatePatientEdit: (target: {
+        type: 'patient-section-title' | 'patient-field-label';
+        index?: number;
+    }) => void;
     handleActivateSectionEdit: (target: { type: 'section-title'; index: number }) => void;
     handlePatientFieldChange: (index: number, value: string) => void;
     handlePatientLabelChange: (index: number, label: string) => void;
@@ -102,14 +110,26 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
                     style={{ '--sheet-zoom': sheetZoom } as React.CSSProperties}
                 >
                     {logoUrls.left && (
-                        <img id="logoLeft" src={logoUrls.left} className="absolute top-2 left-2 w-12 h-auto opacity-60 print:block" alt="Logo Left" />
+                        <img
+                            id="logoLeft"
+                            src={logoUrls.left}
+                            className="absolute top-2 left-2 w-12 h-auto opacity-60 print:block"
+                            alt="Logo Left"
+                        />
                     )}
                     {logoUrls.right && (
-                        <img id="logoRight" src={logoUrls.right} className="absolute top-2 right-2 w-12 h-auto opacity-60 print:block" alt="Logo Right" />
+                        <img
+                            id="logoRight"
+                            src={logoUrls.right}
+                            className="absolute top-2 right-2 w-12 h-auto opacity-60 print:block"
+                            alt="Logo Right"
+                        />
                     )}
                     <div
                         className="title"
-                        contentEditable={record.templateId === '5' || (isEditing && activeEditTarget?.type === 'record-title')}
+                        contentEditable={
+                            record.templateId === '5' || (isEditing && activeEditTarget?.type === 'record-title')
+                        }
                         suppressContentEditableWarning
                         onDoubleClick={() => activateEditTarget({ type: 'record-title' })}
                         onBlur={e => onRecordTitleChange(e.currentTarget.innerText)}
@@ -119,7 +139,12 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
                     <PatientInfo
                         isEditing={isEditing}
                         isGlobalStructureEditing={isGlobalStructureEditing}
-                        activeEditTarget={(activeEditTarget?.type === 'patient-section-title' || activeEditTarget?.type === 'patient-field-label') ? activeEditTarget : null}
+                        activeEditTarget={
+                            activeEditTarget?.type === 'patient-section-title' ||
+                            activeEditTarget?.type === 'patient-field-label'
+                                ? activeEditTarget
+                                : null
+                        }
                         onActivateEdit={handleActivatePatientEdit}
                         patientFields={record.patientFields}
                         onPatientFieldChange={handlePatientFieldChange}
@@ -135,7 +160,11 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
                                 isEditing={isEditing}
                                 isAdvancedEditing={editingHeader.isAdvancedEditing}
                                 isGlobalStructureEditing={isGlobalStructureEditing}
-                                activeEditTarget={activeEditTarget?.type === 'section-title' && activeEditTarget.index === index ? activeEditTarget : null}
+                                activeEditTarget={
+                                    activeEditTarget?.type === 'section-title' && activeEditTarget.index === index
+                                        ? activeEditTarget
+                                        : null
+                                }
                                 onActivateEdit={handleActivateSectionEdit}
                                 onSectionContentChange={handleSectionContentChange}
                                 onSectionTitleChange={handleSectionTitleChange}
@@ -152,18 +181,22 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
                     />
                 </div>
             </div>
-            {editingHeader.isAdvancedEditing && (
-                <div className="sticky-toolbar-container">
-                    <EditorToolbar onToolbarCommand={editingHeader.onToolbarCommand} />
-                </div>
-            )}
             <div id="editPanel" className={`edit-panel ${isGlobalStructureEditing ? 'visible' : 'hidden'}`}>
                 <div>Edición</div>
-                <button onClick={onAddPatientField} className="btn" type="button">Agregar campo</button>
-                <button onClick={onAddSection} className="btn" type="button">Agregar nueva sección</button>
+                <button onClick={onAddPatientField} className="btn" type="button">
+                    Agregar campo
+                </button>
+                <button onClick={onAddSection} className="btn" type="button">
+                    Agregar nueva sección
+                </button>
             </div>
             <Suspense fallback={null}>{aiAssistant}</Suspense>
         </div>
+        {editingHeader.isAdvancedEditing && (
+            <div className="sticky-toolbar-container">
+                <EditorToolbar onToolbarCommand={editingHeader.onToolbarCommand} />
+            </div>
+        )}
     </div>
 );
 

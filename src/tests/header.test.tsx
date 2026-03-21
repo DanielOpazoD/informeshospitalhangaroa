@@ -98,7 +98,7 @@ describe('Header', () => {
         expect(props.editing.onToggleAiAssistant).toHaveBeenCalled();
     });
 
-    it('ejecuta acciones de los menús Archivo, Drive y Herramientas', () => {
+    it('ejecuta acciones de los menús Archivo y Drive desde el icono principal', () => {
         const props = createProps();
         const importClickSpy = vi.spyOn(document.getElementById('importJson') as HTMLButtonElement, 'click');
         render(<Header {...props} />);
@@ -123,6 +123,10 @@ describe('Header', () => {
         fireEvent.click(screen.getByText('Guardar en Drive'));
         fireEvent.click(screen.getByLabelText('Google Drive'));
         fireEvent.click(screen.getByText('Abrir desde Drive'));
+        fireEvent.click(screen.getByLabelText('Google Drive'));
+        fireEvent.click(screen.getByText('Cambiar usuario Drive'));
+        fireEvent.click(screen.getByLabelText('Google Drive'));
+        fireEvent.click(screen.getByText('Cerrar sesión Drive'));
 
         fireEvent.click(screen.getByTitle('Desactivar edición avanzada'));
 
@@ -135,6 +139,21 @@ describe('Header', () => {
         expect(props.onRestoreTemplate).toHaveBeenCalled();
         expect(props.drive.onSaveToDrive).toHaveBeenCalled();
         expect(props.drive.onOpenFromDrive).toHaveBeenCalled();
+        expect(props.auth.onChangeUser).toHaveBeenCalled();
+        expect(props.auth.onSignOut).toHaveBeenCalled();
         expect(props.onOpenSettings).toHaveBeenCalled();
+    });
+
+    it('muestra inicio de sesión dentro del menú de Drive cuando no hay sesión activa', () => {
+        const props = createProps();
+        props.auth.isSignedIn = false;
+        props.auth.tokenClient = { requestAccessToken: vi.fn() };
+        render(<Header {...props} />);
+
+        fireEvent.click(screen.getByLabelText('Google Drive'));
+        fireEvent.click(screen.getByText('Iniciar sesión en Drive'));
+
+        expect(props.auth.onSignIn).toHaveBeenCalledOnce();
+        expect(screen.queryByText('Guardar en Drive')).toBeNull();
     });
 });

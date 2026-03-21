@@ -12,11 +12,7 @@ const mockProfile = {
 function renderMenu(overrides = {}) {
     const defaults = {
         isSignedIn: true,
-        isGisReady: true,
-        isGapiReady: true,
-        tokenClient: { requestAccessToken: vi.fn() },
         userProfile: mockProfile,
-        onSignIn: vi.fn(),
         onSignOut: vi.fn(),
         onChangeUser: vi.fn(),
     };
@@ -25,22 +21,9 @@ function renderMenu(overrides = {}) {
 
 describe('UserAccountMenu', () => {
     describe('when signed out', () => {
-        it('renders a login button for Drive', () => {
+        it('does not render account actions', () => {
             renderMenu({ isSignedIn: false });
-            expect(screen.getByTitle('Conectar Google Drive')).toBeDefined();
-        });
-
-        it('disables login when GIS is not ready', () => {
-            renderMenu({ isSignedIn: false, isGisReady: false });
-            const button = screen.getByTitle('Conectar Google Drive');
-            expect((button as HTMLButtonElement).disabled).toBe(true);
-        });
-
-        it('calls onSignIn when login button is clicked', () => {
-            const onSignIn = vi.fn();
-            renderMenu({ isSignedIn: false, onSignIn });
-            fireEvent.click(screen.getByTitle('Conectar Google Drive'));
-            expect(onSignIn).toHaveBeenCalledOnce();
+            expect(screen.queryByRole('button')).toBeNull();
         });
     });
 
