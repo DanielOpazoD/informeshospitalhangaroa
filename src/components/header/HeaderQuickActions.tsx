@@ -1,9 +1,10 @@
 import React from 'react';
-import { PrintIcon, RefreshIcon, RedoIcon, UndoIcon } from '../icons';
+import { HistoryIcon, PrintIcon, RefreshIcon, RedoIcon, UndoIcon } from '../icons';
 
 interface HeaderQuickActionsProps {
     canUndo: boolean;
     canRedo: boolean;
+    onOpenHistory: () => void;
     onPrint: () => void;
     onRestoreTemplate: () => void;
     onUndo: () => void;
@@ -13,12 +14,16 @@ interface HeaderQuickActionsProps {
 const HeaderQuickActions: React.FC<HeaderQuickActionsProps> = ({
     canUndo,
     canRedo,
+    onOpenHistory,
     onPrint,
     onRestoreTemplate,
     onUndo,
     onRedo,
 }) => (
-    <div className="topbar-group">
+    <div className="topbar-group topbar-quick-actions">
+        <button type="button" className="action-btn action-btn-plain" onClick={onOpenHistory} title="Historial">
+            <HistoryIcon />
+        </button>
         <button type="button" className="action-btn action-btn-plain" onClick={onPrint} title="Imprimir PDF">
             <PrintIcon />
         </button>

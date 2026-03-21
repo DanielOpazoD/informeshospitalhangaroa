@@ -13,8 +13,10 @@ const HeaderSaveStatus: React.FC<HeaderSaveStatusProps> = ({ saveStatusLabel, la
     return (
         <div className={`save-status ${statusState}`} title={title}>
             <span className="status-dot" data-state={statusState} />
-            <span className="status-label">{saveStatusLabel}</span>
-            {!hasUnsavedChanges && lastSaveTime && <span className="status-meta">{lastSaveTime}</span>}
+            <span className="save-status-copy">
+                <span className="status-label">{saveStatusLabel}</span>
+                {!hasUnsavedChanges && lastSaveTime && <span className="status-meta">{lastSaveTime}</span>}
+            </span>
         </div>
     );
 };

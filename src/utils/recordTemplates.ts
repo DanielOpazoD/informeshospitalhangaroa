@@ -1,5 +1,4 @@
 import {
-    DEFAULT_PATIENT_FIELDS,
     TEMPLATES,
     generateSectionId,
     getDefaultPatientFieldsByTemplate,
@@ -15,10 +14,14 @@ export const DEFAULT_TEMPLATE_ID = '3';
 const DATED_EVOLUTION_TEMPLATE_ID = '2';
 export const RECOMMENDED_GEMINI_MODEL = 'gemini-1.5-flash-latest';
 
-export const normalizePatientFields = (fields: PatientField[]): PatientField[] => {
+export const normalizePatientFields = (
+    fields: PatientField[],
+    templateId?: string,
+): PatientField[] => {
     const filteredFields = fields.filter(field => field.id !== FIELD_IDS.cama && field.label !== 'Cama');
-    const defaultById = new Map(DEFAULT_PATIENT_FIELDS.map(field => [field.id, field]));
-    const defaultByLabel = new Map(DEFAULT_PATIENT_FIELDS.map(field => [field.label, field]));
+    const templateDefaults = getDefaultPatientFieldsByTemplate(templateId || DEFAULT_TEMPLATE_ID);
+    const defaultById = new Map(templateDefaults.map(field => [field.id, field]));
+    const defaultByLabel = new Map(templateDefaults.map(field => [field.label, field]));
     const seenDefaultIds = new Set<string>();
 
     const normalizedFields = filteredFields.map(field => {
@@ -26,10 +29,19 @@ export const normalizePatientFields = (fields: PatientField[]): PatientField[] =
         if (matchingDefault?.id) {
             seenDefaultIds.add(matchingDefault.id);
         }
-        return matchingDefault ? { ...matchingDefault, ...field } : { ...field };
+        return matchingDefault
+            ? {
+                ...matchingDefault,
+                ...field,
+                label: matchingDefault.label,
+                type: matchingDefault.type,
+                placeholder: field.placeholder ?? matchingDefault.placeholder,
+                readonly: field.readonly ?? matchingDefault.readonly,
+            }
+            : { ...field };
     });
 
-    const missingDefaults = DEFAULT_PATIENT_FIELDS
+    const missingDefaults = templateDefaults
         .filter(defaultField => defaultField.id && !seenDefaultIds.has(defaultField.id))
         .map(defaultField => ({ ...defaultField }));
 

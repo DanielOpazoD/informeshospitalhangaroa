@@ -58,11 +58,6 @@
     background: transparent;
 }
 
-.topbar-left-scroll .editor-toolbar {
-    margin-left: 4px;
-    flex: 0 0 auto;
-}
-
 .topbar-actions {
     display: flex;
     align-items: center;
@@ -76,6 +71,38 @@
     gap: 12px;
     align-items: center;
     flex-wrap: nowrap;
+}
+
+.topbar-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.topbar-section-template {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    padding-inline: 0;
+}
+
+.topbar-section-document {
+    gap: 8px;
+}
+
+.topbar-section-tools {
+    gap: 8px;
+}
+
+body[data-theme='dark'] .topbar-section {
+    background: rgba(15, 23, 42, 0.28);
+    border-color: rgba(148, 163, 184, 0.2);
+    box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.08);
 }
 
 .topbar-group > * {
@@ -184,6 +211,23 @@ body[data-theme='dark'] .app-tile.disabled {
     gap: 8px;
 }
 
+.topbar-actions-document {
+    display: flex;
+    align-items: center;
+    padding-right: 10px;
+    border-right: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.topbar-actions-external {
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+}
+
+body[data-theme='dark'] .topbar-actions-document {
+    border-right-color: rgba(148, 163, 184, 0.22);
+}
+
 .action-group {
     position: relative;
     display: flex;
@@ -206,8 +250,8 @@ body[data-theme='dark'] .app-tile.disabled {
 }
 
 .action-btn-icon {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     padding: 0;
     justify-content: center;
 }
@@ -222,13 +266,54 @@ body[data-theme='dark'] .app-tile.disabled {
     height: 24px;
 }
 
+.action-btn-drive {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
+    border-color: rgba(203, 213, 225, 0.9);
+    box-shadow:
+        0 8px 20px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.action-btn-drive:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(241, 245, 249, 0.96));
+    border-color: rgba(148, 163, 184, 0.85);
+    box-shadow:
+        0 12px 24px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+body[data-theme='dark'] .action-btn-drive {
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(226, 232, 240, 0.92));
+    border-color: rgba(148, 163, 184, 0.38);
+}
+
 .action-btn-plain {
     background: transparent;
     border: none;
     box-shadow: none;
-    padding: 6px 4px 6px 6px;
+    padding: 5px 3px 5px 5px;
     gap: 6px;
     color: var(--topbar-action-text);
+}
+
+.action-btn-subtle {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(148, 163, 184, 0.24);
+    box-shadow: none;
+}
+
+.action-btn-menu {
+    min-height: 40px;
+    padding-inline: 12px 10px;
+}
+
+.action-btn-menu span {
+    font-size: 12px;
+    font-weight: 700;
 }
 
 .action-btn-plain:hover {
@@ -306,8 +391,9 @@ body[data-theme='dark'] .app-tile.disabled {
     flex: 0 0 auto;
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 12px;
+    flex-wrap: nowrap;
+    min-width: max-content;
 }
 
 .topbar-template-select,
@@ -324,9 +410,11 @@ body[data-theme='dark'] .app-tile.disabled {
         background 0.2s,
         border-color 0.2s,
         box-shadow 0.2s;
-    flex: 0 1 220px;
-    min-width: 160px;
-    max-width: 240px;
+    flex: 0 0 auto;
+    width: clamp(180px, 18vw, 270px);
+    min-width: 180px;
+    max-width: 270px;
+    padding-right: 40px;
 }
 
 .topbar select,
@@ -349,8 +437,10 @@ body[data-theme='dark'] .app-tile.disabled {
 .template-update-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
     border-radius: 999px;
     border: 1px solid var(--topbar-action-border);
     background: var(--topbar-action-bg);
@@ -365,8 +455,8 @@ body[data-theme='dark'] .app-tile.disabled {
 }
 
 .template-update-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
 }
 
 .template-update-btn:hover {
@@ -409,7 +499,7 @@ body[data-theme='dark'] .app-tile.disabled {
     gap: 6px;
     background: var(--topbar-action-bg);
     color: var(--topbar-action-text);
-    border: 1px solid var(--topbar-action-border);
+    border: 1px solid rgba(148, 163, 184, 0.22);
     border-radius: 9999px;
     padding: 6px 14px;
     cursor: pointer;
@@ -458,28 +548,42 @@ body[data-theme='dark'] .app-tile.disabled {
 }
 
 .action-btn.is-active {
-    background: rgba(59, 130, 246, 0.12);
-    border-color: rgba(59, 130, 246, 0.22);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(37, 99, 235, 0.08));
+    border-color: rgba(37, 99, 235, 0.42);
     color: #1d4ed8;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+        0 10px 22px rgba(37, 99, 235, 0.22);
 }
 
 body[data-theme='dark'] .action-btn.is-active {
-    background: rgba(59, 130, 246, 0.2);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.28), rgba(30, 64, 175, 0.22));
     border-color: rgba(96, 165, 250, 0.4);
     color: #bfdbfe;
+}
+
+.action-btn-mode {
+    gap: 8px;
+    padding-inline: 12px;
+    min-height: 40px;
+}
+
+.action-btn-mode span:last-child {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
 }
 
 .save-status {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 3px 8px;
+    gap: 8px;
+    padding: 5px 12px;
     border-radius: 9999px;
-    background: rgba(255, 255, 255, 0.16);
-    border: 1px solid var(--topbar-action-border);
+    background: rgba(255, 255, 255, 0.32);
+    border: 1px solid rgba(148, 163, 184, 0.16);
     color: var(--status-text);
-    white-space: nowrap;
-    min-height: 28px;
+    min-height: 38px;
 }
 
 .save-status.unsaved {
@@ -496,13 +600,13 @@ body[data-theme='dark'] .action-btn.is-active {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    border: 1px solid #cbd5f5;
+    border: 1px solid rgba(59, 130, 246, 0.18);
     border-radius: 999px;
-    padding: 6px 12px;
+    padding: 6px 13px;
     font-weight: 600;
     font-size: 12px;
     color: #1d4ed8;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.9);
     cursor: pointer;
     transition:
         box-shadow 0.2s ease,
@@ -510,8 +614,10 @@ body[data-theme='dark'] .action-btn.is-active {
 }
 
 .ai-launch-btn.is-active {
-    background: #eef2ff;
-    box-shadow: 0 6px 12px rgba(79, 70, 229, 0.2);
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.28);
 }
 
 .ai-launch-icon {
@@ -538,16 +644,28 @@ body[data-theme='dark'] .action-btn.is-active {
     background: var(--status-unsaved);
 }
 
+.save-status-copy {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    min-width: 0;
+    line-height: 1.05;
+}
+
 .status-label {
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.01em;
+    white-space: nowrap;
 }
 
 .status-meta {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
-    opacity: 0.78;
+    line-height: 1;
+    opacity: 0.72;
+    white-space: nowrap;
 }
 
 .api-badge {
@@ -577,6 +695,12 @@ body[data-theme='dark'] .action-btn.is-active {
         justify-content: center;
     }
 
+    .topbar-section {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
     .topbar-group-actions {
         justify-content: center;
     }
@@ -589,9 +713,21 @@ body[data-theme='dark'] .action-btn.is-active {
         justify-content: flex-start;
     }
 
-    .topbar-left-scroll .editor-toolbar {
-        order: initial;
-        width: auto;
-        justify-content: flex-start;
+    .topbar-actions-document {
+        border-right: none;
+        padding-right: 0;
+        justify-content: center;
+    }
+
+    .topbar-actions-external {
+        padding-left: 0;
+        justify-content: center;
+    }
+
+    .topbar-template-select,
+    .topbar select {
+        width: min(270px, 100%);
+        min-width: 0;
+        max-width: 100%;
     }
 }

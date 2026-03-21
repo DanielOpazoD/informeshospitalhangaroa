@@ -106,13 +106,10 @@ describe('Header', () => {
         fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Editar estructura'));
         fireEvent.click(screen.getByLabelText('Archivo'));
-        fireEvent.click(screen.getByText('Guardar borrador'));
-        fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Guardar JSON'));
         fireEvent.click(screen.getByLabelText('Archivo'));
-        fireEvent.click(screen.getByText('Historial'));
-        fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Importar JSON'));
+        fireEvent.click(screen.getByTitle('Historial'));
         fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByTitle('Configuración de Google API'));
 
@@ -131,7 +128,6 @@ describe('Header', () => {
         fireEvent.click(screen.getByTitle('Desactivar edición avanzada'));
 
         expect(props.editing.onToggleEdit).toHaveBeenCalled();
-        expect(props.save.onQuickSave).toHaveBeenCalled();
         expect(props.onPrint).toHaveBeenCalled();
         expect(props.drive.onDownloadJson).toHaveBeenCalled();
         expect(props.save.onOpenHistory).toHaveBeenCalled();

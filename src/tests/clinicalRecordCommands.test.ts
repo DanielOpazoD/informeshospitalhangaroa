@@ -177,6 +177,41 @@ describe('clinicalRecordCommands', () => {
         }
     });
 
+    it('preserva la etiqueta de fecha según la plantilla al aplicar paciente HHR', () => {
+        const result = executeClinicalRecordCommand(buildRecord({
+            templateId: '3',
+            title: 'Epicrisis médica',
+            patientFields: [
+                { id: 'nombre', label: 'Nombre', value: '', type: 'text' },
+                { id: 'rut', label: 'Rut', value: '', type: 'text' },
+                { id: 'fecnac', label: 'Fecha de nacimiento', value: '', type: 'date' },
+                { id: 'fing', label: 'Fecha de ingreso', value: '', type: 'date' },
+                { id: 'finf', label: 'Fecha de alta', value: '', type: 'date' },
+                { id: 'edad', label: 'Edad', value: '', type: 'text', readonly: true },
+            ],
+        }), {
+            type: 'apply_hhr_patient',
+            todayKey: '2026-03-20',
+            patient: {
+                bedId: 'c1',
+                bedLabel: 'C1',
+                patientName: 'Jane Roe',
+                rut: '11.111.111-1',
+                age: '34',
+                birthDate: '1992-03-20',
+                admissionDate: '2026-03-10',
+                specialty: 'Medicina',
+                sourceDailyRecordDate: '2026-03-20',
+            },
+        });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.record.patientFields.find(field => field.id === 'finf')?.label).toBe('Fecha de alta');
+            expect(result.record.patientFields.find(field => field.id === 'finf')?.value).toBe('2026-03-20');
+        }
+    });
+
     it('bloquea comandos incompatibles con el workflow actual', () => {
         const decision = canExecuteClinicalRecordCommand(
             { type: 'edit_patient_field', index: 0, value: 'Otro nombre' },

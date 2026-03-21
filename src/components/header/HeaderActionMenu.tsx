@@ -10,6 +10,7 @@ interface HeaderActionMenuProps {
     onClose: () => void;
     icon: React.ReactNode;
     children: React.ReactNode;
+    buttonText?: string;
     showChevron?: boolean;
     buttonClassName?: string;
 }
@@ -22,6 +23,7 @@ const HeaderActionMenu: React.FC<HeaderActionMenuProps> = ({
     onClose,
     icon,
     children,
+    buttonText,
     showChevron = true,
     buttonClassName,
 }) => {
@@ -42,6 +44,7 @@ const HeaderActionMenu: React.FC<HeaderActionMenuProps> = ({
                 title={title}
             >
                 {icon}
+                {buttonText && <span>{buttonText}</span>}
                 {showChevron && <ChevronDownIcon />}
             </button>
             {isOpen && (

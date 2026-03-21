@@ -14,6 +14,14 @@ describe('recordTemplates', () => {
         expect(normalized.some(field => field.label === 'Campo libre')).toBe(true);
     });
 
+    it('normaliza etiquetas según la plantilla activa', () => {
+        const normalized = normalizePatientFields([
+            { id: 'finf', label: 'Fecha del informe', value: '2026-03-21', type: 'date' },
+        ], '3');
+
+        expect(normalized.find(field => field.id === 'finf')?.label).toBe('Fecha de alta');
+    });
+
     it('crea una baseline válida y usa plantilla por defecto si el id no existe', () => {
         const baseline = createTemplateBaseline('inexistente');
 

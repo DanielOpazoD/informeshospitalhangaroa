@@ -201,17 +201,21 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
                     <div className="workspace-side-rail" style={sideRailStyle}>
                         {editingHeader.isAdvancedEditing && (
                             <div className="sticky-toolbar-container">
+                                <div className="side-rail-card-label">Formato</div>
                                 <EditorToolbar onToolbarCommand={editingHeader.onToolbarCommand} />
                             </div>
                         )}
                         <div id="editPanel" className={`edit-panel ${isGlobalStructureEditing ? 'visible' : 'hidden'}`}>
-                            <div>Edición</div>
-                            <button onClick={onAddPatientField} className="btn" type="button">
-                                Agregar campo
-                            </button>
-                            <button onClick={onAddSection} className="btn" type="button">
-                                Agregar nueva sección
-                            </button>
+                            <div>Estructura</div>
+                            <div className="edit-panel-section">
+                                <div className="edit-panel-section-title">Insertar</div>
+                                <button onClick={onAddPatientField} className="btn" type="button">
+                                    Agregar campo
+                                </button>
+                                <button onClick={onAddSection} className="btn" type="button">
+                                    Agregar nueva sección
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -182,7 +182,10 @@ export const migrateClinicalRecord = (record: ParsedClinicalRecordInput): { reco
 
 export const normalizeClinicalRecord = (
     record: ParsedClinicalRecordInput,
-    normalizePatientFields: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'] = normalizeClinicalRecordPatientFields,
+    normalizePatientFields: (
+        fields: ClinicalRecord['patientFields'],
+        templateId?: string,
+    ) => ClinicalRecord['patientFields'] = normalizeClinicalRecordPatientFields,
 ): ClinicalRecord => ({
     version: CURRENT_RECORD_VERSION,
     templateId: record.templateId,
@@ -190,7 +193,7 @@ export const normalizeClinicalRecord = (
     titleMode: record.titleMode === 'auto' || record.titleMode === 'custom'
         ? record.titleMode
         : inferTitleMode(record),
-    patientFields: normalizePatientFields(record.patientFields),
+    patientFields: normalizePatientFields(record.patientFields, record.templateId),
     sections: record.sections.map((section, index) => ({
         id: buildDeterministicSectionId(section, index),
         title: section.title.trim(),
@@ -237,7 +240,10 @@ export const isClinicalRecord = (value: unknown): value is ClinicalRecord => {
 
 export const loadClinicalRecord = (
     value: unknown,
-    normalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
+    normalizePatientFields?: (
+        fields: ClinicalRecord['patientFields'],
+        templateId?: string,
+    ) => ClinicalRecord['patientFields'],
 ): LoadClinicalRecordResult => {
     const parsed = parseClinicalRecordInput(value);
     if (!parsed.record) {

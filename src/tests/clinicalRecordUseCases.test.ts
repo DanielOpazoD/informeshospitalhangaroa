@@ -64,6 +64,22 @@ describe('clinicalRecordUseCases', () => {
         expect(imported.warnings.length).toBeGreaterThan(0);
     });
 
+    it('mantiene etiquetas específicas de epicrisis al importar', () => {
+        const imported = importRecordFromJson({
+            ...buildRecord({
+                templateId: '3',
+                title: 'Epicrisis médica',
+            }),
+            patientFields: [
+                { id: 'finf', label: 'Fecha del informe', value: '2026-03-20', type: 'date' },
+                { id: 'nombre', label: 'Nombre', value: 'Paciente', type: 'text' },
+            ],
+        });
+
+        expect(imported.errors).toEqual([]);
+        expect(imported.record?.patientFields.find(field => field.id === 'finf')?.label).toBe('Fecha de alta');
+    });
+
     it('persiste snapshots normalizados y sanitizados', () => {
         const snapshot = saveDraftSnapshot(buildRecord({
             sections: [{ id: 'sec-1', title: 'Plan', content: '<p onclick="bad()">Ok</p>' }],

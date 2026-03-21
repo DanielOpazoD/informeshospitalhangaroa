@@ -12,7 +12,10 @@ export interface ParseClinicalRecordResult {
 
 export const parseClinicalRecord = (
     value: unknown,
-    normalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
+    normalizePatientFields?: (
+        fields: ClinicalRecord['patientFields'],
+        templateId?: string,
+    ) => ClinicalRecord['patientFields'],
 ): ParseClinicalRecordResult => {
     const { record, warnings } = loadClinicalRecord(value, normalizePatientFields);
     return { record, warnings };

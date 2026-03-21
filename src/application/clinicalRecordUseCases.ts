@@ -36,7 +36,10 @@ export const changeRecordTitle = (record: ClinicalRecord, title: string): Clinic
 
 export const importRecordFromJson = (
     value: unknown,
-    _customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
+    _customNormalizePatientFields?: (
+        fields: ClinicalRecord['patientFields'],
+        templateId?: string,
+    ) => ClinicalRecord['patientFields'],
 ): LoadClinicalRecordResult =>
     toLoadResult(
         executeClinicalRecordCommand(
@@ -55,18 +58,27 @@ export const importRecordFromJson = (
 
 export const importRecordFromDrive = (
     value: unknown,
-    _customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
+    _customNormalizePatientFields?: (
+        fields: ClinicalRecord['patientFields'],
+        templateId?: string,
+    ) => ClinicalRecord['patientFields'],
 ): LoadClinicalRecordResult => importRecordFromJson(value);
 
 export const restoreHistoryEntry = (
     entry: VersionHistoryEntry,
-    _customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
+    _customNormalizePatientFields?: (
+        fields: ClinicalRecord['patientFields'],
+        templateId?: string,
+    ) => ClinicalRecord['patientFields'],
 ): LoadClinicalRecordResult =>
     toLoadResult(executeClinicalRecordCommand(entry.record, { type: 'replace_record_from_history', entry }));
 
 export const saveDraftSnapshot = (
     record: ClinicalRecord,
-    _customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
+    _customNormalizePatientFields?: (
+        fields: ClinicalRecord['patientFields'],
+        templateId?: string,
+    ) => ClinicalRecord['patientFields'],
 ): ClinicalRecord => {
     const result = normalizeClinicalRecordSnapshot(record);
     return result.record;

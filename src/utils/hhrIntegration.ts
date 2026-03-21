@@ -1,4 +1,4 @@
-import { DEFAULT_PATIENT_FIELDS } from '../constants';
+import { DEFAULT_PATIENT_FIELDS, getDefaultPatientFieldsByTemplate } from '../constants';
 import { FIELD_IDS } from '../appConstants';
 import type { ClinicalRecord, ClinicalSectionData, PatientField } from '../types';
 import type {
@@ -66,6 +66,9 @@ const HHR_SECTION_TEMPLATES: Record<HhrDocumentType, HhrSectionTemplate[]> = {
 
 const patientFieldDefaultsById = new Map(DEFAULT_PATIENT_FIELDS.map(field => [field.id, field]));
 
+const getTemplatePatientFieldDefault = (templateId: string, fieldId: string): PatientField | undefined =>
+    getDefaultPatientFieldsByTemplate(templateId).find(field => field.id === fieldId);
+
 const normalizeString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
 const normalizeLookupKey = (value: string): string =>
@@ -124,13 +127,23 @@ const clonePatientFields = (fields: PatientField[]): PatientField[] => fields.ma
 
 const upsertPatientField = (
     fields: PatientField[],
-    nextField: PatientField & { id: string }
+    nextField: PatientField & { id: string },
+    templateId?: string,
 ): PatientField[] => {
     const nextFields = clonePatientFields(fields);
     const existingIndex = nextFields.findIndex(field => field.id === nextField.id);
-    const defaultField = patientFieldDefaultsById.get(nextField.id);
+    const defaultField = templateId
+        ? getTemplatePatientFieldDefault(templateId, nextField.id) || patientFieldDefaultsById.get(nextField.id)
+        : patientFieldDefaultsById.get(nextField.id);
     const fieldToPersist: PatientField = defaultField
-        ? { ...defaultField, ...nextField, readonly: nextField.readonly ?? defaultField.readonly }
+        ? {
+            ...defaultField,
+            ...nextField,
+            label: defaultField.label,
+            type: nextField.type ?? defaultField.type,
+            placeholder: nextField.placeholder ?? defaultField.placeholder,
+            readonly: nextField.readonly ?? defaultField.readonly,
+        }
         : nextField;
 
     if (existingIndex >= 0) {
@@ -232,32 +245,32 @@ export const applyHhrPatientToRecord = (
         label: 'Nombre',
         value: patient.patientName,
         type: 'text',
-    });
+    }, record.templateId);
     nextFields = upsertPatientField(nextFields, {
         id: FIELD_IDS.rut,
         label: 'Rut',
         value: patient.rut,
         type: 'text',
-    });
+    }, record.templateId);
     nextFields = upsertPatientField(nextFields, {
         id: FIELD_IDS.fecnac,
         label: 'Fecha de nacimiento',
         value: patient.birthDate,
         type: 'date',
-    });
+    }, record.templateId);
     nextFields = upsertPatientField(nextFields, {
         id: FIELD_IDS.fing,
         label: 'Fecha de ingreso',
         value: patient.admissionDate,
         type: 'date',
-    });
+    }, record.templateId);
     nextFields = upsertPatientField(nextFields, {
         id: FIELD_IDS.edad,
         label: 'Edad',
         value: computedAge || patient.age,
         type: 'text',
         readonly: true,
-    });
+    }, record.templateId);
 
     if (!getClinicalRecordPatientFieldValue(record, FIELD_IDS.finf)) {
         nextFields = upsertPatientField(nextFields, {
@@ -265,7 +278,7 @@ export const applyHhrPatientToRecord = (
             label: 'Fecha del informe',
             value: todayKey,
             type: 'date',
-        });
+        }, record.templateId);
     }
 
     return {
