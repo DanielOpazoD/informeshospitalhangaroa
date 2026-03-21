@@ -1,8 +1,14 @@
 import { type ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { DriveProvider, useDrive } from '../contexts/DriveContext';
-import type { DriveGateway } from '../services/driveGateway';
+import {
+    DriveProvider,
+    useDrive,
+    useDriveNavigation,
+    useDrivePersistence,
+    useDriveSearchState,
+} from '../contexts/DriveContext';
+import type { DriveGateway } from '../infrastructure/drive/driveGateway';
 
 const mocks = vi.hoisted(() => ({
     useDriveStorage: vi.fn(),
@@ -37,7 +43,7 @@ vi.mock('../hooks/useDriveOperations', () => ({
     useDriveOperations: mocks.useDriveOperations,
 }));
 
-vi.mock('../services/driveGateway', () => ({
+vi.mock('../infrastructure/drive/driveGateway', () => ({
     createDriveGateway: mocks.createDriveGateway,
 }));
 
@@ -61,11 +67,18 @@ const configureHookMocks = () => {
         driveDateFrom: '2026-03-01',
         driveDateTo: '2026-03-19',
         driveContentTerm: 'diagnostico',
+        driveSearchMode: 'metadata',
+        driveSearchWarnings: [],
+        isDriveSearchPartial: false,
+        deepSearchStatus: '',
+        driveSearchJob: { operation: 'drive_deep_search', status: 'idle', message: null, updatedAt: null },
         setDriveSearchTerm: vi.fn(),
         setDriveDateFrom: vi.fn(),
         setDriveDateTo: vi.fn(),
         setDriveContentTerm: vi.fn(),
+        setDriveSearchMode: vi.fn(),
         handleSearchInDrive: mocks.searchHandle,
+        cancelDriveSearch: vi.fn(),
         clearDriveSearch: mocks.clearSearch,
     });
     mocks.useDriveOperations.mockReturnValue({
@@ -129,5 +142,18 @@ describe('DriveContext', () => {
             { id: 'root', name: 'Mi unidad' },
             { id: 'folder-1', name: 'Paciente A' },
         ], 'root');
+    });
+
+    it('expone subcontextos finos por responsabilidad', () => {
+        configureHookMocks();
+
+        const { result: navigation } = renderHook(() => useDriveNavigation(), { wrapper });
+        const { result: search } = renderHook(() => useDriveSearchState(), { wrapper });
+        const { result: persistence } = renderHook(() => useDrivePersistence(), { wrapper });
+
+        expect(navigation.current.selectedFolderId).toBe('root');
+        expect(search.current.driveSearchTerm).toBe('jane');
+        expect(persistence.current.favoriteFolders[0]?.id).toBe('fav-1');
+        expect(persistence.current.handleCreateFolder).toBe(mocks.handleCreateFolder);
     });
 });

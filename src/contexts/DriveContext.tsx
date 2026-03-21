@@ -22,12 +22,19 @@ interface DriveCacheEntry {
     timestamp: number;
 }
 
-
-interface DriveContextValue {
+export interface DriveNavigationContextValue {
     driveFolders: DriveFolder[];
     driveJsonFiles: DriveFolder[];
     folderPath: DriveFolder[];
-    saveFormat: SaveFormat;
+    selectedFolderId: string;
+    isDriveLoading: boolean;
+    fetchDriveFolders: (folderId: string) => Promise<void>;
+    fetchFolderContents: (folderId: string) => Promise<void>;
+    formatDriveDate: (value?: string) => string;
+    setFolderPath: React.Dispatch<React.SetStateAction<DriveFolder[]>>;
+}
+
+export interface DriveSearchContextValue {
     driveSearchTerm: string;
     driveDateFrom: string;
     driveDateTo: string;
@@ -37,44 +44,57 @@ interface DriveContextValue {
     isDriveSearchPartial: boolean;
     deepSearchStatus: string;
     driveSearchJob: AsyncJobState;
-    favoriteFolders: FavoriteFolderEntry[];
-    recentFiles: RecentDriveFile[];
-    selectedFolderId: string;
-    newFolderName: string;
-    fileNameInput: string;
-    isDriveLoading: boolean;
-    isSaving: boolean;
-    fetchDriveFolders: (folderId: string) => Promise<void>;
-    fetchFolderContents: (folderId: string) => Promise<void>;
-    handleAddFavoriteFolder: () => void;
-    handleRemoveFavoriteFolder: (id: string) => void;
-    handleGoToFavorite: (favorite: FavoriteFolderEntry, mode: 'save' | 'open') => void;
-    handleSearchInDrive: () => Promise<void>;
-    cancelDriveSearch: () => void;
-    clearDriveSearch: () => void;
-    addRecentFile: (file: DriveFolder) => void;
-    formatDriveDate: (value?: string) => string;
-    handleCreateFolder: () => Promise<void>;
-    handleSetDefaultFolder: () => void;
-    openJsonFileFromDrive: (file: DriveFolder) => Promise<ClinicalRecord | null>;
-    saveToDrive: (options: SaveOptions) => Promise<boolean>;
-    setFolderPath: React.Dispatch<React.SetStateAction<DriveFolder[]>>;
-    setSaveFormat: React.Dispatch<React.SetStateAction<SaveFormat>>;
-    setFileNameInput: React.Dispatch<React.SetStateAction<string>>;
-    setNewFolderName: React.Dispatch<React.SetStateAction<string>>;
     setDriveSearchTerm: React.Dispatch<React.SetStateAction<string>>;
     setDriveDateFrom: React.Dispatch<React.SetStateAction<string>>;
     setDriveDateTo: React.Dispatch<React.SetStateAction<string>>;
     setDriveContentTerm: React.Dispatch<React.SetStateAction<string>>;
     setDriveSearchMode: React.Dispatch<React.SetStateAction<DriveSearchMode>>;
+    handleSearchInDrive: () => Promise<void>;
+    cancelDriveSearch: () => void;
+    clearDriveSearch: () => void;
 }
+
+export interface DrivePersistenceContextValue {
+    saveFormat: SaveFormat;
+    favoriteFolders: FavoriteFolderEntry[];
+    recentFiles: RecentDriveFile[];
+    newFolderName: string;
+    fileNameInput: string;
+    isSaving: boolean;
+    handleAddFavoriteFolder: () => void;
+    handleRemoveFavoriteFolder: (id: string) => void;
+    handleGoToFavorite: (favorite: FavoriteFolderEntry, mode: 'save' | 'open') => void;
+    addRecentFile: (file: DriveFolder) => void;
+    handleCreateFolder: () => Promise<void>;
+    handleSetDefaultFolder: () => void;
+    openJsonFileFromDrive: (file: DriveFolder) => Promise<ClinicalRecord | null>;
+    saveToDrive: (options: SaveOptions) => Promise<boolean>;
+    setSaveFormat: React.Dispatch<React.SetStateAction<SaveFormat>>;
+    setFileNameInput: React.Dispatch<React.SetStateAction<string>>;
+    setNewFolderName: React.Dispatch<React.SetStateAction<string>>;
+}
+
+export type DriveContextValue =
+    & DriveNavigationContextValue
+    & DriveSearchContextValue
+    & DrivePersistenceContextValue;
 
 interface DriveProviderProps {
     showToast: ToastFn;
     children: React.ReactNode;
 }
 
-const DriveContext = createContext<DriveContextValue | undefined>(undefined);
+const DriveNavigationContext = createContext<DriveNavigationContextValue | undefined>(undefined);
+const DriveSearchContext = createContext<DriveSearchContextValue | undefined>(undefined);
+const DrivePersistenceContext = createContext<DrivePersistenceContextValue | undefined>(undefined);
+
+const useRequiredContext = <T,>(context: React.Context<T | undefined>, hookName: string): T => {
+    const value = useContext(context);
+    if (!value) {
+        throw new Error(`${hookName} must be used within a DriveProvider`);
+    }
+    return value;
+};
 
 export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToast }) => {
     const [driveFolders, setDriveFolders] = useState<DriveFolder[]>([]);
@@ -92,14 +112,20 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
     const {
         favoriteFolders,
         recentFiles,
-        handleAddFavoriteFolder: _handleAddFavoriteFolder,
+        handleAddFavoriteFolder: rawAddFavoriteFolder,
         handleRemoveFavoriteFolder,
         addRecentFile,
-        handleSetDefaultFolder: _handleSetDefaultFolder,
+        handleSetDefaultFolder: rawSetDefaultFolder,
     } = useDriveStorage(showToast);
 
-    const handleAddFavoriteFolder = useCallback(() => _handleAddFavoriteFolder(folderPath), [_handleAddFavoriteFolder, folderPath]);
-    const handleSetDefaultFolder = useCallback(() => _handleSetDefaultFolder(folderPath, selectedFolderId), [_handleSetDefaultFolder, folderPath, selectedFolderId]);
+    const handleAddFavoriteFolder = useCallback(
+        () => rawAddFavoriteFolder(folderPath),
+        [folderPath, rawAddFavoriteFolder],
+    );
+    const handleSetDefaultFolder = useCallback(
+        () => rawSetDefaultFolder(folderPath, selectedFolderId),
+        [folderPath, rawSetDefaultFolder, selectedFolderId],
+    );
 
     const {
         fetchDriveFolders,
@@ -126,25 +152,7 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         setIsSaving,
     });
 
-    const {
-        driveSearchTerm,
-        driveDateFrom,
-        driveDateTo,
-        driveContentTerm,
-        driveSearchMode,
-        driveSearchWarnings,
-        isDriveSearchPartial,
-        deepSearchStatus,
-        driveSearchJob,
-        setDriveSearchTerm,
-        setDriveDateFrom,
-        setDriveDateTo,
-        setDriveContentTerm,
-        setDriveSearchMode,
-        handleSearchInDrive,
-        cancelDriveSearch,
-        clearDriveSearch,
-    } = useDriveSearch({
+    const search = useDriveSearch({
         setIsDriveLoading,
         setDriveFolders,
         setDriveJsonFiles,
@@ -155,101 +163,104 @@ export const DriveProvider: React.FC<DriveProviderProps> = ({ children, showToas
         driveGateway,
     });
 
-
-
-    const value = useMemo<DriveContextValue>(() => ({
+    const navigationValue = useMemo<DriveNavigationContextValue>(() => ({
         driveFolders,
         driveJsonFiles,
         folderPath,
-        saveFormat,
-        driveSearchTerm,
-        driveDateFrom,
-        driveDateTo,
-        driveContentTerm,
-        driveSearchMode,
-        driveSearchWarnings,
-        isDriveSearchPartial,
-        deepSearchStatus,
-        driveSearchJob,
-        favoriteFolders,
-        recentFiles,
         selectedFolderId,
-        newFolderName,
-        fileNameInput,
         isDriveLoading,
-        isSaving,
         fetchDriveFolders,
         fetchFolderContents,
+        formatDriveDate,
+        setFolderPath,
+    }), [
+        driveFolders,
+        driveJsonFiles,
+        fetchDriveFolders,
+        fetchFolderContents,
+        folderPath,
+        formatDriveDate,
+        isDriveLoading,
+        selectedFolderId,
+    ]);
+
+    const searchValue = useMemo<DriveSearchContextValue>(() => ({
+        driveSearchTerm: search.driveSearchTerm,
+        driveDateFrom: search.driveDateFrom,
+        driveDateTo: search.driveDateTo,
+        driveContentTerm: search.driveContentTerm,
+        driveSearchMode: search.driveSearchMode,
+        driveSearchWarnings: search.driveSearchWarnings,
+        isDriveSearchPartial: search.isDriveSearchPartial,
+        deepSearchStatus: search.deepSearchStatus,
+        driveSearchJob: search.driveSearchJob,
+        setDriveSearchTerm: search.setDriveSearchTerm,
+        setDriveDateFrom: search.setDriveDateFrom,
+        setDriveDateTo: search.setDriveDateTo,
+        setDriveContentTerm: search.setDriveContentTerm,
+        setDriveSearchMode: search.setDriveSearchMode,
+        handleSearchInDrive: search.handleSearchInDrive,
+        cancelDriveSearch: search.cancelDriveSearch,
+        clearDriveSearch: search.clearDriveSearch,
+    }), [search]);
+
+    const persistenceValue = useMemo<DrivePersistenceContextValue>(() => ({
+        saveFormat,
+        favoriteFolders,
+        recentFiles,
+        newFolderName,
+        fileNameInput,
+        isSaving,
         handleAddFavoriteFolder,
         handleRemoveFavoriteFolder,
         handleGoToFavorite,
-        handleSearchInDrive,
-        cancelDriveSearch,
-        clearDriveSearch,
         addRecentFile,
-        formatDriveDate,
         handleCreateFolder,
         handleSetDefaultFolder,
         openJsonFileFromDrive,
         saveToDrive,
-        setFolderPath,
         setSaveFormat,
         setFileNameInput,
         setNewFolderName,
-        setDriveSearchTerm,
-        setDriveDateFrom,
-        setDriveDateTo,
-        setDriveContentTerm,
-        setDriveSearchMode,
     }), [
         addRecentFile,
-        cancelDriveSearch,
-        clearDriveSearch,
-        setDriveContentTerm,
-        setDriveDateFrom,
-        setDriveDateTo,
-        setDriveSearchMode,
-        setDriveSearchTerm,
-        deepSearchStatus,
-        driveSearchJob,
-        driveContentTerm,
-        driveDateFrom,
-        driveDateTo,
-        driveFolders,
-        driveJsonFiles,
-        driveSearchMode,
-        driveSearchTerm,
-        driveSearchWarnings,
         favoriteFolders,
-        fetchDriveFolders,
-        fetchFolderContents,
         fileNameInput,
-        folderPath,
-        formatDriveDate,
         handleAddFavoriteFolder,
         handleCreateFolder,
         handleGoToFavorite,
         handleRemoveFavoriteFolder,
-        handleSearchInDrive,
         handleSetDefaultFolder,
-        isDriveSearchPartial,
-        isDriveLoading,
         isSaving,
         newFolderName,
+        openJsonFileFromDrive,
         recentFiles,
         saveFormat,
-        selectedFolderId,
         saveToDrive,
-        openJsonFileFromDrive,
     ]);
 
-    return <DriveContext.Provider value={value}>{children}</DriveContext.Provider>;
+    return (
+        <DriveNavigationContext.Provider value={navigationValue}>
+            <DriveSearchContext.Provider value={searchValue}>
+                <DrivePersistenceContext.Provider value={persistenceValue}>
+                    {children}
+                </DrivePersistenceContext.Provider>
+            </DriveSearchContext.Provider>
+        </DriveNavigationContext.Provider>
+    );
 };
 
-export const useDrive = (): DriveContextValue => {
-    const context = useContext(DriveContext);
-    if (!context) {
-        throw new Error('useDrive must be used within a DriveProvider');
-    }
-    return context;
-};
+export const useDriveNavigation = (): DriveNavigationContextValue =>
+    useRequiredContext(DriveNavigationContext, 'useDriveNavigation');
+
+export const useDriveSearchState = (): DriveSearchContextValue =>
+    useRequiredContext(DriveSearchContext, 'useDriveSearchState');
+
+export const useDrivePersistence = (): DrivePersistenceContextValue =>
+    useRequiredContext(DrivePersistenceContext, 'useDrivePersistence');
+
+export const useDrive = (): DriveContextValue => ({
+    ...useDriveNavigation(),
+    ...useDriveSearchState(),
+    ...useDrivePersistence(),
+});

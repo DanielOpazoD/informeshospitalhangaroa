@@ -1,6 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useDriveSearch } from '../hooks/useDriveSearch';
+import type { DriveGateway } from '../infrastructure/drive/driveGateway';
+import type { AppResult, DriveFolder, DriveSearchResult } from '../types';
 
 const createParams = (overrides?: Partial<Parameters<typeof useDriveSearch>[0]>) => ({
     setIsDriveLoading: vi.fn(),
@@ -10,17 +12,27 @@ const createParams = (overrides?: Partial<Parameters<typeof useDriveSearch>[0]>)
     showToast: vi.fn(),
     driveCacheRef: { current: new Map<string, { folders: never[]; files: Array<{ id: string; name: string }>; timestamp: number }>() },
     fetchFolderContents: vi.fn().mockResolvedValue(undefined),
-    driveGateway: {
-        getAccessToken: vi.fn(),
-        listFolders: vi.fn(),
-        listJsonFiles: vi.fn(),
-        listFolderContents: vi.fn(),
-        searchJsonFiles: vi.fn().mockResolvedValue([]),
-        getFileContent: vi.fn().mockResolvedValue(''),
-        getJsonRecord: vi.fn(),
-        createFolder: vi.fn(),
-        uploadFile: vi.fn(),
-    },
+    driveGateway: buildGateway(),
+    ...overrides,
+});
+
+const ok = <T,>(
+    data: T,
+    status: Extract<AppResult<T>, { ok: true }>['status'] = 'complete',
+): AppResult<T> => ({
+    ok: true,
+    data,
+    status,
+});
+
+const buildGateway = (overrides?: Partial<DriveGateway>): DriveGateway => ({
+    getAccessToken: vi.fn(),
+    listFolders: vi.fn().mockResolvedValue(ok<DriveFolder[]>([])),
+    listFolderContents: vi.fn().mockResolvedValue(ok({ folders: [], files: [] })),
+    readJsonRecord: vi.fn().mockResolvedValue(ok({})),
+    createFolder: vi.fn().mockResolvedValue(ok(undefined)),
+    uploadFile: vi.fn().mockResolvedValue(ok({ id: 'file-1', name: 'registro.json' })),
+    search: vi.fn().mockResolvedValue(ok<DriveSearchResult>({ files: [], partial: false, warnings: [] })),
     ...overrides,
 });
 
@@ -34,7 +46,7 @@ describe('useDriveSearch', () => {
         });
 
         expect(params.showToast).toHaveBeenCalledWith('Ingrese algún criterio de búsqueda.', 'warning');
-        expect(params.driveGateway.searchJsonFiles).not.toHaveBeenCalled();
+        expect(params.driveGateway.search).not.toHaveBeenCalled();
     });
 
     it('usa resultados cacheados cuando el TTL sigue vigente', async () => {
@@ -58,7 +70,7 @@ describe('useDriveSearch', () => {
             await result.current.handleSearchInDrive();
         });
 
-        expect(params.driveGateway.searchJsonFiles).not.toHaveBeenCalled();
+        expect(params.driveGateway.search).not.toHaveBeenCalled();
         expect(params.setDriveFolders).toHaveBeenCalledWith([]);
         expect(params.setDriveJsonFiles).toHaveBeenCalledWith([{ id: 'cached-1', name: 'cache.json' }]);
         expect(params.setFolderPath).toHaveBeenCalledWith([{ id: 'search', name: 'Resultados de búsqueda' }]);
@@ -68,22 +80,13 @@ describe('useDriveSearch', () => {
     it('filtra por contenido y cachea los resultados nuevos', async () => {
         vi.spyOn(Date, 'now').mockReturnValue(20_000);
         const params = createParams({
-            driveGateway: {
-                getAccessToken: vi.fn(),
-                listFolders: vi.fn(),
-                listJsonFiles: vi.fn(),
-                listFolderContents: vi.fn(),
-                searchJsonFiles: vi.fn().mockResolvedValue([
-                    { id: 'file-1', name: 'uno.json' },
-                    { id: 'file-2', name: 'dos.json' },
-                ]),
-                getFileContent: vi.fn()
-                    .mockResolvedValueOnce('sin coincidencia')
-                    .mockResolvedValueOnce('Diagnostico confirmado'),
-                getJsonRecord: vi.fn(),
-                createFolder: vi.fn(),
-                uploadFile: vi.fn(),
-            },
+            driveGateway: buildGateway({
+                search: vi.fn().mockResolvedValue(ok<DriveSearchResult>({
+                    files: [{ id: 'file-2', name: 'dos.json' }],
+                    partial: false,
+                    warnings: [],
+                })),
+            }),
         });
         const { result } = renderHook(() => useDriveSearch(params));
 
@@ -97,11 +100,12 @@ describe('useDriveSearch', () => {
             await result.current.handleSearchInDrive();
         });
 
-        expect(params.driveGateway.searchJsonFiles).toHaveBeenCalledWith({
+        expect(params.driveGateway.search).toHaveBeenCalledWith({
             searchTerm: 'Paciente',
             dateFrom: '',
             dateTo: '',
-        });
+            contentTerm: 'diagnostico',
+        }, 'deepContent', expect.any(Object));
         expect(params.setDriveJsonFiles).toHaveBeenCalledWith([{ id: 'file-2', name: 'dos.json' }]);
         expect(params.driveCacheRef.current.get('search:deepContent:paciente|||diagnostico')?.files).toEqual([{ id: 'file-2', name: 'dos.json' }]);
         expect(params.showToast).toHaveBeenCalledWith('Se encontraron 1 archivo(s).');
@@ -109,17 +113,9 @@ describe('useDriveSearch', () => {
 
     it('propaga errores de búsqueda con mensaje contextual', async () => {
         const params = createParams({
-            driveGateway: {
-                getAccessToken: vi.fn(),
-                listFolders: vi.fn(),
-                listJsonFiles: vi.fn(),
-                listFolderContents: vi.fn(),
-                searchJsonFiles: vi.fn().mockRejectedValue({ status: 403 }),
-                getFileContent: vi.fn(),
-                getJsonRecord: vi.fn(),
-                createFolder: vi.fn(),
-                uploadFile: vi.fn(),
-            },
+            driveGateway: buildGateway({
+                search: vi.fn().mockRejectedValue({ status: 403 }),
+            }),
         });
         const { result } = renderHook(() => useDriveSearch(params));
 
@@ -139,7 +135,7 @@ describe('useDriveSearch', () => {
 
     it('expone estado parcial del job cuando el gateway devuelve búsqueda parcial', async () => {
         const params = createParams({
-            driveGateway: {
+            driveGateway: buildGateway({
                 search: vi.fn().mockResolvedValue({
                     ok: true,
                     status: 'partial',
@@ -150,7 +146,7 @@ describe('useDriveSearch', () => {
                     },
                     warnings: ['Tiempo agotado'],
                 }),
-            },
+            }),
         });
         const { result } = renderHook(() => useDriveSearch(params));
 

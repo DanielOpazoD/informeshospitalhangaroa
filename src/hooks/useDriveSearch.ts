@@ -6,14 +6,11 @@ import {
     type MutableRefObject,
     type SetStateAction,
 } from 'react';
-import type { AppResult, AsyncJobState, DriveFolder, DriveSearchMode, DriveSearchResult, ToastFn } from '../types';
+import type { AsyncJobState, DriveFolder, DriveSearchMode, DriveSearchResult, ToastFn } from '../types';
 import { SEARCH_CACHE_TTL } from '../appConstants';
-import {
-    DRIVE_CONTENT_FETCH_CONCURRENCY,
-    DRIVE_DEEP_SEARCH_MAX_FILES,
-    DRIVE_DEEP_SEARCH_TIME_BUDGET_MS,
-} from '../appConstants';
 import { buildDriveContextErrorMessage } from '../utils/driveErrorUtils';
+import type { DriveGateway } from '../infrastructure/drive/driveGateway';
+import { AppResultError, getResultJobStatus } from '../infrastructure/shared/appResult';
 
 interface DriveCacheEntry {
     folders: DriveFolder[];
@@ -29,24 +26,7 @@ interface UseDriveSearchProps {
     showToast: ToastFn;
     driveCacheRef: MutableRefObject<Map<string, DriveCacheEntry>>;
     fetchFolderContents: (folderId: string) => Promise<void>;
-    driveGateway: CompatibleDriveGateway;
-}
-
-interface CompatibleDriveGateway {
-    getAccessToken?: () => string | null;
-    listFolders?: (folderId: string) => Promise<DriveFolder[] | AppResult<DriveFolder[]>>;
-    listJsonFiles?: (folderId: string) => Promise<DriveFolder[]>;
-    listFolderContents?: (folderId: string) => Promise<{ folders: DriveFolder[]; files: DriveFolder[] } | AppResult<{ folders: DriveFolder[]; files: DriveFolder[] }>>;
-    search?: (
-        request: { searchTerm: string; dateFrom: string; dateTo: string; contentTerm: string },
-        mode: DriveSearchMode,
-        options?: { cancelToken?: { cancelled: boolean }; onProgress?: (status: string) => void },
-    ) => Promise<AppResult<DriveSearchResult>>;
-    searchJsonFiles?: (filters: { searchTerm: string; dateFrom: string; dateTo: string }) => Promise<DriveFolder[]>;
-    getFileContent?: (fileId: string) => Promise<string>;
-    getJsonRecord?: (fileId: string) => Promise<unknown>;
-    createFolder?: (name: string, parentId: string) => Promise<void | AppResult<void>>;
-    uploadFile?: (params: { fileName: string; mimeType: string; content: Blob; parentId: string }) => Promise<{ id?: string; name?: string } | AppResult<{ id?: string; name?: string }>>;
+    driveGateway: DriveGateway;
 }
 
 export function useDriveSearch({
@@ -83,102 +63,6 @@ export function useDriveSearch({
         setIsDriveSearchPartial(result.partial);
     }, [setDriveFolders, setDriveJsonFiles, setFolderPath]);
 
-    const runLegacyMetadataSearch = useCallback(async (): Promise<DriveFolder[]> => {
-        if (!driveGateway.searchJsonFiles) {
-            throw new Error('La búsqueda por metadata no está disponible en el gateway actual.');
-        }
-        return driveGateway.searchJsonFiles({
-            searchTerm: driveSearchTerm.trim(),
-            dateFrom: driveDateFrom,
-            dateTo: driveDateTo,
-        });
-    }, [driveDateFrom, driveDateTo, driveGateway, driveSearchTerm]);
-
-    const runLegacyDeepContentSearch = useCallback(async (files: DriveFolder[]): Promise<DriveSearchResult> => {
-        const contentTerm = driveContentTerm.trim().toLowerCase();
-        if (!contentTerm) {
-            return {
-                files,
-                partial: false,
-                warnings: ['La búsqueda profunda requiere un término de contenido; se usó solo metadata.'],
-            };
-        }
-
-        const searchToken = { cancelled: false };
-        activeDeepSearchRef.current = searchToken;
-        const startedAt = Date.now();
-        const warnings = new Set<string>();
-        const filtered: DriveFolder[] = [];
-        const candidates = files.slice(0, DRIVE_DEEP_SEARCH_MAX_FILES);
-        const queue = [...candidates];
-        let partial = files.length > DRIVE_DEEP_SEARCH_MAX_FILES;
-        let processed = 0;
-
-        if (partial) {
-            warnings.add(`La búsqueda profunda se limitó a ${DRIVE_DEEP_SEARCH_MAX_FILES} archivos para mantener la respuesta ágil.`);
-        }
-
-        const workerCount = Math.min(DRIVE_CONTENT_FETCH_CONCURRENCY, queue.length) || 1;
-        const initialMessage = `Analizando 0 de ${candidates.length} archivos...`;
-        setDeepSearchStatus(initialMessage);
-        setDriveSearchJob({
-            operation: 'drive_deep_search',
-            status: 'running',
-            message: initialMessage,
-            updatedAt: Date.now(),
-        });
-
-        const workers = Array.from({ length: workerCount }, () => (async () => {
-            while (queue.length) {
-                if (searchToken.cancelled) {
-                    partial = true;
-                    warnings.add('La búsqueda profunda fue cancelada antes de completar todos los archivos.');
-                    return;
-                }
-
-                if (Date.now() - startedAt >= DRIVE_DEEP_SEARCH_TIME_BUDGET_MS) {
-                    partial = true;
-                    warnings.add('La búsqueda profunda alcanzó su presupuesto de tiempo y devolvió resultados parciales.');
-                    return;
-                }
-
-                const nextFile = queue.shift();
-                if (!nextFile) return;
-                try {
-                    if (!driveGateway.getFileContent) {
-                        throw new Error('La lectura de contenido de Drive no está disponible en el gateway actual.');
-                    }
-                    const content = await driveGateway.getFileContent(nextFile.id);
-                    if (content && content.toLowerCase().includes(contentTerm)) {
-                        filtered.push(nextFile);
-                    }
-                } catch (error) {
-                    warnings.add(`No se pudo inspeccionar el contenido de "${nextFile.name}".`);
-                    console.warn('No se pudo analizar el archivo para la búsqueda de contenido:', nextFile.name, error);
-                } finally {
-                    processed += 1;
-                    const message = `Analizando ${processed} de ${candidates.length} archivos...`;
-                    setDeepSearchStatus(message);
-                    setDriveSearchJob({
-                        operation: 'drive_deep_search',
-                        status: 'running',
-                        message,
-                        updatedAt: Date.now(),
-                    });
-                }
-            }
-        })());
-
-        await Promise.all(workers);
-        activeDeepSearchRef.current = null;
-
-        return {
-            files: filtered,
-            partial,
-            warnings: Array.from(warnings),
-        };
-    }, [driveContentTerm, driveGateway]);
-
     const handleSearchInDrive = useCallback(async () => {
         if (!driveSearchTerm && !driveDateFrom && !driveDateTo && !driveContentTerm) {
             showToast('Ingrese algún criterio de búsqueda.', 'warning');
@@ -206,67 +90,33 @@ export function useDriveSearch({
                 return;
             }
 
-            let result: DriveSearchResult;
-            if ('search' in driveGateway) {
-                const searchToken = { cancelled: false };
-                activeDeepSearchRef.current = searchToken;
-                const searchResult = await driveGateway.search!({
-                    searchTerm,
-                    dateFrom: driveDateFrom,
-                    dateTo: driveDateTo,
-                    contentTerm,
-                }, driveSearchMode, {
-                    cancelToken: searchToken,
-                    onProgress: setDeepSearchStatus,
-                });
-                if (!searchResult.ok) {
-                    throw Object.assign(new Error(searchResult.error.message), { appResultStatus: searchResult.status });
-                }
-                result = searchResult.data;
-                setDriveSearchJob({
-                    operation: 'drive_deep_search',
-                    status: searchResult.status === 'cancelled'
-                        ? 'cancelled'
-                        : searchResult.status === 'partial'
-                            ? 'partial'
-                            : driveSearchMode === 'deepContent'
-                                ? 'success'
-                                : 'idle',
-                    message: searchResult.status === 'cancelled'
-                        ? 'Búsqueda cancelada por el usuario.'
-                        : searchResult.status === 'partial'
-                            ? 'Búsqueda profunda completada con resultados parciales.'
-                            : driveSearchMode === 'deepContent'
-                                ? 'Búsqueda profunda completada.'
-                                : null,
-                    updatedAt: Date.now(),
-                });
-            } else {
-                const metadataFiles = await runLegacyMetadataSearch();
-                result = driveSearchMode === 'deepContent'
-                    ? await runLegacyDeepContentSearch(metadataFiles)
-                    : {
-                        files: metadataFiles,
-                        partial: false,
-                        warnings: contentTerm ? ['El término de contenido solo se usa en la búsqueda profunda.'] : [],
-                    };
-                setDriveSearchJob({
-                    operation: 'drive_deep_search',
-                    status: result.partial
-                        ? result.warnings.some(warning => warning.toLowerCase().includes('cancelada'))
-                            ? 'cancelled'
-                            : 'partial'
-                        : driveSearchMode === 'deepContent'
-                            ? 'success'
-                            : 'idle',
-                    message: result.partial
-                        ? 'Búsqueda profunda finalizada con resultados parciales.'
+            const searchToken = { cancelled: false };
+            activeDeepSearchRef.current = searchToken;
+            const searchResult = await driveGateway.search({
+                searchTerm,
+                dateFrom: driveDateFrom,
+                dateTo: driveDateTo,
+                contentTerm,
+            }, driveSearchMode, {
+                cancelToken: searchToken,
+                onProgress: setDeepSearchStatus,
+            });
+            if (!searchResult.ok) {
+                throw new AppResultError(searchResult.error.message, searchResult.status);
+            }
+            const result = searchResult.data;
+            setDriveSearchJob({
+                operation: 'drive_deep_search',
+                status: getResultJobStatus(searchResult.status, driveSearchMode === 'deepContent' ? 'success' : 'idle'),
+                message: searchResult.status === 'cancelled'
+                    ? 'Búsqueda cancelada por el usuario.'
+                    : searchResult.status === 'partial'
+                        ? 'Búsqueda profunda completada con resultados parciales.'
                         : driveSearchMode === 'deepContent'
                             ? 'Búsqueda profunda completada.'
                             : null,
-                    updatedAt: Date.now(),
-                });
-            }
+                updatedAt: Date.now(),
+            });
 
             applySearchResult(result);
             if (!result.partial && result.warnings.length === 0) {
@@ -275,7 +125,7 @@ export function useDriveSearch({
             showToast(`Se encontraron ${result.files.length} archivo(s).${result.partial ? ' Resultado parcial.' : ''}`);
         } catch (error) {
             console.error('Error al buscar en Drive:', error);
-            const status = (error as { appResultStatus?: string })?.appResultStatus;
+            const status = error instanceof AppResultError ? error.status : undefined;
             setDriveSearchJob({
                 operation: 'drive_deep_search',
                 status: status === 'cancelled' ? 'cancelled' : status === 'partial' ? 'partial' : 'error',
@@ -288,7 +138,7 @@ export function useDriveSearch({
             setIsDriveLoading(false);
             setDeepSearchStatus('');
         }
-    }, [applySearchResult, driveContentTerm, driveDateFrom, driveDateTo, driveGateway, driveSearchMode, driveSearchTerm, driveCacheRef, runLegacyDeepContentSearch, runLegacyMetadataSearch, setIsDriveLoading, showToast]);
+    }, [applySearchResult, driveContentTerm, driveDateFrom, driveDateTo, driveGateway, driveSearchMode, driveSearchTerm, driveCacheRef, setIsDriveLoading, showToast]);
 
     const cancelDriveSearch = useCallback(() => {
         if (activeDeepSearchRef.current) {

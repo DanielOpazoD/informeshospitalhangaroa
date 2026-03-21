@@ -1,8 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useDriveOperations } from '../hooks/useDriveOperations';
-import type { ClinicalRecord, DriveFolder } from '../types';
-import type { DriveGateway } from '../services/driveGateway';
+import type { AppResult, ClinicalRecord, DriveFolder } from '../types';
+import type { DriveGateway } from '../infrastructure/drive/driveGateway';
 
 const buildRecord = (): ClinicalRecord => ({
     version: 'v14',
@@ -14,19 +14,26 @@ const buildRecord = (): ClinicalRecord => ({
     especialidad: '',
 });
 
+const ok = <T,>(
+    data: T,
+    status: Extract<AppResult<T>, { ok: true }>['status'] = 'complete',
+): AppResult<T> => ({
+    ok: true,
+    data,
+    status,
+});
+
 const buildGateway = (): DriveGateway => ({
     getAccessToken: vi.fn().mockReturnValue('token'),
-    listFolders: vi.fn().mockResolvedValue([{ id: 'folder-1', name: 'Informes' }]),
-    listJsonFiles: vi.fn().mockResolvedValue([]),
-    listFolderContents: vi.fn().mockResolvedValue({
+    listFolders: vi.fn().mockResolvedValue(ok([{ id: 'folder-1', name: 'Informes' }])),
+    listFolderContents: vi.fn().mockResolvedValue(ok({
         folders: [{ id: 'folder-1', name: 'Informes' }],
         files: [{ id: 'file-1', name: 'registro.json' }],
-    }),
-    searchJsonFiles: vi.fn().mockResolvedValue([]),
-    getFileContent: vi.fn().mockResolvedValue(''),
-    getJsonRecord: vi.fn().mockResolvedValue(buildRecord()),
-    createFolder: vi.fn().mockResolvedValue(undefined),
-    uploadFile: vi.fn().mockResolvedValue({ id: 'file-1', name: 'registro.json' }),
+    })),
+    readJsonRecord: vi.fn().mockResolvedValue(ok(buildRecord())),
+    createFolder: vi.fn().mockResolvedValue(ok(undefined)),
+    uploadFile: vi.fn().mockResolvedValue(ok({ id: 'file-1', name: 'registro.json' })),
+    search: vi.fn().mockResolvedValue(ok({ files: [], partial: false, warnings: [] })),
 });
 
 const createParams = (overrides?: Partial<Parameters<typeof useDriveOperations>[0]>) => {
@@ -144,7 +151,7 @@ describe('useDriveOperations', () => {
         const params = createParams({
             driveGateway: {
                 ...buildGateway(),
-                getJsonRecord: vi.fn().mockResolvedValue(invalidRecord),
+                readJsonRecord: vi.fn().mockResolvedValue(ok(invalidRecord)),
             },
         });
         const file = { id: 'file-1', name: 'registro.json' };

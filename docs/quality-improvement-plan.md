@@ -3,6 +3,13 @@
 ## Objetivo
 Evolucionar el sistema de forma segura y gradual hacia una arquitectura más modular, robusta, mantenible y escalable, sin introducir cambios de alto riesgo en un solo ciclo.
 
+## Estado actual
+- `2026-03-21`: la app ya usa un `DriveGateway` tipado como frontera principal para hooks de Drive.
+- `2026-03-21`: `App.tsx` dejó de concentrar la coordinación del shell; el wiring principal quedó repartido entre `AppRoot`, `AppShellRoute` y `useAppShellController`.
+- `2026-03-21`: `DriveContext` ahora se divide internamente por responsabilidades de navegación, búsqueda y persistencia, manteniendo `useDrive()` como fachada de compatibilidad.
+- `2026-03-21`: `coverage/` pasa a considerarse artefacto generado y queda fuera del flujo normal del repositorio.
+- Referencia operativa: revisar `docs/architecture-guardrails.md` antes de abrir PRs de refactor.
+
 ## Principios de ejecución
 - **Incrementalidad:** cambios pequeños, reversibles y fáciles de revisar.
 - **Seguridad operativa:** cada paso con validaciones automatizadas mínimas.
@@ -49,6 +56,8 @@ Evolucionar el sistema de forma segura y gradual hacia una arquitectura más mod
 2. Dejar `App.tsx` como ensamblador de providers, rutas, vistas y hooks.
 3. Aislar listeners globales y cleanup en hooks dedicados.
 
+Estado: en progreso alto. La composición principal ya fue separada, pero todavía conviene seguir reduciendo contratos anchos en el shell.
+
 **Criterio de salida:** `App.tsx` deja de ser el centro de negocio y pasa a coordinar módulos más pequeños.
 
 ### Iteración 3 — Hardening de fronteras externas
@@ -56,6 +65,8 @@ Evolucionar el sistema de forma segura y gradual hacia una arquitectura más mod
 2. Mantener `DriveGateway` tipado y endurecer el parser de registros importados.
 3. Dividir `geminiClient.ts` en módulos de catálogo, routing, retries y generación sin romper la API pública.
 4. Centralizar mapeo de errores y remover accesos directos evitables a APIs globales en la app.
+
+Estado: parcialmente realizado en Drive. Falta seguir aplicando el mismo estándar operativo en más integraciones y helpers compartidos.
 
 **Criterio de salida:** las fronteras de storage, Drive y Gemini quedan desacopladas del árbol principal de UI.
 

@@ -88,4 +88,17 @@ export default [
             'eqeqeq': ['error', 'always'],
         },
     },
+    {
+        files: ['src/hooks/**/*.{ts,tsx}', 'src/components/**/*.{ts,tsx}'],
+        rules: {
+            'no-restricted-imports': ['error', {
+                patterns: [
+                    {
+                        group: ['**/services/driveGateway'],
+                        message: 'Use la frontera tipada en infrastructure/drive/driveGateway.',
+                    },
+                ],
+            }],
+        },
+    },
 ];

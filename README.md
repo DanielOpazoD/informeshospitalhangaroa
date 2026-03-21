@@ -110,6 +110,7 @@ Si todo está OK, verás el mensaje `Hola, funciono correctamente`. Si la clave 
 ## Plan de mejoras incrementales de calidad
 
 Para guiar refactors seguros y graduales (modularidad, estabilidad, escalabilidad y pruebas), revisa el plan técnico en [`docs/quality-improvement-plan.md`](docs/quality-improvement-plan.md).
+Las reglas activas de arquitectura y el checklist para PRs de refactor viven en [`docs/architecture-guardrails.md`](docs/architecture-guardrails.md).
 
 ## Control de tamaño de bundle
 
