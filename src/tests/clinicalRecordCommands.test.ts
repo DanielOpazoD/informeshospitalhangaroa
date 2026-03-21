@@ -1,0 +1,132 @@
+import { describe, expect, it } from 'vitest';
+import type { ClinicalRecord, VersionHistoryEntry } from '../types';
+import { executeClinicalRecordCommand } from '../application/clinicalRecordCommands';
+
+const buildRecord = (overrides?: Partial<ClinicalRecord>): ClinicalRecord => ({
+    version: 'v14',
+    templateId: '2',
+    title: 'Evolución médica (____) - Hospital Hanga Roa',
+    titleMode: 'auto',
+    patientFields: [
+        { id: 'nombre', label: 'Nombre', value: 'Paciente', type: 'text' },
+        { id: 'fecnac', label: 'Fecha de nacimiento', value: '2000-01-15', type: 'date' },
+        { id: 'finf', label: 'Fecha del informe', value: '2025-01-15', type: 'date' },
+        { id: 'edad', label: 'Edad', value: '', type: 'text', readonly: true },
+    ],
+    sections: [{ id: 'sec-1', title: 'Plan', content: '<p>Ok</p>' }],
+    medico: '',
+    especialidad: '',
+    ...overrides,
+});
+
+describe('clinicalRecordCommands', () => {
+    it('edita campos de paciente y recalcula edad', () => {
+        const result = executeClinicalRecordCommand(buildRecord(), {
+            type: 'edit_patient_field',
+            index: 1,
+            value: '1995-01-15',
+        });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.record.patientFields[1]?.value).toBe('1995-01-15');
+            expect(result.record.patientFields.find(field => field.id === 'edad')?.value).toBe('30');
+        }
+    });
+
+    it('sanitiza contenido al editar una sección', () => {
+        const result = executeClinicalRecordCommand(buildRecord(), {
+            type: 'edit_section_content',
+            index: 0,
+            content: '<script>alert(1)</script><p>Seguro</p>',
+        });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.record.sections[0]?.content).toBe('<p>Seguro</p>');
+            expect(result.warnings.length).toBeGreaterThan(0);
+        }
+    });
+
+    it('respeta títulos custom al cambiar plantilla', () => {
+        const result = executeClinicalRecordCommand(buildRecord({
+            title: 'Título manual',
+            titleMode: 'custom',
+        }), {
+            type: 'change_template',
+            templateId: '3',
+        });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.record.title).toBe('Título manual');
+            expect(result.record.titleMode).toBe('custom');
+        }
+    });
+
+    it('usa el mismo pipeline para importación e historial', () => {
+        const importPayload = {
+            version: 'v13',
+            templateId: '2',
+            title: 'Importado',
+            patientFields: [{ id: 'nombre', label: 'Nombre', value: 'Paciente', type: 'text' }],
+            sections: [{ title: 'Plan', content: '<p>Seguro</p>' }],
+            medico: '',
+            especialidad: '',
+        };
+        const historyEntry: VersionHistoryEntry = {
+            id: '1',
+            timestamp: 1,
+            record: importPayload as ClinicalRecord,
+        };
+
+        const importResult = executeClinicalRecordCommand(buildRecord(), {
+            type: 'replace_record_from_import',
+            value: importPayload,
+        });
+        const historyResult = executeClinicalRecordCommand(buildRecord(), {
+            type: 'replace_record_from_history',
+            entry: historyEntry,
+        });
+
+        expect(importResult).toEqual(historyResult);
+    });
+
+    it('no rompe el documento si se recibe un comando inválido', () => {
+        const current = buildRecord();
+        const result = executeClinicalRecordCommand(current, {
+            type: 'remove_section',
+            index: 99,
+        });
+
+        expect(result.ok).toBe(false);
+        expect(result.record).toEqual(current);
+        if (!result.ok) {
+            expect(result.errors).toContain('La sección que intenta eliminar no existe.');
+        }
+    });
+
+    it('aplica paciente HHR sin perder coherencia del documento', () => {
+        const result = executeClinicalRecordCommand(buildRecord(), {
+            type: 'apply_hhr_patient',
+            todayKey: '2026-03-20',
+            patient: {
+                bedId: 'c1',
+                bedLabel: 'C1',
+                patientName: 'Jane Roe',
+                rut: '11.111.111-1',
+                age: '34',
+                birthDate: '1992-03-20',
+                admissionDate: '2026-03-10',
+                specialty: 'Medicina',
+                sourceDailyRecordDate: '2026-03-20',
+            },
+        });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.record.patientFields.find(field => field.id === 'nombre')?.value).toBe('Jane Roe');
+            expect(result.record.patientFields.find(field => field.id === 'rut')?.value).toBe('11.111.111-1');
+        }
+    });
+});

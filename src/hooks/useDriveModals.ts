@@ -5,13 +5,14 @@ import { validateCriticalFields } from '../utils/validationUtils';
 import { buildContextualErrorMessage } from '../utils/errorUtils';
 import { getRootDriveFolder, loadDefaultDriveFolderPath } from '../utils/driveFolderStorage';
 import { getBrowserStorageAdapter, type StorageAdapter } from '../utils/storageAdapter';
+import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
 
 interface UseDriveModalsOptions {
     isSignedIn: boolean;
     handleSignIn: () => void;
     showToast: (message: string, type?: 'success' | 'warning' | 'error') => void;
     record: ClinicalRecord;
-    setRecord: React.Dispatch<React.SetStateAction<ClinicalRecord>>;
+    dispatchRecordCommand: (command: ClinicalRecordCommand) => ClinicalRecordCommandResult;
     setHasUnsavedChanges: React.Dispatch<React.SetStateAction<boolean>>;
     saveDraft: (reason: 'auto' | 'manual' | 'import', overrideRecord?: ClinicalRecord) => void;
     markRecordAsReplaced: () => void;
@@ -43,7 +44,7 @@ export function useDriveModals({
     handleSignIn,
     showToast,
     record,
-    setRecord,
+    dispatchRecordCommand,
     setHasUnsavedChanges,
     saveDraft,
     markRecordAsReplaced,
@@ -113,14 +114,18 @@ export function useDriveModals({
             const importedRecord = await openJsonFileFromDrive(file);
             if (!importedRecord) return;
             markRecordAsReplaced();
-            setRecord(importedRecord);
+            const result = dispatchRecordCommand({ type: 'replace_record_from_import', value: importedRecord });
+            if (!result.ok) {
+                showToast(result.errors.join('\n') || 'No se pudo abrir el archivo seleccionado.', 'error');
+                return;
+            }
             setHasUnsavedChanges(false);
-            saveDraft('import', importedRecord);
+            saveDraft('import', result.record);
             setIsOpenModalOpen(false);
         } catch (error) {
             showToast(buildContextualErrorMessage(`No se pudo abrir "${file.name}"`, error), 'error');
         }
-    }, [openJsonFileFromDrive, markRecordAsReplaced, setRecord, setHasUnsavedChanges, saveDraft, showToast]);
+    }, [dispatchRecordCommand, openJsonFileFromDrive, markRecordAsReplaced, setHasUnsavedChanges, saveDraft, showToast]);
 
     const handlePickerCallback = useCallback(async (data: GooglePickerCallbackData) => {
         if (data.action === window.google.picker.Action.PICKED) {

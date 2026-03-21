@@ -27,7 +27,6 @@ import HhrCensusModal from './components/hhr/HhrCensusModal';
 import {
     buildClinicalUpdateSection,
     createTemplateBaseline,
-    normalizePatientFields,
     RECOMMENDED_GEMINI_MODEL,
 } from './utils/recordTemplates';
 
@@ -43,7 +42,7 @@ interface AppShellProps { toast: ToastState | null; showToast: (message: string,
 const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClientId, onOpenCartola }) => {
     const {
         record,
-        setRecord,
+        dispatchRecordCommand,
         lastLocalSave,
         hasUnsavedChanges,
         setHasUnsavedChanges,
@@ -71,6 +70,8 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         handleUpdateSectionMeta,
         handleRemoveSection,
         handleRemovePatientField,
+        handleMedicoChange,
+        handleEspecialidadChange,
         handleAddSection: hookAddSection,
         handleAddPatientField: hookAddPatientField,
     } = useRecordContext();
@@ -114,13 +115,12 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
 
     const fileOperations = useFileOperations({
         record,
-        setRecord,
+        dispatchRecordCommand,
         setHasUnsavedChanges,
         saveDraft,
         markRecordAsReplaced,
         hasUnsavedChanges,
         showToast,
-        normalizePatientFields,
     });
 
     const driveModals = useDriveModals({
@@ -128,7 +128,7 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         handleSignIn: auth.handleSignIn,
         showToast,
         record,
-        setRecord,
+        dispatchRecordCommand,
         setHasUnsavedChanges,
         saveDraft,
         markRecordAsReplaced,
@@ -160,13 +160,11 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
     });
 
     const { handleTemplateChange, handleRecordTitleChange } = useRecordTitleController({
-        record,
-        setRecord,
-        markRecordAsReplaced,
+        dispatchRecordCommand,
     });
     const hhrController = useHhrIntegrationController({
         record,
-        setRecord,
+        dispatchRecordCommand,
         setHasUnsavedChanges,
         markRecordAsReplaced,
         showToast,
@@ -195,12 +193,12 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
             if (!confirmed) return;
             const blankRecord = createTemplateBaseline(record.templateId);
             markRecordAsReplaced();
-            setRecord(blankRecord);
+            dispatchRecordCommand({ type: 'reset_record', templateId: blankRecord.templateId });
             setHasUnsavedChanges(true);
             resetSyncState();
             showToast('Formulario restablecido.', 'warning');
         })();
-    }, [confirm, markRecordAsReplaced, record.templateId, resetSyncState, setHasUnsavedChanges, setRecord, showToast]);
+    }, [confirm, dispatchRecordCommand, markRecordAsReplaced, record.templateId, resetSyncState, setHasUnsavedChanges, showToast]);
 
     useKeyboardShortcuts({
         onSave: fileOperations.handleManualSave,
@@ -238,7 +236,6 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
             drive={drive}
             recordState={{
                 record,
-                setRecord,
                 hasUnsavedChanges,
                 versionHistory,
                 isHistoryModalOpen,
@@ -257,6 +254,8 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
                 handleUpdateSectionMeta,
                 handleRemoveSection,
                 handleRemovePatientField,
+                handleMedicoChange,
+                handleEspecialidadChange,
             }}
             toggleGlobalStructureEditing={toggleGlobalStructureEditing}
             handleTemplateChange={handleTemplateChange}

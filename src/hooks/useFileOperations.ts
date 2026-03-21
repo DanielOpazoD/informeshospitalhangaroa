@@ -4,7 +4,7 @@ import { suggestedFilename } from '../utils/stringUtils';
 import { validateCriticalFields } from '../utils/validationUtils';
 import { useConfirmDialog } from './useConfirmDialog';
 import { FIELD_IDS } from '../appConstants';
-import { importRecordFromJson } from '../application/clinicalRecordUseCases';
+import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
 
 /**
  * Options for configuring file I/O operations.
@@ -12,13 +12,12 @@ import { importRecordFromJson } from '../application/clinicalRecordUseCases';
  */
 interface UseFileOperationsOptions {
     record: ClinicalRecord;
-    setRecord: React.Dispatch<React.SetStateAction<ClinicalRecord>>;
+    dispatchRecordCommand: (command: ClinicalRecordCommand) => ClinicalRecordCommandResult;
     setHasUnsavedChanges: React.Dispatch<React.SetStateAction<boolean>>;
     saveDraft: (reason: 'auto' | 'manual' | 'import', overrideRecord?: ClinicalRecord) => void;
     markRecordAsReplaced: () => void;
     hasUnsavedChanges: boolean;
     showToast: ToastFn;
-    normalizePatientFields: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'];
 }
 
 /**
@@ -27,13 +26,12 @@ interface UseFileOperationsOptions {
  */
 export function useFileOperations({
     record,
-    setRecord,
+    dispatchRecordCommand,
     setHasUnsavedChanges,
     saveDraft,
     markRecordAsReplaced,
     hasUnsavedChanges,
     showToast,
-    normalizePatientFields,
 }: UseFileOperationsOptions) {
     const { confirm } = useConfirmDialog();
     const importInputRef = useRef<HTMLInputElement>(null);
@@ -57,22 +55,21 @@ export function useFileOperations({
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                const { record: importedRecord, warnings, errors } = importRecordFromJson(
-                    JSON.parse(e.target?.result as string),
-                    normalizePatientFields,
-                );
-                if (importedRecord) {
-                    const normalizedRecord: ClinicalRecord = importedRecord;
-                    markRecordAsReplaced();
-                    setRecord(normalizedRecord);
+                markRecordAsReplaced();
+                const result = dispatchRecordCommand({
+                    type: 'replace_record_from_import',
+                    value: JSON.parse(e.target?.result as string),
+                });
+                if (result.ok) {
+                    const normalizedRecord: ClinicalRecord = result.record;
                     setHasUnsavedChanges(false);
                     saveDraft('import', normalizedRecord);
                     showToast('Borrador importado correctamente.');
-                    if (warnings.length) {
-                        showToast(`Importación protegida:\n- ${warnings.join('\n- ')}`, 'warning');
+                    if (result.warnings.length) {
+                        showToast(`Importación protegida:\n- ${result.warnings.join('\n- ')}`, 'warning');
                     }
                 } else {
-                    showToast(errors.join('\n') || 'Archivo JSON inválido.', 'error');
+                    showToast(result.errors.join('\n') || 'Archivo JSON inválido.', 'error');
                 }
             } catch {
                 showToast('Error al leer el archivo JSON.', 'error');
@@ -80,7 +77,7 @@ export function useFileOperations({
         };
         reader.readAsText(file);
         if (event.target) event.target.value = '';
-    }, [markRecordAsReplaced, normalizePatientFields, saveDraft, setHasUnsavedChanges, setRecord, showToast]);
+    }, [dispatchRecordCommand, markRecordAsReplaced, saveDraft, setHasUnsavedChanges, showToast]);
 
     const handleDownloadJson = useCallback(() => {
         const errors = validateCriticalFields(record);

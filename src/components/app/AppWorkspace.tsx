@@ -9,7 +9,6 @@ import type { HeaderAuthProps, HeaderDriveProps, HeaderEditingProps, HeaderHhrPr
 
 interface AppWorkspaceProps {
     record: ClinicalRecord;
-    setRecord: React.Dispatch<React.SetStateAction<ClinicalRecord>>;
     auth: HeaderAuthProps;
     driveHeader: HeaderDriveProps;
     editingHeader: HeaderEditingProps;
@@ -35,6 +34,8 @@ interface AppWorkspaceProps {
     handleUpdateSectionMeta: (index: number, meta: Partial<ClinicalSectionData>) => void;
     handleRemoveSection: (index: number) => void;
     handleRemovePatientField: (index: number) => void;
+    handleMedicoChange: (value: string) => void;
+    handleEspecialidadChange: (value: string) => void;
     onRecordTitleChange: (title: string) => void;
     onAddPatientField: () => void;
     onAddSection: () => void;
@@ -45,7 +46,6 @@ interface AppWorkspaceProps {
 
 const AppWorkspace: React.FC<AppWorkspaceProps> = ({
     record,
-    setRecord,
     auth,
     driveHeader,
     editingHeader,
@@ -71,6 +71,8 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
     handleUpdateSectionMeta,
     handleRemoveSection,
     handleRemovePatientField,
+    handleMedicoChange,
+    handleEspecialidadChange,
     onRecordTitleChange,
     onAddPatientField,
     onAddSection,
@@ -147,8 +149,8 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
                     <Footer
                         medico={record.medico}
                         especialidad={record.especialidad}
-                        onMedicoChange={value => setRecord({ ...record, medico: value })}
-                        onEspecialidadChange={value => setRecord({ ...record, especialidad: value })}
+                        onMedicoChange={handleMedicoChange}
+                        onEspecialidadChange={handleEspecialidadChange}
                     />
                 </div>
             </div>

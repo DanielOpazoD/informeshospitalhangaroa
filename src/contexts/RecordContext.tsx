@@ -8,6 +8,7 @@ import type {
     VersionHistoryEntry,
 } from '../types';
 import type { EditorWorkflowAction } from '../application/editorWorkflow';
+import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
 import { useClinicalRecord } from '../hooks/useClinicalRecord';
 import { useRecordForm } from '../hooks/useRecordForm';
 
@@ -31,6 +32,7 @@ interface RecordContextValue {
     record: ClinicalRecord;
     /** Modificador directo del estado de la ficha */
     setRecord: React.Dispatch<React.SetStateAction<ClinicalRecord>>;
+    dispatchRecordCommand: (command: ClinicalRecordCommand) => ClinicalRecordCommandResult;
     /** Timestamp del último autoguardado en localStorage */
     lastLocalSave: number | null;
     /** Indica si hay modificaciones recientes no guardadas permanentemente */
@@ -67,6 +69,8 @@ interface RecordContextValue {
     handleRemovePatientField: (index: number) => void;
     handleAddSection: (newSection: ClinicalSectionData) => void;
     handleAddPatientField: (newField: PatientField) => void;
+    handleMedicoChange: (value: string) => void;
+    handleEspecialidadChange: (value: string) => void;
 }
 
 const RecordContext = createContext<RecordContextValue | undefined>(undefined);
@@ -83,8 +87,7 @@ export const RecordProvider: React.FC<RecordProviderProps> = ({ children, showTo
     const [isGlobalStructureEditing, setIsGlobalStructureEditing] = useState(false);
 
     const recordFormActions = useRecordForm({
-        record: clinicalRecordState.record,
-        setRecord: clinicalRecordState.setRecord,
+        dispatchRecordCommand: clinicalRecordState.dispatchRecordCommand,
         setIsEditing,
         setActiveEditTarget,
         clearActiveEditTarget: () => setActiveEditTarget(null),

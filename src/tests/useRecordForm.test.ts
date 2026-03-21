@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useRecordForm } from '../hooks/useRecordForm';
 import type { ClinicalRecord } from '../types';
+import { executeClinicalRecordCommand, type ClinicalRecordCommand } from '../application/clinicalRecordCommands';
 
 function createMockRecord(): ClinicalRecord {
     return {
@@ -26,12 +27,7 @@ function createMockRecord(): ClinicalRecord {
 
 function setup(record?: ClinicalRecord) {
     const mockRecord = record || createMockRecord();
-    const setRecord = vi.fn((updater: unknown) => {
-        if (typeof updater === 'function') {
-            return (updater as (r: ClinicalRecord) => ClinicalRecord)(mockRecord);
-        }
-        return updater;
-    });
+    const dispatchRecordCommand = vi.fn((command: ClinicalRecordCommand) => executeClinicalRecordCommand(mockRecord, command));
     const setIsEditing = vi.fn();
     const setActiveEditTarget = vi.fn();
     const clearActiveEditTarget = vi.fn();
@@ -39,8 +35,7 @@ function setup(record?: ClinicalRecord) {
 
     const { result } = renderHook(() =>
         useRecordForm({
-            record: mockRecord,
-            setRecord: setRecord as unknown as React.Dispatch<React.SetStateAction<ClinicalRecord>>,
+            dispatchRecordCommand,
             setIsEditing,
             setActiveEditTarget,
             clearActiveEditTarget,
@@ -50,7 +45,7 @@ function setup(record?: ClinicalRecord) {
 
     return {
         result,
-        setRecord,
+        dispatchRecordCommand,
         setIsEditing,
         setActiveEditTarget,
         clearActiveEditTarget,
@@ -72,24 +67,20 @@ describe('useRecordForm', () => {
     });
 
     describe('handlePatientFieldChange', () => {
-        it('updates the patient field value via setRecord', () => {
-            const { result, setRecord } = setup();
+        it('updates the patient field value via command dispatch', () => {
+            const { result, dispatchRecordCommand } = setup();
             act(() => {
                 result.current.handlePatientFieldChange(0, 'María García');
             });
-            expect(setRecord).toHaveBeenCalledOnce();
-            const updater = setRecord.mock.calls[0][0] as (r: ClinicalRecord) => ClinicalRecord;
-            const updated = updater(createMockRecord());
-            expect(updated.patientFields[0].value).toBe('María García');
+            expect(dispatchRecordCommand).toHaveBeenCalledWith({ type: 'edit_patient_field', index: 0, value: 'María García' });
         });
 
         it('recalculates age when birth date changes', () => {
-            const { result, setRecord } = setup();
+            const { result, dispatchRecordCommand } = setup();
             act(() => {
                 result.current.handlePatientFieldChange(2, '2000-01-15'); // fecnac index = 2
             });
-            const updater = setRecord.mock.calls[0][0] as (r: ClinicalRecord) => ClinicalRecord;
-            const updated = updater(createMockRecord());
+            const updated = dispatchRecordCommand.mock.results[0]?.value.record as ClinicalRecord;
             // With fecnac=2000-01-15 and finf=2025-01-15, edad should be ~25
             expect(updated.patientFields[4].value).toBe('25');
         });
@@ -97,89 +88,90 @@ describe('useRecordForm', () => {
 
     describe('handlePatientLabelChange', () => {
         it('updates the patient field label', () => {
-            const { result, setRecord } = setup();
+            const { result, dispatchRecordCommand } = setup();
             act(() => {
                 result.current.handlePatientLabelChange(0, 'Paciente');
             });
-            const updater = setRecord.mock.calls[0][0] as (r: ClinicalRecord) => ClinicalRecord;
-            const updated = updater(createMockRecord());
-            expect(updated.patientFields[0].label).toBe('Paciente');
+            expect(dispatchRecordCommand).toHaveBeenCalledWith({ type: 'edit_patient_label', index: 0, label: 'Paciente' });
         });
     });
 
     describe('handleSectionContentChange', () => {
         it('updates the section content', () => {
-            const { result, setRecord } = setup();
+            const { result, dispatchRecordCommand } = setup();
             act(() => {
                 result.current.handleSectionContentChange(0, 'Nuevo contenido');
             });
-            const updater = setRecord.mock.calls[0][0] as (r: ClinicalRecord) => ClinicalRecord;
-            const updated = updater(createMockRecord());
-            expect(updated.sections[0].content).toBe('Nuevo contenido');
+            expect(dispatchRecordCommand).toHaveBeenCalledWith({ type: 'edit_section_content', index: 0, content: 'Nuevo contenido' });
         });
     });
 
     describe('handleSectionTitleChange', () => {
         it('updates the section title', () => {
-            const { result, setRecord } = setup();
+            const { result, dispatchRecordCommand } = setup();
             act(() => {
                 result.current.handleSectionTitleChange(1, 'Nuevo Título');
             });
-            const updater = setRecord.mock.calls[0][0] as (r: ClinicalRecord) => ClinicalRecord;
-            const updated = updater(createMockRecord());
-            expect(updated.sections[1].title).toBe('Nuevo Título');
+            expect(dispatchRecordCommand).toHaveBeenCalledWith({ type: 'edit_section_title', index: 1, title: 'Nuevo Título' });
         });
     });
 
     describe('handleRemoveSection', () => {
         it('removes the section at the given index', () => {
-            const { result, setRecord } = setup();
+            const { result, dispatchRecordCommand } = setup();
             act(() => {
                 result.current.handleRemoveSection(0);
             });
-            const updater = setRecord.mock.calls[0][0] as (r: ClinicalRecord) => ClinicalRecord;
-            const updated = updater(createMockRecord());
-            expect(updated.sections).toHaveLength(1);
-            expect(updated.sections[0].title).toBe('Diagnósticos');
+            expect(dispatchRecordCommand).toHaveBeenCalledWith({ type: 'remove_section', index: 0 });
         });
     });
 
     describe('handleRemovePatientField', () => {
         it('removes the patient field at the given index', () => {
-            const { result, setRecord } = setup();
+            const { result, dispatchRecordCommand } = setup();
             act(() => {
                 result.current.handleRemovePatientField(1);
             });
-            const updater = setRecord.mock.calls[0][0] as (r: ClinicalRecord) => ClinicalRecord;
-            const updated = updater(createMockRecord());
-            expect(updated.patientFields).toHaveLength(4);
-            expect(updated.patientFields[1].id).toBe('fecnac');
+            expect(dispatchRecordCommand).toHaveBeenCalledWith({ type: 'remove_patient_field', index: 1 });
         });
     });
 
     describe('handleAddSection', () => {
         it('adds a new section to the end', () => {
-            const { result, setRecord } = setup();
+            const { result, dispatchRecordCommand } = setup();
             act(() => {
                 result.current.handleAddSection({ id: 'sec-new', title: 'Plan', content: 'Nuevo plan' });
             });
-            const updater = setRecord.mock.calls[0][0] as (r: ClinicalRecord) => ClinicalRecord;
-            const updated = updater(createMockRecord());
-            expect(updated.sections).toHaveLength(3);
-            expect(updated.sections[2].title).toBe('Plan');
+            expect(dispatchRecordCommand).toHaveBeenCalledWith({
+                type: 'add_section',
+                section: { id: 'sec-new', title: 'Plan', content: 'Nuevo plan' },
+            });
         });
     });
 
     describe('handleAddPatientField', () => {
         it('adds a new patient field to the end', () => {
-            const { result, setRecord } = setup();
+            const { result, dispatchRecordCommand } = setup();
             act(() => {
                 result.current.handleAddPatientField({ label: 'Teléfono', value: '', type: 'text' });
             });
-            const updater = setRecord.mock.calls[0][0] as (r: ClinicalRecord) => ClinicalRecord;
-            const updated = updater(createMockRecord());
-            expect(updated.patientFields).toHaveLength(6);
-            expect(updated.patientFields[5].label).toBe('Teléfono');
+            expect(dispatchRecordCommand).toHaveBeenCalledWith({
+                type: 'add_patient_field',
+                field: { label: 'Teléfono', value: '', type: 'text' },
+            });
+        });
+    });
+
+    describe('professional fields', () => {
+        it('dispatches a command for medico and especialidad', () => {
+            const { result, dispatchRecordCommand } = setup();
+            act(() => {
+                result.current.handleMedicoChange('Dr. House');
+                result.current.handleEspecialidadChange('Urgencia');
+            });
+
+            expect(dispatchRecordCommand).toHaveBeenCalledWith({ type: 'edit_professional_field', field: 'medico', value: 'Dr. House' });
+            expect(dispatchRecordCommand).toHaveBeenCalledWith({ type: 'edit_professional_field', field: 'especialidad', value: 'Urgencia' });
         });
     });
 

@@ -22,7 +22,6 @@ interface AppShellContentProps {
     recordState: Pick<
         ReturnType<typeof useRecordContext>,
         | 'record'
-        | 'setRecord'
         | 'hasUnsavedChanges'
         | 'versionHistory'
         | 'isHistoryModalOpen'
@@ -41,6 +40,8 @@ interface AppShellContentProps {
         | 'handleUpdateSectionMeta'
         | 'handleRemoveSection'
         | 'handleRemovePatientField'
+        | 'handleMedicoChange'
+        | 'handleEspecialidadChange'
     >;
     toggleGlobalStructureEditing: () => void;
     handleTemplateChange: (id: string) => void;
@@ -182,7 +183,6 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
 
         <AppWorkspace
             record={recordState.record}
-            setRecord={recordState.setRecord}
             auth={{
                 isSignedIn: auth.isSignedIn,
                 isGisReady: auth.isGisReady,
@@ -238,6 +238,8 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
             handleUpdateSectionMeta={recordState.handleUpdateSectionMeta}
             handleRemoveSection={recordState.handleRemoveSection}
             handleRemovePatientField={recordState.handleRemovePatientField}
+            handleMedicoChange={recordState.handleMedicoChange}
+            handleEspecialidadChange={recordState.handleEspecialidadChange}
             onRecordTitleChange={handleRecordTitleChange}
             onAddPatientField={handleAddPatientField}
             onAddSection={handleAddSection}

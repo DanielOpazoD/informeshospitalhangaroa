@@ -122,6 +122,19 @@ vi.mock('../contexts/RecordContext', () => ({
             especialidad: '',
         },
         setRecord: vi.fn(),
+        dispatchRecordCommand: vi.fn().mockReturnValue({
+            ok: true,
+            record: {
+                version: 'v14',
+                templateId: '2',
+                title: 'Informe clínico',
+                patientFields: [{ id: 'nombre', label: 'Nombre', value: 'Jane Roe', type: 'text' }],
+                sections: [{ id: 'sec-1', title: 'Diagnóstico', content: 'Contenido' }],
+                medico: '',
+                especialidad: '',
+            },
+            warnings: [],
+        }),
         lastLocalSave: 123,
         hasUnsavedChanges: false,
         setHasUnsavedChanges: vi.fn(),
@@ -131,6 +144,8 @@ vi.mock('../contexts/RecordContext', () => ({
         saveDraft: vi.fn(),
         handleRestoreHistoryEntry: vi.fn(),
         markRecordAsReplaced: vi.fn(),
+        workflowState: { status: 'idle', hasUnsavedChanges: false, lastError: null },
+        dispatchWorkflow: vi.fn(),
         isEditing: false,
         setIsEditing: vi.fn(),
         activeEditTarget: null,
@@ -150,6 +165,8 @@ vi.mock('../contexts/RecordContext', () => ({
         handleRemovePatientField: vi.fn(),
         handleAddSection: vi.fn(),
         handleAddPatientField: vi.fn(),
+        handleMedicoChange: vi.fn(),
+        handleEspecialidadChange: vi.fn(),
     }),
 }));
 

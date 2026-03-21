@@ -1,89 +1,93 @@
+import {
+    executeClinicalRecordCommand,
+    normalizeClinicalRecordSnapshot,
+} from './clinicalRecordCommands';
 import type { ClinicalRecord, VersionHistoryEntry } from '../types';
+import { type LoadClinicalRecordResult } from '../domain/clinicalRecord';
+import type { HhrCensusPatient } from '../hhrTypes';
 import {
-    loadClinicalRecord,
-    type LoadClinicalRecordResult,
-} from '../domain/clinicalRecord';
-import {
-    createTemplateBaseline,
     getAutoTitleForTemplate,
     getReportDateValue,
-    inferTitleMode,
     normalizePatientFields,
 } from '../utils/recordTemplates';
-import type { HhrCensusPatient } from '../hhrTypes';
-import { applyHhrPatientToRecord } from '../utils/hhrIntegration';
 
-const ensureLoadedRecord = (
-    value: unknown,
-    customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
-): LoadClinicalRecordResult =>
-    loadClinicalRecord(value, customNormalizePatientFields || normalizePatientFields);
+const toLoadResult = (result: ReturnType<typeof executeClinicalRecordCommand>): LoadClinicalRecordResult => (
+    result.ok
+        ? { record: result.record, warnings: result.warnings, errors: [] }
+        : { record: null, warnings: result.warnings, errors: result.errors }
+);
 
 export const applyAutoTitle = (record: ClinicalRecord): ClinicalRecord => {
-    if (inferTitleMode(record) !== 'auto') {
-        return {
-            ...record,
-            titleMode: 'custom',
-        };
+    if (record.titleMode !== 'auto') {
+        return record;
     }
 
-    return {
-        ...record,
-        title: getAutoTitleForTemplate(record.templateId, getReportDateValue(record)),
-        titleMode: 'auto',
-    };
+    return { ...record, title: getAutoTitleForTemplate(record.templateId, getReportDateValue(record)) };
 };
 
 export const changeTemplate = (record: ClinicalRecord, templateId: string): ClinicalRecord => {
-    const baseline = createTemplateBaseline(templateId);
-    const shouldKeepCustomTitle = inferTitleMode(record) === 'custom' || templateId === '5';
-
-    return {
-        ...record,
-        templateId: baseline.templateId,
-        title: shouldKeepCustomTitle ? record.title : baseline.title,
-        titleMode: shouldKeepCustomTitle ? 'custom' : baseline.titleMode,
-        patientFields: baseline.patientFields,
-        sections: baseline.sections,
-    };
+    const result = executeClinicalRecordCommand(record, { type: 'change_template', templateId });
+    return result.record;
 };
 
-export const changeRecordTitle = (record: ClinicalRecord, title: string): ClinicalRecord => ({
-    ...record,
-    title,
-    titleMode: 'custom',
-});
+export const changeRecordTitle = (record: ClinicalRecord, title: string): ClinicalRecord =>
+    executeClinicalRecordCommand(record, { type: 'change_record_title', title }).record;
 
 export const importRecordFromJson = (
     value: unknown,
-    customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
-): LoadClinicalRecordResult => ensureLoadedRecord(value, customNormalizePatientFields);
+    _customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
+): LoadClinicalRecordResult =>
+    toLoadResult(
+        executeClinicalRecordCommand(
+            {
+                version: 'v14',
+                templateId: '2',
+                title: '',
+                patientFields: normalizePatientFields([]),
+                sections: [],
+                medico: '',
+                especialidad: '',
+            },
+            { type: 'replace_record_from_import', value },
+        ),
+    );
 
 export const importRecordFromDrive = (
     value: unknown,
-    customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
-): LoadClinicalRecordResult => ensureLoadedRecord(value, customNormalizePatientFields);
+    _customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
+): LoadClinicalRecordResult => importRecordFromJson(value);
 
 export const restoreHistoryEntry = (
     entry: VersionHistoryEntry,
-    customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
-): LoadClinicalRecordResult => ensureLoadedRecord(entry.record, customNormalizePatientFields);
+    _customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
+): LoadClinicalRecordResult =>
+    toLoadResult(executeClinicalRecordCommand(entry.record, { type: 'replace_record_from_history', entry }));
 
 export const saveDraftSnapshot = (
     record: ClinicalRecord,
-    customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
+    _customNormalizePatientFields?: (fields: ClinicalRecord['patientFields']) => ClinicalRecord['patientFields'],
 ): ClinicalRecord => {
-    const loaded = ensureLoadedRecord(record, customNormalizePatientFields);
-    return loaded.record || applyAutoTitle({
-        ...record,
-        patientFields: (customNormalizePatientFields || normalizePatientFields)(record.patientFields),
-    });
+    const result = normalizeClinicalRecordSnapshot(record);
+    return result.record;
 };
 
-export const resetRecord = (templateId: string): ClinicalRecord => createTemplateBaseline(templateId);
+export const resetRecord = (templateId: string, currentRecord?: ClinicalRecord): ClinicalRecord => {
+    if (!currentRecord) {
+        return executeClinicalRecordCommand({
+            version: 'v14',
+            templateId,
+            title: '',
+            patientFields: normalizePatientFields([]),
+            sections: [],
+            medico: '',
+            especialidad: '',
+        }, { type: 'reset_record', templateId }).record;
+    }
+    return executeClinicalRecordCommand(currentRecord, { type: 'reset_record', templateId }).record;
+};
 
 export const syncRecordWithHhr = (
     record: ClinicalRecord,
     patient: HhrCensusPatient,
     todayKey: string,
-): ClinicalRecord => applyAutoTitle(applyHhrPatientToRecord(record, patient, todayKey));
+): ClinicalRecord => executeClinicalRecordCommand(record, { type: 'apply_hhr_patient', patient, todayKey }).record;

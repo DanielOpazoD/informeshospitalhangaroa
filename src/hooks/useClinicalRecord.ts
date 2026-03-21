@@ -6,11 +6,11 @@ import { getBrowserStorageAdapter, readStoredJson, writeStoredJson, type Storage
 import { normalizePatientFields } from '../utils/recordTemplates';
 import { createTemplateBaseline } from '../utils/recordTemplates';
 import {
-    importRecordFromJson,
-    restoreHistoryEntry as restoreHistoryEntryUseCase,
     saveDraftSnapshot,
 } from '../application/clinicalRecordUseCases';
 import { editorWorkflowReducer, initialEditorWorkflowState } from '../application/editorWorkflow';
+import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
+import { executeClinicalRecordCommand } from '../application/clinicalRecordCommands';
 
 interface UseClinicalRecordOptions {
     onToast: ToastFn;
@@ -20,6 +20,7 @@ interface UseClinicalRecordOptions {
 export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter() }: UseClinicalRecordOptions) => {
     const { confirm } = useConfirmDialog();
     const [record, setRecord] = useState<ClinicalRecord>(() => createTemplateBaseline('2'));
+    const recordRef = useRef(record);
     const [lastLocalSave, setLastLocalSave] = useState<number | null>(null);
     const [versionHistory, setVersionHistory] = useState<VersionHistoryEntry[]>([]);
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -35,7 +36,21 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
     }, []);
 
     const getRecordSnapshot = useCallback(() => {
-        return structuredClone(record);
+        return structuredClone(recordRef.current);
+    }, []);
+
+    const dispatchRecordCommand = useCallback((command: ClinicalRecordCommand): ClinicalRecordCommandResult => {
+        const snapshot = getRecordSnapshot();
+        const result = executeClinicalRecordCommand(snapshot, command);
+        if (result.ok) {
+            recordRef.current = result.record;
+            setRecord(result.record);
+        }
+        return result;
+    }, [getRecordSnapshot]);
+
+    useEffect(() => {
+        recordRef.current = record;
     }, [record]);
 
     const pushHistory = useCallback((snapshot: ClinicalRecord, timestamp: number) => {
@@ -71,10 +86,9 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
         try {
             const parsed = readStoredJson<{ timestamp?: number; record?: ClinicalRecord }>(storage, LOCAL_STORAGE_KEYS.draft);
             if (parsed?.record) {
-                const loaded = importRecordFromJson(parsed.record, normalizePatientFields);
-                if (loaded.record) {
-                    markRecordAsReplaced();
-                    setRecord(loaded.record);
+                markRecordAsReplaced();
+                const loaded = dispatchRecordCommand({ type: 'replace_record_from_import', value: parsed.record });
+                if (loaded.ok) {
                     if (parsed.timestamp) setLastLocalSave(parsed.timestamp);
                     dispatchWorkflow({ type: 'SET_UNSAVED_CHANGES', value: false });
                     onToast('Borrador recuperado automáticamente.', 'success');
@@ -96,7 +110,7 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
         } catch (error) {
             console.warn('No se pudo leer el historial local:', error);
         }
-    }, [markRecordAsReplaced, normalizeRecord, onToast, storage]);
+    }, [dispatchRecordCommand, markRecordAsReplaced, normalizeRecord, onToast, storage]);
 
     useEffect(() => {
         if (suppressedRecordChangeCountRef.current > 0) {
@@ -133,21 +147,20 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
             });
             if (!confirmed) return;
             dispatchWorkflow({ type: 'RESTORE_STARTED' });
-            const restored = restoreHistoryEntryUseCase(entry, normalizePatientFields);
-            if (!restored.record) {
+            markRecordAsReplaced();
+            const restored = dispatchRecordCommand({ type: 'replace_record_from_history', entry });
+            if (!restored.ok) {
                 dispatchWorkflow({ type: 'RESTORE_FAILED', error: restored.errors.join('\n') || 'No se pudo restaurar la versión.' });
                 onToast('No se pudo restaurar la versión seleccionada.', 'error');
                 return;
             }
-            markRecordAsReplaced();
-            setRecord(restored.record);
             setLastLocalSave(entry.timestamp);
             writeStoredJson(storage, LOCAL_STORAGE_KEYS.draft, { timestamp: entry.timestamp, record: restored.record });
             dispatchWorkflow({ type: 'RESTORE_SUCCEEDED' });
             onToast('Versión restaurada desde el historial.');
             setIsHistoryModalOpen(false);
         })();
-    }, [confirm, markRecordAsReplaced, onToast, storage]);
+    }, [confirm, dispatchRecordCommand, markRecordAsReplaced, onToast, storage]);
 
     const setHasUnsavedChanges = useCallback<Dispatch<SetStateAction<boolean>>>((value) => {
         const nextValue = typeof value === 'function'
@@ -159,6 +172,7 @@ export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter(
     return {
         record,
         setRecord,
+        dispatchRecordCommand,
         lastLocalSave,
         hasUnsavedChanges: workflowState.hasUnsavedChanges,
         setHasUnsavedChanges,

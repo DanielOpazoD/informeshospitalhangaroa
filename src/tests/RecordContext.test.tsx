@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, cleanup } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LOCAL_STORAGE_KEYS } from '../appConstants';
 import { RecordProvider, useRecordContext } from '../contexts/RecordContext';
@@ -14,6 +14,7 @@ describe('RecordContext', () => {
     const storageRestorers: Array<() => void> = [];
 
     afterEach(() => {
+        cleanup();
         storageRestorers.splice(0).forEach(restore => restore());
         vi.restoreAllMocks();
     });
@@ -101,7 +102,7 @@ describe('RecordContext', () => {
         const { result } = renderHook(() => useRecordContext(), { wrapper: saveWrapper });
 
         act(() => {
-            result.current.setRecord(prev => ({ ...prev, title: 'Nuevo título' }));
+            result.current.dispatchRecordCommand({ type: 'change_record_title', title: 'Nuevo título' });
         });
 
         act(() => {

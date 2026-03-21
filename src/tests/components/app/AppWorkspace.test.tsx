@@ -92,7 +92,6 @@ const createProps = (): React.ComponentProps<typeof AppWorkspace> => ({
         medico: 'Dr. Test',
         especialidad: 'Medicina',
     },
-    setRecord: vi.fn(),
     auth: {
         isSignedIn: true,
         isGisReady: true,
@@ -154,6 +153,8 @@ const createProps = (): React.ComponentProps<typeof AppWorkspace> => ({
     handleUpdateSectionMeta: vi.fn(),
     handleRemoveSection: vi.fn(),
     handleRemovePatientField: vi.fn(),
+    handleMedicoChange: vi.fn(),
+    handleEspecialidadChange: vi.fn(),
     onRecordTitleChange: vi.fn(),
     onAddPatientField: vi.fn(),
     onAddSection: vi.fn(),
@@ -212,8 +213,8 @@ describe('AppWorkspace', () => {
         expect(props.handleSectionTitleChange).toHaveBeenCalledWith(1, 'titulo-1');
         expect(props.handleRemoveSection).toHaveBeenCalledWith(1);
         expect(props.handleUpdateSectionMeta).toHaveBeenCalledWith(1, { updateDate: '2026-03-20' });
-        expect(props.setRecord).toHaveBeenCalledWith(expect.objectContaining({ medico: 'Dr. House' }));
-        expect(props.setRecord).toHaveBeenCalledWith(expect.objectContaining({ especialidad: 'Urgencia' }));
+        expect(props.handleMedicoChange).toHaveBeenCalledWith('Dr. House');
+        expect(props.handleEspecialidadChange).toHaveBeenCalledWith('Urgencia');
     });
 
     it('filtra activeEditTarget y actualiza el título al perder foco', () => {

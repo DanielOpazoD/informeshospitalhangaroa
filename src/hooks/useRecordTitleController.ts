@@ -1,49 +1,22 @@
-import { useCallback, useEffect, type Dispatch, type SetStateAction } from 'react';
-import type { ClinicalRecord } from '../types';
-import {
-    getAutoTitleForTemplate,
-    getReportDateValue,
-    inferTitleMode,
-} from '../utils/recordTemplates';
-import {
-    applyAutoTitle,
-    changeRecordTitle,
-    changeTemplate,
-} from '../application/clinicalRecordUseCases';
+import { useCallback } from 'react';
+import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
 
 interface UseRecordTitleControllerParams {
-    record: ClinicalRecord;
-    setRecord: Dispatch<SetStateAction<ClinicalRecord>>;
-    markRecordAsReplaced: () => void;
+    dispatchRecordCommand: (command: ClinicalRecordCommand) => ClinicalRecordCommandResult;
 }
 
 export const useRecordTitleController = ({
-    record,
-    setRecord,
-    markRecordAsReplaced,
+    dispatchRecordCommand,
 }: UseRecordTitleControllerParams) => {
-    const autoTitle = getAutoTitleForTemplate(record.templateId, getReportDateValue(record));
-
-    useEffect(() => {
-        const currentMode = inferTitleMode(record);
-        if (currentMode !== 'auto' || record.title === autoTitle) {
-            return;
-        }
-
-        markRecordAsReplaced();
-        setRecord(current => inferTitleMode(current) === 'auto' ? applyAutoTitle(current) : current);
-    }, [autoTitle, markRecordAsReplaced, record, setRecord]);
-
     const handleTemplateChange = useCallback((templateId: string) => {
-        setRecord(current => changeTemplate(current, templateId));
-    }, [setRecord]);
+        dispatchRecordCommand({ type: 'change_template', templateId });
+    }, [dispatchRecordCommand]);
 
     const handleRecordTitleChange = useCallback((title: string) => {
-        setRecord(current => changeRecordTitle(current, title));
-    }, [setRecord]);
+        dispatchRecordCommand({ type: 'change_record_title', title });
+    }, [dispatchRecordCommand]);
 
     return {
-        autoTitle,
         handleTemplateChange,
         handleRecordTitleChange,
     };

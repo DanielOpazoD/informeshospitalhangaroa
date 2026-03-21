@@ -1,7 +1,6 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
-import type { ClinicalRecord, ClinicalSectionData, PatientField } from '../types';
-import { calcEdadY } from '../utils/dateUtils';
-import { generateSectionId } from '../constants';
+import type { ClinicalSectionData, PatientField } from '../types';
+import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
 
 type EditTarget =
     | { type: 'patient-section-title' }
@@ -11,8 +10,7 @@ type EditTarget =
     | null;
 
 interface UseRecordFormOptions {
-    record: ClinicalRecord;
-    setRecord: Dispatch<SetStateAction<ClinicalRecord>>;
+    dispatchRecordCommand: (command: ClinicalRecordCommand) => ClinicalRecordCommandResult;
     setIsEditing: Dispatch<SetStateAction<boolean>>;
     setActiveEditTarget: Dispatch<SetStateAction<EditTarget>>;
     clearActiveEditTarget: () => void;
@@ -20,7 +18,7 @@ interface UseRecordFormOptions {
 }
 
 export function useRecordForm({
-    setRecord,
+    dispatchRecordCommand,
     setIsEditing,
     setActiveEditTarget,
     clearActiveEditTarget,
@@ -57,80 +55,48 @@ export function useRecordForm({
     }, [clearActiveEditTarget, setIsEditing, setIsGlobalStructureEditing]);
 
     const handlePatientFieldChange = useCallback((index: number, value: string) => {
-        setRecord(r => {
-            const newFields = [...r.patientFields];
-            newFields[index] = { ...newFields[index], value };
-
-            if (newFields[index].id === 'fecnac' || newFields[index].id === 'finf') {
-                const birthDateField = newFields.find(f => f.id === 'fecnac');
-                const reportDateField = newFields.find(f => f.id === 'finf');
-                const age = calcEdadY(birthDateField?.value || '', reportDateField?.value);
-                const ageIndex = newFields.findIndex(f => f.id === 'edad');
-                if (ageIndex !== -1) newFields[ageIndex] = { ...newFields[ageIndex], value: age };
-            }
-            return { ...r, patientFields: newFields };
-        });
-    }, [setRecord]);
+        dispatchRecordCommand({ type: 'edit_patient_field', index, value });
+    }, [dispatchRecordCommand]);
 
     const handlePatientLabelChange = useCallback((index: number, label: string) => {
-        setRecord(r => {
-            const newFields = [...r.patientFields];
-            newFields[index] = { ...newFields[index], label };
-            return { ...r, patientFields: newFields };
-        });
-    }, [setRecord]);
+        dispatchRecordCommand({ type: 'edit_patient_label', index, label });
+    }, [dispatchRecordCommand]);
 
     const handleSectionContentChange = useCallback((index: number, content: string) => {
-        setRecord(r => {
-            const newSections = [...r.sections];
-            newSections[index] = { ...newSections[index], content };
-            return { ...r, sections: newSections };
-        });
-    }, [setRecord]);
+        dispatchRecordCommand({ type: 'edit_section_content', index, content });
+    }, [dispatchRecordCommand]);
 
     const handleSectionTitleChange = useCallback((index: number, title: string) => {
-        setRecord(r => {
-            const newSections = [...r.sections];
-            newSections[index] = { ...newSections[index], title };
-            return { ...r, sections: newSections };
-        });
-    }, [setRecord]);
+        dispatchRecordCommand({ type: 'edit_section_title', index, title });
+    }, [dispatchRecordCommand]);
 
     const handleUpdateSectionMeta = useCallback((index: number, meta: Partial<ClinicalSectionData>) => {
-        setRecord(r => {
-            const newSections = [...r.sections];
-            newSections[index] = { ...newSections[index], ...meta };
-            return { ...r, sections: newSections };
-        });
-    }, [setRecord]);
+        dispatchRecordCommand({ type: 'update_section_meta', index, meta });
+    }, [dispatchRecordCommand]);
 
     const handleRemoveSection = useCallback((index: number) => {
-        setRecord(r => ({
-            ...r,
-            sections: r.sections.filter((_, i) => i !== index),
-        }));
-    }, [setRecord]);
+        dispatchRecordCommand({ type: 'remove_section', index });
+    }, [dispatchRecordCommand]);
 
     const handleRemovePatientField = useCallback((index: number) => {
-        setRecord(r => ({
-            ...r,
-            patientFields: r.patientFields.filter((_, i) => i !== index),
-        }));
-    }, [setRecord]);
+        dispatchRecordCommand({ type: 'remove_patient_field', index });
+    }, [dispatchRecordCommand]);
 
     const handleAddSection = useCallback((newSection: ClinicalSectionData) => {
-        setRecord(r => ({
-            ...r,
-            sections: [...r.sections, { ...newSection, id: newSection.id || generateSectionId() }],
-        }));
-    }, [setRecord]);
+        dispatchRecordCommand({ type: 'add_section', section: newSection });
+    }, [dispatchRecordCommand]);
 
     const handleAddPatientField = useCallback((newField: PatientField) => {
-        setRecord(r => ({
-            ...r,
-            patientFields: [...r.patientFields, newField],
-        }));
-    }, [setRecord]);
+        dispatchRecordCommand({ type: 'add_patient_field', field: newField });
+    }, [dispatchRecordCommand]);
+
+    const handleMedicoChange = useCallback((value: string) => {
+        dispatchRecordCommand({ type: 'edit_professional_field', field: 'medico', value });
+    }, [dispatchRecordCommand]);
+
+    const handleEspecialidadChange = useCallback((value: string) => {
+        dispatchRecordCommand({ type: 'edit_professional_field', field: 'especialidad', value });
+    }, [dispatchRecordCommand]);
 
     return {
         activateEditTarget,
@@ -146,5 +112,7 @@ export function useRecordForm({
         handleRemovePatientField,
         handleAddSection,
         handleAddPatientField,
+        handleMedicoChange,
+        handleEspecialidadChange,
     };
 }

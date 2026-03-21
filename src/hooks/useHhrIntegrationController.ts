@@ -17,11 +17,11 @@ import {
 } from '../utils/hhrIntegration';
 import { createHhrGateway } from '../infrastructure/hhr/hhrGateway';
 import type { EditorWorkflowAction } from '../application/editorWorkflow';
-import { syncRecordWithHhr } from '../application/clinicalRecordUseCases';
+import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
 
 interface UseHhrIntegrationControllerParams {
     record: ClinicalRecord;
-    setRecord: Dispatch<SetStateAction<ClinicalRecord>>;
+    dispatchRecordCommand: (command: ClinicalRecordCommand) => ClinicalRecordCommandResult;
     setHasUnsavedChanges: Dispatch<SetStateAction<boolean>>;
     markRecordAsReplaced: () => void;
     showToast: (message: string, type?: 'success' | 'warning' | 'error') => void;
@@ -30,7 +30,7 @@ interface UseHhrIntegrationControllerParams {
 
 export const useHhrIntegrationController = ({
     record,
-    setRecord,
+    dispatchRecordCommand,
     setHasUnsavedChanges,
     markRecordAsReplaced,
     showToast,
@@ -123,13 +123,17 @@ export const useHhrIntegrationController = ({
 
     const handleSelectHhrPatient = useCallback((patient: HhrCensusPatient) => {
         markRecordAsReplaced();
-        setRecord(current => syncRecordWithHhr(current, patient, hhrDateKey));
+        const result = dispatchRecordCommand({ type: 'apply_hhr_patient', patient, todayKey: hhrDateKey });
+        if (!result.ok) {
+            showToast(result.errors.join('\n') || 'No se pudo cargar el paciente desde HHR.', 'error');
+            return;
+        }
         setHasUnsavedChanges(true);
         setSelectedHhrPatient(patient);
         clearSyncState();
         setIsHhrCensusModalOpen(false);
         showToast(`Paciente ${patient.patientName} cargado desde HHR.`);
-    }, [clearSyncState, hhrDateKey, markRecordAsReplaced, setHasUnsavedChanges, setRecord, showToast]);
+    }, [clearSyncState, dispatchRecordCommand, hhrDateKey, markRecordAsReplaced, setHasUnsavedChanges, showToast]);
 
     const handleClearSelectedHhrPatient = useCallback(() => {
         setSelectedHhrPatient(null);

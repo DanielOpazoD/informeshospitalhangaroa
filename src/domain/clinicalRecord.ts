@@ -1,5 +1,4 @@
 import { FIELD_IDS } from '../appConstants';
-import { generateSectionId } from '../constants';
 import type { ClinicalRecord, ClinicalSectionData, PatientField } from '../types';
 import { sanitizeClinicalHtml } from '../utils/clinicalContentSanitizer';
 import {
@@ -41,6 +40,23 @@ const parseDate = (value: string) => {
     if (!value) return null;
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const buildDeterministicSectionId = (section: Pick<ParsedClinicalSectionInput, 'id' | 'title'>, index: number): string => {
+    const explicitId = section.id?.trim();
+    if (explicitId) {
+        return explicitId;
+    }
+
+    const slug = section.title
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    return `section-${index + 1}${slug ? `-${slug}` : ''}`;
 };
 
 export const validateClinicalRecordInvariants = (record: ClinicalRecord): string[] => {
@@ -175,8 +191,8 @@ export const normalizeClinicalRecord = (
         ? record.titleMode
         : inferTitleMode(record),
     patientFields: normalizePatientFields(record.patientFields),
-    sections: record.sections.map(section => ({
-        id: section.id?.trim() || generateSectionId(),
+    sections: record.sections.map((section, index) => ({
+        id: buildDeterministicSectionId(section, index),
         title: section.title.trim(),
         content: section.content,
         ...(section.kind ? { kind: section.kind } : {}),
@@ -190,7 +206,7 @@ export const normalizeClinicalRecord = (
 export const sanitizeClinicalRecord = (record: ClinicalRecord): { record: ClinicalRecord; warnings: string[] } => {
     const warnings = new Set<string>();
 
-    const sanitizedSections = record.sections.map(section => {
+    const sanitizedSections = record.sections.map((section, index) => {
         const sanitized = sanitizeClinicalHtml(section.content);
         sanitized.warnings.forEach(warning => warnings.add(warning));
         if (!section.id.trim()) {
@@ -199,7 +215,7 @@ export const sanitizeClinicalRecord = (record: ClinicalRecord): { record: Clinic
 
         return {
             ...section,
-            id: section.id.trim() || generateSectionId(),
+            id: buildDeterministicSectionId(section, index),
             title: section.title.trim(),
             content: sanitized.html,
         };
