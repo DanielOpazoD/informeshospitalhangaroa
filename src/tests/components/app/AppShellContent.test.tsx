@@ -217,13 +217,6 @@ const createSpies = () => {
         handleToolbarCommand,
         onOpenCartola: vi.fn(),
         aiAssistantPanel: <div>assistant</div>,
-        hhrHeader: {
-            isEnabled: true,
-            canSave: true,
-            isSaving: false,
-            disabledReason: undefined,
-            onSaveToHhr: vi.fn(),
-        },
         hhrPanel: <div>hhr-panel</div>,
         hhrModal: <div>hhr-modal</div>,
     };
@@ -280,7 +273,6 @@ describe('AppShellContent', () => {
 
         expect(appWorkspaceProps?.driveHeader.hasApiKey).toBe(true);
         expect(appWorkspaceProps?.saveHeader.hasUnsavedChanges).toBe(true);
-        expect(appWorkspaceProps?.hhrHeader.isEnabled).toBe(true);
         expect(appWorkspaceProps?.integrationPanel).toBeTruthy();
 
         fireEvent.click(screen.getByText('open-settings'));

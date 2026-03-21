@@ -5,7 +5,7 @@ import {
     GmailIcon,
     SwitchUserIcon,
     SignOutIcon,
-    LoginIcon,
+    DriveIcon,
 } from './icons';
 
 interface UserAccountMenuProps {
@@ -72,12 +72,12 @@ const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
         return (
             <button
                 onClick={onSignIn}
-                className="action-btn primary"
+                className="action-btn action-btn-plain"
                 type="button"
                 disabled={!isGisReady || !isGapiReady || !tokenClient}
+                title="Conectar Google Drive"
             >
-                <LoginIcon />
-                <span>Iniciar sesión</span>
+                <DriveIcon />
             </button>
         );
     }

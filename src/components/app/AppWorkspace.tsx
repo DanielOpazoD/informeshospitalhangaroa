@@ -5,7 +5,7 @@ import PatientInfo from '../PatientInfo';
 import ClinicalSection from '../ClinicalSection';
 import Footer from '../Footer';
 import { logoUrls } from '../../institutionConfig';
-import type { HeaderAuthProps, HeaderDriveProps, HeaderEditingProps, HeaderHhrProps, HeaderSaveProps } from '../Header';
+import type { HeaderAuthProps, HeaderDriveProps, HeaderEditingProps, HeaderSaveProps } from '../Header';
 
 interface AppWorkspaceProps {
     record: ClinicalRecord;
@@ -13,7 +13,6 @@ interface AppWorkspaceProps {
     driveHeader: HeaderDriveProps;
     editingHeader: HeaderEditingProps;
     saveHeader: HeaderSaveProps;
-    hhrHeader: HeaderHhrProps;
     templateId: string;
     onTemplateChange: (id: string) => void;
     onAddClinicalUpdateSection: () => void;
@@ -50,7 +49,6 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
     driveHeader,
     editingHeader,
     saveHeader,
-    hhrHeader,
     templateId,
     onTemplateChange,
     onAddClinicalUpdateSection,
@@ -93,7 +91,6 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
             drive={driveHeader}
             editing={editingHeader}
             save={saveHeader}
-            hhr={hhrHeader}
         />
         {integrationPanel}
         <div className="workspace">

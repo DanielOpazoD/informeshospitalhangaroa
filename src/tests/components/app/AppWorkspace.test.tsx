@@ -130,13 +130,6 @@ const createProps = (): React.ComponentProps<typeof AppWorkspace> => ({
         onUndo: vi.fn(),
         onRedo: vi.fn(),
     },
-    hhrHeader: {
-        isEnabled: true,
-        canSave: true,
-        isSaving: false,
-        disabledReason: undefined,
-        onSaveToHhr: vi.fn(),
-    },
     templateId: '2',
     onTemplateChange: vi.fn(),
     onAddClinicalUpdateSection: vi.fn(),
@@ -244,7 +237,6 @@ describe('AppWorkspace', () => {
         expect(clinicalSectionProps[0]?.activeEditTarget).toBeNull();
         expect(clinicalSectionProps[1]?.activeEditTarget).toEqual({ type: 'section-title', index: 1 });
         expect(headerProps?.templateId).toBe('2');
-        expect(headerProps?.hhr.isEnabled).toBe(true);
         expect(footerProps?.medico).toBe('Dr. Test');
         expect(footerProps?.especialidad).toBe('Medicina');
         expect(document.getElementById('sheet')?.className).toContain('edit-mode');

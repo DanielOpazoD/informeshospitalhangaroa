@@ -284,6 +284,10 @@ export const useHhrIntegrationController = ({
             onSignOut: handleHhrSignOut,
             onOpenCensusModal: () => setIsHhrCensusModalOpen(true),
             onClearSelectedPatient: handleClearSelectedHhrPatient,
+            canSave: Boolean(canSaveToHhr),
+            isSaving: isSavingToHhr,
+            disabledReason: hhrSaveDisabledReason,
+            onSaveToHhr: handleSaveToHhr,
         },
         hhrModal: {
             isOpen: isHhrCensusModalOpen,

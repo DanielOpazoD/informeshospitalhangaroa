@@ -59,13 +59,6 @@ const createProps = (): React.ComponentProps<typeof Header> => ({
         onUndo: vi.fn(),
         onRedo: vi.fn(),
     },
-    hhr: {
-        isEnabled: true,
-        canSave: true,
-        isSaving: false,
-        disabledReason: undefined,
-        onSaveToHhr: vi.fn(),
-    },
 });
 
 describe('Header', () => {
@@ -95,10 +88,9 @@ describe('Header', () => {
         fireEvent.click(screen.getByLabelText('Abrir aplicaciones'));
         fireEvent.click(screen.getByText('Cartola de medicamentos'));
         fireEvent.change(screen.getByRole('combobox'), { target: { value: '5' } });
-        fireEvent.click(screen.getByText('Act. clínica'));
-        fireEvent.click(screen.getByText('Deshacer'));
-        fireEvent.click(screen.getByText('Rehacer'));
-        fireEvent.click(screen.getByText('Guardar en Ficha HHR'));
+        fireEvent.click(screen.getByTitle('Agregar actualización clínica'));
+        fireEvent.click(screen.getByTitle('Deshacer último cambio persistido'));
+        fireEvent.click(screen.getByTitle('Rehacer cambio revertido'));
         fireEvent.click(screen.getByTitle('Desactivar edición avanzada'));
         fireEvent.click(screen.getByLabelText('Abrir asistente clínico'));
         fireEvent.click(screen.getByText('toolbar-bold'));
@@ -108,7 +100,6 @@ describe('Header', () => {
         expect(props.onAddClinicalUpdateSection).toHaveBeenCalled();
         expect(props.save.onUndo).toHaveBeenCalled();
         expect(props.save.onRedo).toHaveBeenCalled();
-        expect(props.hhr.onSaveToHhr).toHaveBeenCalled();
         expect(props.editing.onToggleAdvancedEditing).toHaveBeenCalled();
         expect(props.editing.onToggleAiAssistant).toHaveBeenCalled();
         expect(props.editing.onToolbarCommand).toHaveBeenCalledWith('bold');
@@ -119,28 +110,28 @@ describe('Header', () => {
         const importClickSpy = vi.spyOn(document.getElementById('importJson') as HTMLButtonElement, 'click');
         render(<Header {...props} />);
 
-        fireEvent.click(screen.getByText('Archivo'));
+        fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Editar estructura'));
-        fireEvent.click(screen.getByText('Archivo'));
+        fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Guardar borrador'));
-        fireEvent.click(screen.getByText('Archivo'));
+        fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Imprimir PDF'));
-        fireEvent.click(screen.getByText('Archivo'));
+        fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Guardar JSON'));
-        fireEvent.click(screen.getByText('Archivo'));
+        fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Historial'));
-        fireEvent.click(screen.getByText('Archivo'));
+        fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Importar'));
-        fireEvent.click(screen.getByText('Archivo'));
+        fireEvent.click(screen.getByLabelText('Archivo'));
         fireEvent.click(screen.getByText('Restablecer planilla'));
 
-        fireEvent.click(screen.getByText('Drive'));
+        fireEvent.click(screen.getByLabelText('Google Drive'));
         fireEvent.click(screen.getByText('Guardar en Drive'));
-        fireEvent.click(screen.getByText('Drive'));
+        fireEvent.click(screen.getByLabelText('Google Drive'));
         fireEvent.click(screen.getByText('Abrir desde Drive'));
 
         fireEvent.click(screen.getByTitle('Desactivar edición avanzada'));
-        fireEvent.click(screen.getByText('⚙️'));
+        fireEvent.click(screen.getByLabelText('Herramientas'));
         fireEvent.click(screen.getByText('Google API'));
 
         expect(props.editing.onToggleEdit).toHaveBeenCalled();

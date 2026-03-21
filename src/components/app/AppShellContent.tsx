@@ -7,7 +7,6 @@ import { useFileOperations } from '../../hooks/useFileOperations';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDrive } from '../../contexts/DriveContext';
 import { useRecordContext } from '../../contexts/RecordContext';
-import type { HeaderHhrProps } from '../Header';
 import AppModals from './AppModals';
 import AppWorkspace from './AppWorkspace';
 
@@ -57,7 +56,6 @@ interface AppShellContentProps {
     handleToolbarCommand: (command: string) => void;
     onOpenCartola: () => void;
     aiAssistantPanel: React.ReactNode;
-    hhrHeader: HeaderHhrProps;
     hhrPanel: React.ReactNode;
     hhrModal: React.ReactNode;
 }
@@ -81,7 +79,6 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
     handleToolbarCommand,
     onOpenCartola,
     aiAssistantPanel,
-    hhrHeader,
     hhrPanel,
     hhrModal,
 }) => (
@@ -226,7 +223,6 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
                 onUndo: recordState.undo,
                 onRedo: recordState.redo,
             }}
-            hhrHeader={hhrHeader}
             templateId={recordState.record.templateId}
             onTemplateChange={handleTemplateChange}
             onAddClinicalUpdateSection={handleAddClinicalUpdateSection}

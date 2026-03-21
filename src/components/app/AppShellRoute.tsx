@@ -55,7 +55,6 @@ const AppShellRoute: React.FC<AppShellRouteProps & { onOpenCartola: () => void }
                     onPanelWidthChange={controller.editorUi.setAiPanelWidth}
                 />
             )}
-            hhrHeader={controller.hhrController.hhrHeader}
             hhrPanel={(
                 <Suspense fallback={null}>
                     <HhrIntegrationPanel {...controller.hhrController.hhrPanel} />

@@ -21,6 +21,8 @@ import {
     RefreshIcon,
     HistoryIcon,
     CalendarPlusIcon,
+    UndoIcon,
+    RedoIcon,
 } from './icons';
 
 /** Props related to Google authentication state */
@@ -89,7 +91,6 @@ interface HeaderProps {
     drive: HeaderDriveProps;
     editing: HeaderEditingProps;
     save: HeaderSaveProps;
-    hhr: HeaderHhrProps;
 }
 
 type ActionMenu = 'archivo' | 'drive' | 'herramientas';
@@ -106,7 +107,6 @@ const Header: React.FC<HeaderProps> = ({
     drive,
     editing,
     save,
-    hhr,
 }) => {
     const {
         isEditing, onToggleEdit,
@@ -263,7 +263,6 @@ const Header: React.FC<HeaderProps> = ({
                                 title="Agregar actualización clínica"
                             >
                                 <CalendarPlusIcon />
-                                <span>Act. clínica</span>
                             </button>
                         </div>
                         <div className={`save-status ${statusState}`}>
@@ -281,7 +280,7 @@ const Header: React.FC<HeaderProps> = ({
                                 disabled={!canUndo}
                                 title={!canUndo ? 'No hay cambios previos para deshacer' : 'Deshacer último cambio persistido'}
                             >
-                                <span>Deshacer</span>
+                                <UndoIcon />
                             </button>
                             <button
                                 type="button"
@@ -290,21 +289,9 @@ const Header: React.FC<HeaderProps> = ({
                                 disabled={!canRedo}
                                 title={!canRedo ? 'No hay cambios posteriores para rehacer' : 'Rehacer cambio revertido'}
                             >
-                                <span>Rehacer</span>
+                                <RedoIcon />
                             </button>
                         </div>
-                        {hhr.isEnabled && (
-                            <button
-                                type="button"
-                                className="action-btn hhr-cloud-save"
-                                onClick={hhr.onSaveToHhr}
-                                disabled={!hhr.canSave || hhr.isSaving}
-                                title={!hhr.canSave ? hhr.disabledReason : 'Guardar borrador clínico en la ficha HHR'}
-                            >
-                                <UploadIcon />
-                                <span>{hhr.isSaving ? 'Guardando HHR…' : 'Guardar en Ficha HHR'}</span>
-                            </button>
-                        )}
                         <button
                             type="button"
                             className={`ai-launch-btn ${isAiAssistantVisible ? 'is-active' : ''}`}
@@ -329,9 +316,10 @@ const Header: React.FC<HeaderProps> = ({
                             onClick={() => toggleActionMenu('archivo')}
                             aria-haspopup="true"
                             aria-expanded={openActionMenu === 'archivo'}
+                            aria-label="Archivo"
+                            title="Archivo"
                         >
                             <FileGroupIcon />
-                            <span>Archivo</span>
                             <ChevronDownIcon />
                         </button>
                         {openActionMenu === 'archivo' && (
@@ -400,9 +388,10 @@ const Header: React.FC<HeaderProps> = ({
                             onClick={() => toggleActionMenu('drive')}
                             aria-haspopup="true"
                             aria-expanded={openActionMenu === 'drive'}
+                            aria-label="Google Drive"
+                            title="Google Drive"
                         >
                             <DriveIcon />
-                            <span>Drive</span>
                             <ChevronDownIcon />
                         </button>
                         {openActionMenu === 'drive' && (
@@ -430,6 +419,8 @@ const Header: React.FC<HeaderProps> = ({
                             onClick={() => toggleActionMenu('herramientas')}
                             aria-haspopup="true"
                             aria-expanded={openActionMenu === 'herramientas'}
+                            aria-label="Herramientas"
+                            title="Herramientas"
                         >
                             <span aria-hidden="true" className="action-icon-emoji">⚙️</span>
                             <ChevronDownIcon />

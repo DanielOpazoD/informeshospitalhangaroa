@@ -25,21 +25,21 @@ function renderMenu(overrides = {}) {
 
 describe('UserAccountMenu', () => {
     describe('when signed out', () => {
-        it('renders a "Iniciar sesión" button', () => {
+        it('renders a login button for Drive', () => {
             renderMenu({ isSignedIn: false });
-            expect(screen.getByText('Iniciar sesión')).toBeDefined();
+            expect(screen.getByTitle('Conectar Google Drive')).toBeDefined();
         });
 
         it('disables login when GIS is not ready', () => {
             renderMenu({ isSignedIn: false, isGisReady: false });
-            const button = screen.getByText('Iniciar sesión').closest('button');
-            expect(button?.disabled).toBe(true);
+            const button = screen.getByTitle('Conectar Google Drive');
+            expect((button as HTMLButtonElement).disabled).toBe(true);
         });
 
         it('calls onSignIn when login button is clicked', () => {
             const onSignIn = vi.fn();
             renderMenu({ isSignedIn: false, onSignIn });
-            fireEvent.click(screen.getByText('Iniciar sesión'));
+            fireEvent.click(screen.getByTitle('Conectar Google Drive'));
             expect(onSignIn).toHaveBeenCalledOnce();
         });
     });
