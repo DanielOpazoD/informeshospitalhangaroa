@@ -68,8 +68,12 @@ export interface DriveSearchResult {
 export interface AppError {
     source: 'drive' | 'auth' | 'hhr' | 'import';
     code: string;
+    operation: string;
     message: string;
+    transient: boolean;
     retryable: boolean;
+    httpStatus?: number;
+    details?: string[];
 }
 
 export type AppResult<T> =
@@ -119,12 +123,13 @@ export type ClinicalRecordCommandCategory =
     | 'persistence';
 
 export type EditorEffect =
-    | { type: 'reset_hhr_sync' }
-    | { type: 'show_warning'; message: string }
-    | { type: 'close_open_modal' }
-    | { type: 'close_history_modal' }
-    | { type: 'mark_import_completed' }
-    | { type: 'mark_restore_completed' };
+    | { type: 'reset_hhr_sync'; priority?: number }
+    | { type: 'show_warning'; message: string; dedupeKey?: string; priority?: number }
+    | { type: 'show_toast'; message: string; tone: 'success' | 'warning' | 'error'; dedupeKey?: string; priority?: number }
+    | { type: 'close_modal'; modal: 'open' | 'history' | 'save' | 'hhr_census'; priority?: number }
+    | { type: 'request_focus'; target: 'record-title' | 'history' | 'patient' | 'section'; priority?: number }
+    | { type: 'request_confirmation'; confirmationId: string; title: string; message: string; confirmLabel: string; cancelLabel: string; tone: 'warning' | 'danger' | 'info'; priority?: number }
+    | { type: 'log_audit_event'; event: string; details?: string; priority?: number };
 
 export interface HistoryEntryMetadata {
     commandType: ClinicalRecordCommandType;

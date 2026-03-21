@@ -32,7 +32,8 @@ describe('editorUseCases', () => {
 
         expect(result.commandResult.ok).toBe(true);
         expect(result.workflowActions).toEqual([{ type: 'IMPORT_STARTED' }, { type: 'IMPORT_SUCCEEDED' }]);
-        expect(result.effects.some(effect => effect.type === 'close_open_modal')).toBe(true);
+        expect(result.effects).toContainEqual({ type: 'close_modal', modal: 'open', priority: 60 });
+        expect(result.effects.some(effect => effect.type === 'show_toast')).toBe(true);
     });
 
     it('propaga cierre de historial al restaurar una entrada', () => {
@@ -45,14 +46,14 @@ describe('editorUseCases', () => {
         const result = executeRestoreHistoryEntry(buildRecord(), workflowState, entry);
 
         expect(result.commandResult.ok).toBe(true);
-        expect(result.effects.some(effect => effect.type === 'close_history_modal')).toBe(true);
+        expect(result.effects).toContainEqual({ type: 'close_modal', modal: 'history', priority: 60 });
     });
 
     it('emite reset_hhr_sync al restablecer la ficha', () => {
         const result = executeResetRecord(buildRecord(), workflowState, '2');
 
         expect(result.commandResult.ok).toBe(true);
-        expect(result.effects).toContainEqual({ type: 'reset_hhr_sync' });
+        expect(result.effects).toContainEqual({ type: 'reset_hhr_sync', priority: 40 });
     });
 
     it('construye metadata semántica al guardar borradores', () => {
@@ -76,7 +77,7 @@ describe('editorUseCases', () => {
         }, '2026-03-21');
 
         expect(result.commandResult.ok).toBe(true);
-        expect(result.effects).toContainEqual({ type: 'reset_hhr_sync' });
+        expect(result.effects).toContainEqual({ type: 'reset_hhr_sync', priority: 40 });
     });
 
     it('bloquea sync HHR cuando el workflow está ocupado', () => {

@@ -19,15 +19,24 @@ const isRetryableHhrError = (error: unknown): boolean => {
     return !message.includes('permission') && !message.includes('unauthorized');
 };
 
-const toHhrError = (error: unknown, fallbackMessage: string, code: string): AppResult<never> => ({
+const toHhrError = (error: unknown, fallbackMessage: string, operation: string, code: string): AppResult<never> => ({
     ok: false,
     error: {
         source: 'hhr',
         code,
+        operation,
         message: error instanceof Error ? error.message : fallbackMessage,
+        transient: isRetryableHhrError(error),
         retryable: isRetryableHhrError(error),
+        httpStatus: typeof (error as { status?: unknown })?.status === 'number' ? (error as { status: number }).status : undefined,
+        details: [fallbackMessage],
     },
 });
+
+const logGatewayEvent = (label: string) => (event: { type: string; attempt: number; error?: string }) => {
+    const suffix = event.error ? ` (${event.error})` : '';
+    console.warn(`[hhr-gateway] ${label} :: ${event.type} intento ${event.attempt}${suffix}`);
+};
 
 export interface HhrGateway {
     signIn: () => Promise<AppResult<HhrAuthenticatedUser>>;
@@ -56,11 +65,12 @@ export const createHhrGateway = (): HhrGateway => ({
                         timeoutMs: GATEWAY_TIMEOUT_MS,
                         label: 'Inicio de sesión HHR',
                         shouldRetry: isRetryableHhrError,
+                        onEvent: logGatewayEvent('sign_in'),
                     },
                 ),
             };
         } catch (error) {
-            return toHhrError(error, 'No fue posible iniciar sesión en HHR.', 'sign_in');
+            return toHhrError(error, 'No fue posible iniciar sesión en HHR.', 'sign_in', 'sign_in');
         }
     },
     signOut: async () => {
@@ -72,11 +82,12 @@ export const createHhrGateway = (): HhrGateway => ({
                     timeoutMs: GATEWAY_TIMEOUT_MS,
                     label: 'Cierre de sesión HHR',
                     shouldRetry: isRetryableHhrError,
+                    onEvent: logGatewayEvent('sign_out'),
                 },
             );
             return { ok: true, data: undefined };
         } catch (error) {
-            return toHhrError(error, 'No fue posible cerrar sesión en HHR.', 'sign_out');
+            return toHhrError(error, 'No fue posible cerrar sesión en HHR.', 'sign_out', 'sign_out');
         }
     },
     subscribeAuthState: (onUser, onError) => subscribeToHhrAuthState(onUser, onError),
@@ -91,11 +102,12 @@ export const createHhrGateway = (): HhrGateway => ({
                         timeoutMs: GATEWAY_TIMEOUT_MS,
                         label: 'Guardado clínico HHR',
                         shouldRetry: isRetryableHhrError,
+                        onEvent: logGatewayEvent('save_document'),
                     },
                 ),
             };
         } catch (error) {
-            return toHhrError(error, 'No fue posible guardar el documento clínico en HHR.', 'save_document');
+            return toHhrError(error, 'No fue posible guardar el documento clínico en HHR.', 'save_document', 'save_document');
         }
     },
 });

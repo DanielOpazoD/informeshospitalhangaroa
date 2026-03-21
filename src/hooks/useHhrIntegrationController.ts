@@ -137,12 +137,16 @@ export const useHhrIntegrationController = ({
         interpretEditorEffects(useCase.effects, {
             onResetHhrSync: clearSyncState,
             onShowWarning: message => showToast(message, 'warning'),
+            onShowToast: (message, tone) => showToast(message, tone),
+            onRequestFocus: () => {
+                document.getElementById('sheet')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            },
+            onLogAuditEvent: effect => console.warn(`[editor-audit] ${effect.event}`, effect.details ?? ''),
         });
         setHasUnsavedChanges(true);
         setSelectedHhrPatient(patient);
         clearSyncState();
         setIsHhrCensusModalOpen(false);
-        showToast(useCase.userMessage || `Paciente ${patient.patientName} cargado desde HHR.`);
     }, [clearSyncState, dispatchRecordCommand, hhrDateKey, markRecordAsReplaced, record, setHasUnsavedChanges, showToast, workflowState]);
 
     const handleClearSelectedHhrPatient = useCallback(() => {

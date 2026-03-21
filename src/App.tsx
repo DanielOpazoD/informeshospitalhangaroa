@@ -24,8 +24,6 @@ import { RecordProvider, useRecordContext } from './contexts/RecordContext';
 import { generatePdfAsBlob } from './utils/pdfGenerator';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AppShellContent from './components/app/AppShellContent';
-import HhrIntegrationPanel from './components/hhr/HhrIntegrationPanel';
-import HhrCensusModal from './components/hhr/HhrCensusModal';
 import {
     buildClinicalUpdateSection,
     createTemplateBaseline,
@@ -34,6 +32,8 @@ import {
 
 const CartolaMedicamentosView = lazy(() => import('./components/CartolaMedicamentosView'));
 const AIAssistant = lazy(() => import('./components/AIAssistant'));
+const HhrIntegrationPanel = lazy(() => import('./components/hhr/HhrIntegrationPanel'));
+const HhrCensusModal = lazy(() => import('./components/hhr/HhrCensusModal'));
 
 const ENV_GEMINI_API_KEY = getEnvGeminiApiKey();
 const ENV_GEMINI_PROJECT_ID = getEnvGeminiProjectId();
@@ -49,10 +49,14 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
         hasUnsavedChanges,
         setHasUnsavedChanges,
         versionHistory,
+        canUndo,
+        canRedo,
         isHistoryModalOpen,
         setIsHistoryModalOpen,
         saveDraft,
         handleRestoreHistoryEntry,
+        undo,
+        redo,
         markRecordAsReplaced,
         workflowState,
         dispatchWorkflow,
@@ -206,13 +210,14 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
             interpretEditorEffects(useCase.effects.length ? useCase.effects : result.effects, {
                 onResetHhrSync: resetSyncState,
                 onShowWarning: message => showToast(message, 'warning'),
+                onShowToast: (message, tone) => showToast(message, tone),
+                onLogAuditEvent: effect => console.warn(`[editor-audit] ${effect.event}`, effect.details ?? ''),
             });
             if (!result.ok) {
                 showToast(result.errors.join('\n') || 'No se pudo restablecer el formulario.', 'error');
                 return;
             }
             setHasUnsavedChanges(true);
-            showToast(useCase.userMessage || 'Formulario restablecido.', 'warning');
         })();
     }, [confirm, dispatchRecordCommand, markRecordAsReplaced, record, resetSyncState, setHasUnsavedChanges, showToast, workflowState]);
 
@@ -254,9 +259,13 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
                 record,
                 hasUnsavedChanges,
                 versionHistory,
+                canUndo,
+                canRedo,
                 isHistoryModalOpen,
                 setIsHistoryModalOpen,
                 handleRestoreHistoryEntry,
+                undo,
+                redo,
                 isEditing,
                 isGlobalStructureEditing,
                 activeEditTarget,
@@ -285,14 +294,18 @@ const AppShell: React.FC<AppShellProps> = ({ toast, showToast, clientId, setClie
             aiAssistantPanel={appWorkspaceAiAssistant}
             hhrHeader={hhrController.hhrHeader}
             hhrPanel={
-                <HhrIntegrationPanel
-                    {...hhrController.hhrPanel}
-                />
+                <Suspense fallback={null}>
+                    <HhrIntegrationPanel
+                        {...hhrController.hhrPanel}
+                    />
+                </Suspense>
             }
             hhrModal={
-                <HhrCensusModal
-                    {...hhrController.hhrModal}
-                />
+                <Suspense fallback={null}>
+                    <HhrCensusModal
+                        {...hhrController.hhrModal}
+                    />
+                </Suspense>
             }
         />
     );

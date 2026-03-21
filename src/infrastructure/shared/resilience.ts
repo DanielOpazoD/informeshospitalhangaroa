@@ -4,6 +4,14 @@ export interface ResilienceOptions {
     label: string;
     shouldRetry?: (error: unknown) => boolean;
     backoffMs?: number;
+    onEvent?: (event: ResilienceEvent) => void;
+}
+
+export interface ResilienceEvent {
+    type: 'start' | 'retry' | 'success' | 'timeout' | 'failed';
+    label: string;
+    attempt: number;
+    error?: string;
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -39,15 +47,27 @@ export const runWithResilience = async <T>(
         label,
         shouldRetry = () => false,
         backoffMs = 150,
+        onEvent,
     }: ResilienceOptions,
 ): Promise<T> => {
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
         try {
-            return await withTimeout(operation(), timeoutMs, label);
+            onEvent?.({ type: 'start', label, attempt });
+            const result = await withTimeout(operation(), timeoutMs, label);
+            onEvent?.({ type: 'success', label, attempt });
+            return result;
         } catch (error) {
             lastError = error;
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isTimeout = errorMessage.toLowerCase().includes('tiempo de espera');
+            onEvent?.({
+                type: isTimeout ? 'timeout' : attempt >= attempts || !shouldRetry(error) ? 'failed' : 'retry',
+                label,
+                attempt,
+                error: errorMessage,
+            });
             if (attempt >= attempts || !shouldRetry(error)) {
                 throw error;
             }

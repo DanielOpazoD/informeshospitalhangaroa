@@ -61,8 +61,12 @@ export interface HeaderSaveProps {
     saveStatusLabel: string;
     lastSaveTime: string;
     hasUnsavedChanges: boolean;
+    canUndo: boolean;
+    canRedo: boolean;
     onQuickSave: () => void;
     onOpenHistory: () => void;
+    onUndo: () => void;
+    onRedo: () => void;
 }
 
 export interface HeaderHhrProps {
@@ -119,7 +123,8 @@ const Header: React.FC<HeaderProps> = ({
     } = drive;
     const {
         saveStatusLabel, lastSaveTime, hasUnsavedChanges,
-        onQuickSave, onOpenHistory,
+        canUndo, canRedo,
+        onQuickSave, onOpenHistory, onUndo, onRedo,
     } = save;
     const [isLauncherOpen, setIsLauncherOpen] = useState(false);
     const [openActionMenu, setOpenActionMenu] = useState<ActionMenu | null>(null);
@@ -267,6 +272,26 @@ const Header: React.FC<HeaderProps> = ({
                                 <div className="status-label">{saveStatusLabel}</div>
                                 {!hasUnsavedChanges && lastSaveTime && <div className="status-meta">Último guardado: {lastSaveTime}</div>}
                             </div>
+                        </div>
+                        <div className="topbar-group">
+                            <button
+                                type="button"
+                                className="action-btn action-btn-plain"
+                                onClick={onUndo}
+                                disabled={!canUndo}
+                                title={!canUndo ? 'No hay cambios previos para deshacer' : 'Deshacer último cambio persistido'}
+                            >
+                                <span>Deshacer</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="action-btn action-btn-plain"
+                                onClick={onRedo}
+                                disabled={!canRedo}
+                                title={!canRedo ? 'No hay cambios posteriores para rehacer' : 'Rehacer cambio revertido'}
+                            >
+                                <span>Rehacer</span>
+                            </button>
                         </div>
                         {hhr.isEnabled && (
                             <button

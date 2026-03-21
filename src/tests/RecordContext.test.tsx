@@ -144,7 +144,7 @@ describe('RecordContext', () => {
 
         expect(values.get(LOCAL_STORAGE_KEYS.draft)).toContain('Nuevo título');
         expect(values.get(LOCAL_STORAGE_KEYS.history)).toContain('Nuevo título');
-        expect(showToast).toHaveBeenCalledWith('Borrador guardado localmente.');
+        expect(showToast).toHaveBeenCalledWith('Borrador guardado localmente.', 'success');
     });
 
     it('agrupa entradas consecutivas del historial dentro de la ventana configurada', () => {
@@ -173,5 +173,46 @@ describe('RecordContext', () => {
         const persistedHistory = JSON.parse(values.get(LOCAL_STORAGE_KEYS.history) || '[]');
         expect(persistedHistory).toHaveLength(1);
         expect(persistedHistory[0]?.metadata?.groupKey).toBe('save:manual');
+    });
+
+    it('expone undo y redo sobre snapshots persistidos', () => {
+        const { values, restore } = installMockWindowStorage();
+        storageRestorers.push(restore);
+        const { result } = renderHook(() => useRecordContext(), { wrapper });
+
+        vi.spyOn(Date, 'now')
+            .mockReturnValueOnce(10_000)
+            .mockReturnValueOnce(200_000)
+            .mockReturnValueOnce(400_000)
+            .mockReturnValueOnce(600_000);
+
+        act(() => {
+            result.current.dispatchRecordCommand({ type: 'change_record_title', title: 'Versión A' });
+            result.current.saveDraft('manual');
+        });
+
+        act(() => {
+            result.current.dispatchRecordCommand({ type: 'change_record_title', title: 'Versión B' });
+            result.current.saveDraft('manual');
+        });
+
+        expect(result.current.canUndo).toBe(true);
+        expect(result.current.canRedo).toBe(false);
+        expect(result.current.record.title).toBe('Versión B');
+
+        act(() => {
+            result.current.undo();
+        });
+
+        expect(result.current.record.title).toBe('Versión A');
+        expect(result.current.canRedo).toBe(true);
+
+        act(() => {
+            result.current.redo();
+        });
+
+        expect(result.current.record.title).toBe('Versión B');
+        expect(result.current.canUndo).toBe(true);
+        expect(values.get(LOCAL_STORAGE_KEYS.draft)).toContain('Versión B');
     });
 });

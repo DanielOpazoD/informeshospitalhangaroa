@@ -123,8 +123,12 @@ const createProps = (): React.ComponentProps<typeof AppWorkspace> => ({
         saveStatusLabel: 'Guardado',
         lastSaveTime: '10:30',
         hasUnsavedChanges: true,
+        canUndo: true,
+        canRedo: true,
         onQuickSave: vi.fn(),
         onOpenHistory: vi.fn(),
+        onUndo: vi.fn(),
+        onRedo: vi.fn(),
     },
     hhrHeader: {
         isEnabled: true,

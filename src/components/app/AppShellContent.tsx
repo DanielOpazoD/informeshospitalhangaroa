@@ -24,9 +24,13 @@ interface AppShellContentProps {
         | 'record'
         | 'hasUnsavedChanges'
         | 'versionHistory'
+        | 'canUndo'
+        | 'canRedo'
         | 'isHistoryModalOpen'
         | 'setIsHistoryModalOpen'
         | 'handleRestoreHistoryEntry'
+        | 'undo'
+        | 'redo'
         | 'isEditing'
         | 'isGlobalStructureEditing'
         | 'activeEditTarget'
@@ -214,8 +218,12 @@ const AppShellContent: React.FC<AppShellContentProps> = ({
                 saveStatusLabel: editorUi.saveStatusLabel,
                 lastSaveTime: editorUi.lastSaveTime,
                 hasUnsavedChanges: recordState.hasUnsavedChanges,
+                canUndo: recordState.canUndo,
+                canRedo: recordState.canRedo,
                 onQuickSave: fileOperations.handleManualSave,
                 onOpenHistory: () => recordState.setIsHistoryModalOpen(true),
+                onUndo: recordState.undo,
+                onRedo: recordState.redo,
             }}
             hhrHeader={hhrHeader}
             templateId={recordState.record.templateId}

@@ -132,11 +132,14 @@ export function useDriveModals({
             saveDraft('import', result.record);
             interpretEditorEffects(useCase.effects, {
                 onShowWarning: message => showToast(message, 'warning'),
-                onCloseOpenModal: () => setIsOpenModalOpen(false),
+                onShowToast: (message, tone) => showToast(message, tone),
+                onCloseModal: (modal) => {
+                    if (modal === 'open') {
+                        setIsOpenModalOpen(false);
+                    }
+                },
+                onLogAuditEvent: effect => console.warn(`[editor-audit] ${effect.event}`, effect.details ?? ''),
             });
-            if (!useCase.effects.some(effect => effect.type === 'close_open_modal')) {
-                setIsOpenModalOpen(false);
-            }
         } catch (error) {
             dispatchWorkflow?.({ type: 'IMPORT_FAILED', error: buildContextualErrorMessage(`No se pudo abrir "${file.name}"`, error) });
             showToast(buildContextualErrorMessage(`No se pudo abrir "${file.name}"`, error), 'error');

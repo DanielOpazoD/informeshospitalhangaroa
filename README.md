@@ -64,6 +64,7 @@ npm run check:bundle
 
 El editor principal además usa un workflow central (`idle`, `dirty`, `saving`, `restoring`, `importing`, `searching_drive`, `syncing_hhr`, `error`) para mantener coherentes autoguardado, restauración e integraciones remotas.
 Las operaciones críticas ahora pasan además por comandos clínicos explícitos y casos de uso de editor, que devuelven `effects` declarativos para separar decisión de negocio y reacciones de UI.
+El header expone `Deshacer` / `Rehacer` sobre snapshots persistidos, reutilizando exactamente el mismo pipeline clínico que la restauración desde historial.
 
 ### Personaliza el nombre y los logos de la institución
 
@@ -119,7 +120,23 @@ npm run check:bundle
 
 La compilación ahora separa chunks por dominio (`react`, `router`, `drive`, `auth`, `hhr`, `ai`, `cartola`, `pdf`) para reducir el peso del shell principal.
 
-Opcionalmente, ajusta el límite con `MAX_MAIN_CHUNK_KB` (por defecto: `800`).
+El chequeo valida además presupuestos por dominio:
+
+- `index`: `200 kB`
+- `google`: `120 kB`
+- `hhr`: `520 kB`
+- `pdf`: `650 kB`
+- `ai`: `180 kB`
+- `cartola`: `220 kB`
+
+Opcionalmente, ajusta el límite global con `MAX_MAIN_CHUNK_KB` (por defecto: `800`) o los límites por dominio con `MAX_INDEX_CHUNK_KB`, `MAX_GOOGLE_CHUNK_KB`, `MAX_HHR_CHUNK_KB`, `MAX_PDF_CHUNK_KB`, `MAX_AI_CHUNK_KB` y `MAX_CARTOLA_CHUNK_KB`.
+
+## Troubleshooting operativo
+
+- Importación inválida: si un JSON no supera parseo, migración o sanitización, el editor conserva el documento actual y muestra error sin romper la sesión.
+- Drive parcial: la búsqueda profunda puede responder con `partial = true` cuando se cancela, supera el presupuesto de tiempo o alcanza el límite de archivos inspeccionados.
+- Guardado HHR fallido: la UI consume `AppError` enriquecido con `operation`, `transient`, `httpStatus?` y `details?`; reintentar manualmente solo tiene sentido cuando `transient = true`.
+- Google Auth: el perfil intenta primero la API remota con timeout/retry; si eso falla y existe `id_token`, se completa el perfil localmente.
 
 ## Flujo de edición resumido
 
@@ -131,4 +148,15 @@ flowchart LR
     Command --> Domain["Pipeline clínico"]
     Effects --> Interpreter["Intérprete React"]
     Interpreter --> Workflow["Workflow + Persistencia"]
+```
+
+## Flujo resumido de integraciones
+
+```mermaid
+flowchart LR
+    UI["UI / Contexto"] --> Gateway["Gateway"]
+    Gateway --> Resilience["Timeout + retry"]
+    Resilience --> Provider["Drive / Google / HHR"]
+    Provider --> Result["AppResult / AppError"]
+    Result --> UI
 ```

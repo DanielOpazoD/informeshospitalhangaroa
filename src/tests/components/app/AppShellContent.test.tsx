@@ -31,6 +31,8 @@ vi.mock('../../../components/app/AppWorkspace', () => ({
                 <button onClick={props.driveHeader.onOpenFromDrive}>open-drive</button>
                 <button onClick={props.driveHeader.onSaveToDrive}>save-drive</button>
                 <button onClick={props.saveHeader.onOpenHistory}>open-history</button>
+                <button onClick={props.saveHeader.onUndo}>undo</button>
+                <button onClick={props.saveHeader.onRedo}>redo</button>
                 <button onClick={() => props.editingHeader.onToolbarCommand('bold')}>toolbar-command</button>
                 <div>workspace</div>
             </div>
@@ -48,6 +50,8 @@ const createSpies = () => {
     const openSettingsModal = vi.fn();
     const setIsHistoryModalOpen = vi.fn();
     const handleToolbarCommand = vi.fn();
+    const undo = vi.fn();
+    const redo = vi.fn();
 
     const props: React.ComponentProps<typeof AppShellContent> = {
         toast: { type: 'success', message: 'ok' },
@@ -178,9 +182,13 @@ const createSpies = () => {
             },
             hasUnsavedChanges: true,
             versionHistory: [],
+            canUndo: true,
+            canRedo: true,
             isHistoryModalOpen: false,
             setIsHistoryModalOpen,
             handleRestoreHistoryEntry: vi.fn(),
+            undo,
+            redo,
             isEditing: false,
             isGlobalStructureEditing: false,
             activeEditTarget: null,
@@ -230,6 +238,8 @@ const createSpies = () => {
             openSettingsModal,
             setIsHistoryModalOpen,
             handleToolbarCommand,
+            undo,
+            redo,
         },
     };
 };
@@ -275,12 +285,16 @@ describe('AppShellContent', () => {
         fireEvent.click(screen.getByText('open-drive'));
         fireEvent.click(screen.getByText('save-drive'));
         fireEvent.click(screen.getByText('open-history'));
+        fireEvent.click(screen.getByText('undo'));
+        fireEvent.click(screen.getByText('redo'));
         fireEvent.click(screen.getByText('toolbar-command'));
 
         expect(spies.openSettingsModal).toHaveBeenCalled();
         expect(props.driveModals.handleOpenFromDrive).toHaveBeenCalled();
         expect(spies.openSaveModal).toHaveBeenCalled();
         expect(spies.setIsHistoryModalOpen).toHaveBeenCalledWith(true);
+        expect(spies.undo).toHaveBeenCalled();
+        expect(spies.redo).toHaveBeenCalled();
         expect(spies.handleToolbarCommand).toHaveBeenCalled();
     });
 });

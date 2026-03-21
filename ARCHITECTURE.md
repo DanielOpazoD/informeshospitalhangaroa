@@ -59,18 +59,20 @@ Se usa `react-router-dom` para separar vistas pesadas:
 ## 8. Casos De Uso Y Gateways
 - `application/clinicalRecordCommands.ts` concentra el modelo de comandos, políticas por estado, metadata de historial y efectos declarativos.
 - `application/editorUseCases.ts` resuelve importación, restauración, save draft, reset, carga HHR y preflight de sincronización.
-- `application/editorEffects.ts` interpreta effects en capa React sin mezclar decisión de negocio con side effects.
+- `application/editorEffects.ts` interpreta effects en capa React, deduplica reacciones compatibles y ordena prioridad sin mezclar decisión de negocio con side effects.
 - `application/clinicalRecordUseCases.ts` mantiene utilidades puras y compatibilidad con contratos anteriores.
 - `application/editorWorkflow.ts` centraliza el estado operativo del editor sin acoplarlo a componentes concretos.
 - `infrastructure/auth/googleAuthGateway.ts` aísla el acceso a `window.google` y `window.gapi` del `AuthContext`.
 - `infrastructure/hhr/hhrGateway.ts` envuelve login, logout y persistencia clínica HHR con resultados tipados.
 - `infrastructure/shared/resilience.ts` centraliza timeouts y retries para Drive, Auth y HHR.
+- Los gateways enriquecen `AppError` con `operation`, `transient`, `httpStatus?` y `details?` para que la UI no infiera contexto desde strings ambiguos.
 
 ## 9. Historial Local Inteligente
 - Cada entrada local puede incluir `commandType`, `commandCategory`, `changed`, `summary` y `groupKey`.
 - Los snapshots redundantes no se persisten.
 - Cambios consecutivos compatibles dentro de una ventana de 2 minutos se agrupan en una sola entrada.
-- Internamente `useClinicalRecord` ya mantiene una estructura `past/present/future` para preparar undo/redo futuro sin exponer todavía esa UI.
+- `useClinicalRecord` mantiene `past/present/future` como fuente de verdad y expone `undo`, `redo`, `canUndo` y `canRedo` a `RecordContext`.
+- Restaurar desde historial, deshacer y rehacer usan el mismo pipeline clínico oficial antes de persistir draft e historial.
 
 ## 10. Flujo Resumido
 ```mermaid
@@ -83,3 +85,19 @@ flowchart LR
     Effects --> Interpreter["Effect interpreter"]
     Interpreter --> Persistence["Draft / History / Modals / Sync state"]
 ```
+
+## 11. Flujo De Integraciones Externas
+```mermaid
+flowchart LR
+    UI["UI / Context"] --> Gateway["Gateway tipado"]
+    Gateway --> Resilience["Timeout + retry + trazas"]
+    Resilience --> Provider["Drive / Google / HHR"]
+    Provider --> Result["AppResult / AppError"]
+    Result --> UI
+```
+
+## 12. Troubleshooting Rápido
+- Importación inválida: revisar `loadClinicalRecord`; si el JSON no supera parseo/migración/sanitización, el editor conserva el documento actual.
+- Guardado HHR fallido: inspeccionar `error.operation`, `error.transient` y `error.details`; solo errores transient deberían reintentarse.
+- Drive parcial: la búsqueda profunda puede devolver `partial = true` por cancelación, límite de archivos o presupuesto de tiempo.
+- Google Auth: si falla `fetch_profile`, el gateway intenta perfil remoto con retry y luego fallback al `id_token` antes de devolver error.

@@ -80,8 +80,9 @@ export function useFileOperations({
                     saveDraft('import', normalizedRecord);
                     interpretEditorEffects(useCase.effects, {
                         onShowWarning: message => showToast(message, 'warning'),
+                        onShowToast: (message, tone) => showToast(message, tone),
+                        onLogAuditEvent: effect => console.warn(`[editor-audit] ${effect.event}`, effect.details ?? ''),
                     });
-                    showToast(useCase.userMessage || 'Borrador importado correctamente.');
                 } else {
                     showToast(result.errors.join('\n') || 'Archivo JSON inválido.', 'error');
                 }

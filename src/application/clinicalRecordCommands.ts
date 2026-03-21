@@ -80,7 +80,7 @@ export const buildHistoryMetadata = (
 });
 
 const warningEffects = (warnings: string[]): EditorEffect[] =>
-    warnings.map(message => ({ type: 'show_warning', message }));
+    warnings.map(message => ({ type: 'show_warning', message, dedupeKey: message, priority: 70 }));
 
 const success = (
     record: ClinicalRecord,
@@ -396,13 +396,25 @@ export const executeClinicalRecordCommand = (
                 [command.field]: command.value,
             }, metadata);
         case 'reset_record':
-            return finalizeRecord(record, createTemplateBaseline(command.templateId), metadata, [{ type: 'reset_hhr_sync' }]);
+            return finalizeRecord(record, createTemplateBaseline(command.templateId), metadata, [
+                { type: 'reset_hhr_sync', priority: 40 },
+                { type: 'log_audit_event', event: 'record.reset', details: `template:${command.templateId}`, priority: 10 },
+            ]);
         case 'apply_hhr_patient':
-            return finalizeRecord(record, applyHhrPatientToRecord(record, command.patient, command.todayKey), metadata, [{ type: 'reset_hhr_sync' }]);
+            return finalizeRecord(record, applyHhrPatientToRecord(record, command.patient, command.todayKey), metadata, [
+                { type: 'reset_hhr_sync', priority: 40 },
+                { type: 'log_audit_event', event: 'hhr.patient_applied', details: command.patient.patientName, priority: 10 },
+            ]);
         case 'replace_record_from_import':
-            return finalizeLoadedRecord(record, command.value, metadata, [{ type: 'mark_import_completed' }]);
+            return finalizeLoadedRecord(record, command.value, metadata, [
+                { type: 'log_audit_event', event: 'record.imported', priority: 10 },
+            ]);
         case 'replace_record_from_history':
-            return finalizeLoadedRecord(record, command.entry.record, metadata, [{ type: 'mark_restore_completed' }, { type: 'close_history_modal' }, { type: 'reset_hhr_sync' }]);
+            return finalizeLoadedRecord(record, command.entry.record, metadata, [
+                { type: 'close_modal', modal: 'history', priority: 60 },
+                { type: 'reset_hhr_sync', priority: 40 },
+                { type: 'log_audit_event', event: 'record.restored', details: command.entry.id, priority: 10 },
+            ]);
         default:
             return failure(record, metadata, ['El comando clínico solicitado no está soportado.']);
     }

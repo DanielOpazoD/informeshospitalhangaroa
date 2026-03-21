@@ -13,15 +13,24 @@ const isRetryableAuthError = (error: unknown): boolean => {
     return !message.includes('init') && !message.includes('popup_closed_by_user');
 };
 
-const toAuthError = (error: unknown, fallbackMessage: string, code: string): AppResult<never> => ({
+const toAuthError = (error: unknown, fallbackMessage: string, operation: string, code: string): AppResult<never> => ({
     ok: false,
     error: {
         source: 'auth',
         code,
+        operation,
         message: error instanceof Error ? error.message : fallbackMessage,
+        transient: isRetryableAuthError(error),
         retryable: isRetryableAuthError(error),
+        httpStatus: typeof (error as { status?: unknown })?.status === 'number' ? (error as { status: number }).status : undefined,
+        details: [fallbackMessage],
     },
 });
+
+const logGatewayEvent = (label: string) => (event: { type: string; attempt: number; error?: string }) => {
+    const suffix = event.error ? ` (${event.error})` : '';
+    console.warn(`[auth-gateway] ${label} :: ${event.type} intento ${event.attempt}${suffix}`);
+};
 
 export interface GoogleAuthGateway {
     createTokenClient: (clientId: string, scope: string, callback: (response: GoogleTokenResponse) => void) => AppResult<GoogleTokenClient>;
@@ -42,7 +51,7 @@ export const createGoogleAuthGateway = (): GoogleAuthGateway => ({
             });
             return { ok: true, data: client };
         } catch (error) {
-            return toAuthError(error, 'No se pudo inicializar el cliente de Google.', 'init_token_client');
+            return toAuthError(error, 'No se pudo inicializar el cliente de Google.', 'init_token_client', 'init_token_client');
         }
     },
     setAccessToken: (accessToken) => {
@@ -67,8 +76,14 @@ export const createGoogleAuthGateway = (): GoogleAuthGateway => ({
                     timeoutMs: GATEWAY_TIMEOUT_MS,
                     label: 'Perfil de Google',
                     shouldRetry: isRetryableAuthError,
+                    onEvent: logGatewayEvent('fetch_profile'),
                 },
             );
+            if (!response.ok) {
+                const authError = new Error(`Google profile request failed with status ${response.status}`);
+                Object.assign(authError, { status: response.status });
+                throw authError;
+            }
             const profile = await response.json();
             const fallback = decodeIdToken(idToken);
             return {
@@ -92,7 +107,7 @@ export const createGoogleAuthGateway = (): GoogleAuthGateway => ({
                     warnings: ['Se usó el ID token local para completar el perfil de usuario.'],
                 };
             }
-            return toAuthError(error, 'No se pudo obtener el perfil de Google.', 'fetch_profile');
+            return toAuthError(error, 'No se pudo obtener el perfil de Google.', 'fetch_profile', 'fetch_profile');
         }
     },
 });

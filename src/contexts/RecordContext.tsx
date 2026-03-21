@@ -39,10 +39,14 @@ interface RecordContextValue {
     hasUnsavedChanges: boolean;
     setHasUnsavedChanges: React.Dispatch<React.SetStateAction<boolean>>;
     versionHistory: VersionHistoryEntry[];
+    canUndo: boolean;
+    canRedo: boolean;
     isHistoryModalOpen: boolean;
     setIsHistoryModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     saveDraft: (reason: 'auto' | 'manual' | 'import', overrideRecord?: ClinicalRecord) => void;
     handleRestoreHistoryEntry: (entry: VersionHistoryEntry) => void;
+    undo: () => void;
+    redo: () => void;
     markRecordAsReplaced: () => void;
     workflowState: EditorWorkflowState;
     dispatchWorkflow: React.Dispatch<EditorWorkflowAction>;

@@ -57,6 +57,8 @@ describe('hhrGateway', () => {
         if (!result.ok) {
             expect(result.error.source).toBe('hhr');
             expect(result.error.code).toBe('save_document');
+            expect(result.error.operation).toBe('save_document');
+            expect(result.error.transient).toBe(true);
         }
     });
 

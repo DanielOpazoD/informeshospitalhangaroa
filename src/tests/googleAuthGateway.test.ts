@@ -86,4 +86,17 @@ describe('googleAuthGateway', () => {
             expect(result.data.email).toBe('retry@example.com');
         }
     });
+
+    it('expone operation y transient cuando el perfil falla sin fallback', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network')));
+
+        const gateway = createGoogleAuthGateway();
+        const result = await gateway.fetchUserProfile('token-1');
+
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.error.operation).toBe('fetch_profile');
+            expect(result.error.transient).toBe(true);
+        }
+    });
 });

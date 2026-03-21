@@ -52,8 +52,12 @@ const createProps = (): React.ComponentProps<typeof Header> => ({
         saveStatusLabel: 'Guardado',
         lastSaveTime: '10:30',
         hasUnsavedChanges: true,
+        canUndo: true,
+        canRedo: true,
         onQuickSave: vi.fn(),
         onOpenHistory: vi.fn(),
+        onUndo: vi.fn(),
+        onRedo: vi.fn(),
     },
     hhr: {
         isEnabled: true,
@@ -92,6 +96,8 @@ describe('Header', () => {
         fireEvent.click(screen.getByText('Cartola de medicamentos'));
         fireEvent.change(screen.getByRole('combobox'), { target: { value: '5' } });
         fireEvent.click(screen.getByText('Act. clínica'));
+        fireEvent.click(screen.getByText('Deshacer'));
+        fireEvent.click(screen.getByText('Rehacer'));
         fireEvent.click(screen.getByText('Guardar en Ficha HHR'));
         fireEvent.click(screen.getByTitle('Desactivar edición avanzada'));
         fireEvent.click(screen.getByLabelText('Abrir asistente clínico'));
@@ -100,6 +106,8 @@ describe('Header', () => {
         expect(props.onOpenCartolaApp).toHaveBeenCalled();
         expect(props.onTemplateChange).toHaveBeenCalledWith('5');
         expect(props.onAddClinicalUpdateSection).toHaveBeenCalled();
+        expect(props.save.onUndo).toHaveBeenCalled();
+        expect(props.save.onRedo).toHaveBeenCalled();
         expect(props.hhr.onSaveToHhr).toHaveBeenCalled();
         expect(props.editing.onToggleAdvancedEditing).toHaveBeenCalled();
         expect(props.editing.onToggleAiAssistant).toHaveBeenCalled();

@@ -46,6 +46,7 @@ const toAppError = (
     source: 'drive',
     error: unknown,
     fallbackMessage: string,
+    operation: string,
     code = 'unknown',
     retryable = true,
 ): AppResult<never> => ({
@@ -53,14 +54,23 @@ const toAppError = (
     error: {
         source,
         code,
+        operation,
         message: error instanceof Error ? error.message : fallbackMessage,
+        transient: retryable,
         retryable,
+        httpStatus: typeof (error as { status?: unknown })?.status === 'number' ? (error as { status: number }).status : undefined,
+        details: [fallbackMessage],
     },
 });
 
 const isRetryableDriveError = (error: unknown): boolean => {
     const message = error instanceof Error ? error.message.toLowerCase() : '';
     return !message.includes('quota exceeded') && !message.includes('permission') && !message.includes('403');
+};
+
+const logGatewayEvent = (label: string) => (event: { type: string; attempt: number; error?: string }) => {
+    const suffix = event.error ? ` (${event.error})` : '';
+    console.warn(`[drive-gateway] ${label} :: ${event.type} intento ${event.attempt}${suffix}`);
 };
 
 const runDeepContentSearch = async (
@@ -148,11 +158,12 @@ export const createDriveGateway = (): DriveGateway => {
                             timeoutMs: GATEWAY_TIMEOUT_MS,
                             label: 'Listado de carpetas de Drive',
                             shouldRetry: isRetryableDriveError,
+                            onEvent: logGatewayEvent('list_folders'),
                         },
                     ),
                 };
             } catch (error) {
-                return toAppError('drive', error, 'No se pudieron listar las carpetas.', 'list_folders', isRetryableDriveError(error));
+                return toAppError('drive', error, 'No se pudieron listar las carpetas.', 'list_folders', 'list_folders', isRetryableDriveError(error));
             }
         },
         listFolderContents: async (folderId) => {
@@ -166,11 +177,12 @@ export const createDriveGateway = (): DriveGateway => {
                             timeoutMs: GATEWAY_TIMEOUT_MS,
                             label: 'Contenido de carpeta de Drive',
                             shouldRetry: isRetryableDriveError,
+                            onEvent: logGatewayEvent('list_contents'),
                         },
                     ),
                 };
             } catch (error) {
-                return toAppError('drive', error, 'No se pudo listar el contenido de la carpeta.', 'list_contents', isRetryableDriveError(error));
+                return toAppError('drive', error, 'No se pudo listar el contenido de la carpeta.', 'list_contents', 'list_contents', isRetryableDriveError(error));
             }
         },
         readJsonRecord: async (fileId) => {
@@ -184,11 +196,12 @@ export const createDriveGateway = (): DriveGateway => {
                             timeoutMs: GATEWAY_TIMEOUT_MS,
                             label: 'Lectura de JSON desde Drive',
                             shouldRetry: isRetryableDriveError,
+                            onEvent: logGatewayEvent('read_json'),
                         },
                     ),
                 };
             } catch (error) {
-                return toAppError('drive', error, 'No se pudo leer el archivo JSON desde Drive.', 'read_json', isRetryableDriveError(error));
+                return toAppError('drive', error, 'No se pudo leer el archivo JSON desde Drive.', 'read_json', 'read_json', isRetryableDriveError(error));
             }
         },
         createFolder: async (name, parentId) => {
@@ -200,11 +213,12 @@ export const createDriveGateway = (): DriveGateway => {
                         timeoutMs: GATEWAY_TIMEOUT_MS,
                         label: 'Creación de carpeta en Drive',
                         shouldRetry: isRetryableDriveError,
+                        onEvent: logGatewayEvent('create_folder'),
                     },
                 );
                 return { ok: true, data: undefined };
             } catch (error) {
-                return toAppError('drive', error, 'No se pudo crear la carpeta.', 'create_folder', isRetryableDriveError(error));
+                return toAppError('drive', error, 'No se pudo crear la carpeta.', 'create_folder', 'create_folder', isRetryableDriveError(error));
             }
         },
         uploadFile: async (params) => {
@@ -218,11 +232,12 @@ export const createDriveGateway = (): DriveGateway => {
                             timeoutMs: GATEWAY_TIMEOUT_MS,
                             label: 'Subida de archivo a Drive',
                             shouldRetry: isRetryableDriveError,
+                            onEvent: logGatewayEvent('upload_file'),
                         },
                     ),
                 };
             } catch (error) {
-                return toAppError('drive', error, 'No se pudo subir el archivo a Drive.', 'upload_file', isRetryableDriveError(error));
+                return toAppError('drive', error, 'No se pudo subir el archivo a Drive.', 'upload_file', 'upload_file', isRetryableDriveError(error));
             }
         },
         search: async (request, mode, options) => {
@@ -238,6 +253,7 @@ export const createDriveGateway = (): DriveGateway => {
                         timeoutMs: GATEWAY_TIMEOUT_MS,
                         label: 'Búsqueda de archivos en Drive',
                         shouldRetry: isRetryableDriveError,
+                        onEvent: logGatewayEvent('search'),
                     },
                 );
                 const result = mode === 'deepContent'
@@ -255,7 +271,7 @@ export const createDriveGateway = (): DriveGateway => {
                     warnings: result.warnings,
                 };
             } catch (error) {
-                return toAppError('drive', error, 'No se pudo completar la búsqueda en Drive.', 'search', isRetryableDriveError(error));
+                return toAppError('drive', error, 'No se pudo completar la búsqueda en Drive.', 'search', 'search', isRetryableDriveError(error));
             }
         },
     };
