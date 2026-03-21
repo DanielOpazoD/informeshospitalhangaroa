@@ -45,8 +45,8 @@ const createProps = (): React.ComponentProps<typeof Header> => ({
         onToolbarCommand: vi.fn(),
     },
     save: {
-        saveStatusLabel: 'Guardado',
-        lastSaveTime: '10:30',
+        saveStatusLabel: 'Guardado local',
+        lastSaveTime: 'Hace 1 min.',
         hasUnsavedChanges: true,
         canUndo: true,
         canRedo: true,
@@ -72,7 +72,7 @@ describe('Header', () => {
         render(<Header {...createProps()} />);
 
         expect(screen.getByText('user-account-menu')).toBeTruthy();
-        expect(screen.getByText('Guardado')).toBeTruthy();
+        expect(screen.getByText('Guardado local')).toBeTruthy();
         expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('2');
     });
 

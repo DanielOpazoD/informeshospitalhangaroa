@@ -8,16 +8,13 @@ interface HeaderSaveStatusProps {
 
 const HeaderSaveStatus: React.FC<HeaderSaveStatusProps> = ({ saveStatusLabel, lastSaveTime, hasUnsavedChanges }) => {
     const statusState = hasUnsavedChanges || !lastSaveTime ? 'unsaved' : 'saved';
+    const title = !hasUnsavedChanges && lastSaveTime ? `${saveStatusLabel} · ${lastSaveTime}` : saveStatusLabel;
 
     return (
-        <div className={`save-status ${statusState}`}>
+        <div className={`save-status ${statusState}`} title={title}>
             <span className="status-dot" data-state={statusState} />
-            <div>
-                <div className="status-label">{saveStatusLabel}</div>
-                {!hasUnsavedChanges && lastSaveTime && (
-                    <div className="status-meta">Último guardado: {lastSaveTime}</div>
-                )}
-            </div>
+            <span className="status-label">{saveStatusLabel}</span>
+            {!hasUnsavedChanges && lastSaveTime && <span className="status-meta">{lastSaveTime}</span>}
         </div>
     );
 };

@@ -27,45 +27,47 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ onToolbarCommand }) => {
 
     return (
         <div className="editor-toolbar" role="toolbar" aria-label="Herramientas de edición avanzada">
-            {buttons.map(btn => (
-                <button
-                    key={btn.command}
-                    type="button"
-                    onMouseDown={preventMouseDown}
-                    onClick={() => onToolbarCommand(btn.command)}
-                    aria-label={`Aplicar ${btn.title.toLowerCase()}`}
-                    title={btn.title}
-                >
-                    <span className={`toolbar-icon ${btn.className || ''}`}>{btn.label}</span>
-                </button>
-            ))}
-            <span className="toolbar-divider" aria-hidden="true" />
-            {indentButtons.map(btn => (
-                <button
-                    key={btn.command}
-                    type="button"
-                    onMouseDown={preventMouseDown}
-                    onClick={() => onToolbarCommand(btn.command)}
-                    aria-label={btn.title}
-                    title={btn.title}
-                >
-                    <span className="toolbar-icon">{btn.label}</span>
-                </button>
-            ))}
-            <span className="toolbar-divider" aria-hidden="true" />
-            {zoomButtons.map(btn => (
-                <button
-                    key={btn.command}
-                    type="button"
-                    onMouseDown={preventMouseDown}
-                    onClick={() => onToolbarCommand(btn.command)}
-                    aria-label={btn.title}
-                    title={btn.title}
-                >
-                    <span className="toolbar-icon">{btn.label}</span>
-                </button>
-            ))}
-            <span className="toolbar-divider" aria-hidden="true" />
+            <div className="editor-toolbar-row">
+                {buttons.map(btn => (
+                    <button
+                        key={btn.command}
+                        type="button"
+                        onMouseDown={preventMouseDown}
+                        onClick={() => onToolbarCommand(btn.command)}
+                        aria-label={`Aplicar ${btn.title.toLowerCase()}`}
+                        title={btn.title}
+                    >
+                        <span className={`toolbar-icon ${btn.className || ''}`}>{btn.label}</span>
+                    </button>
+                ))}
+            </div>
+            <div className="editor-toolbar-row">
+                {indentButtons.map(btn => (
+                    <button
+                        key={btn.command}
+                        type="button"
+                        onMouseDown={preventMouseDown}
+                        onClick={() => onToolbarCommand(btn.command)}
+                        aria-label={btn.title}
+                        title={btn.title}
+                    >
+                        <span className="toolbar-icon">{btn.label}</span>
+                    </button>
+                ))}
+                <span className="toolbar-divider" aria-hidden="true" />
+                {zoomButtons.map(btn => (
+                    <button
+                        key={btn.command}
+                        type="button"
+                        onMouseDown={preventMouseDown}
+                        onClick={() => onToolbarCommand(btn.command)}
+                        aria-label={btn.title}
+                        title={btn.title}
+                    >
+                        <span className="toolbar-icon">{btn.label}</span>
+                    </button>
+                ))}
+            </div>
         </div>
     );
 };

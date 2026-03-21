@@ -96,8 +96,8 @@ const createSpies = () => {
             handleFinalSave,
         },
         editorUi: {
-            saveStatusLabel: 'Guardado',
-            lastSaveTime: 'hace 1 minuto',
+            saveStatusLabel: 'Guardado local',
+            lastSaveTime: 'Hace 1 min.',
             sheetZoom: 1,
             setSheetZoom: vi.fn(),
             isAdvancedEditing: false,

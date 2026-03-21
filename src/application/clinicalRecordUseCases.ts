@@ -6,6 +6,7 @@ import type { ClinicalRecord, VersionHistoryEntry } from '../types';
 import { type LoadClinicalRecordResult } from '../domain/clinicalRecord';
 import type { HhrCensusPatient } from '../hhrTypes';
 import {
+    DEFAULT_TEMPLATE_ID,
     getAutoTitleForTemplate,
     getReportDateValue,
     normalizePatientFields,
@@ -41,7 +42,7 @@ export const importRecordFromJson = (
         executeClinicalRecordCommand(
             {
                 version: 'v14',
-                templateId: '2',
+                templateId: DEFAULT_TEMPLATE_ID,
                 title: '',
                 patientFields: normalizePatientFields([]),
                 sections: [],

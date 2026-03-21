@@ -119,8 +119,8 @@ const buildAppShellControllerMock = () => ({
         setSheetZoom: vi.fn(),
         aiPanelWidth: 420,
         setAiPanelWidth: vi.fn(),
-        saveStatusLabel: 'Guardado',
-        lastSaveTime: '10:30',
+        saveStatusLabel: 'Guardado local',
+        lastSaveTime: 'Hace 1 min.',
     },
     fileOperations: {
         defaultDriveFileName: 'informe',
@@ -568,7 +568,7 @@ describe('App routing', () => {
         expect(mockState.driveProviderCalls).toBe(1);
         expect(mockState.recordProviderCalls).toBe(1);
         expect(mockState.appShellContentProps?.recordState.record.title).toBe('Informe clínico');
-        expect(mockState.appShellContentProps?.editorUi.saveStatusLabel).toBe('Guardado');
+        expect(mockState.appShellContentProps?.editorUi.saveStatusLabel).toBe('Guardado local');
     });
 
     it('navega hacia cartola y permite volver al shell principal', async () => {

@@ -15,7 +15,7 @@ import {
 } from '../appConstants';
 import { useConfirmDialog } from './useConfirmDialog';
 import { getBrowserStorageAdapter, readStoredJson, writeStoredJson, type StorageAdapter } from '../utils/storageAdapter';
-import { createTemplateBaseline } from '../utils/recordTemplates';
+import { createTemplateBaseline, DEFAULT_TEMPLATE_ID } from '../utils/recordTemplates';
 import { editorWorkflowReducer, initialEditorWorkflowState, type EditorWorkflowAction } from '../application/editorWorkflow';
 import type { ClinicalRecordCommand, ClinicalRecordCommandResult } from '../application/clinicalRecordCommands';
 import {
@@ -104,7 +104,7 @@ const updateHistoryStacksOnRedo = (stacks: HistoryStacks): HistoryStacks => {
 
 export const useClinicalRecord = ({ onToast, storage = getBrowserStorageAdapter() }: UseClinicalRecordOptions) => {
     const { confirm } = useConfirmDialog();
-    const [record, setRecord] = useState<ClinicalRecord>(() => createTemplateBaseline('2'));
+    const [record, setRecord] = useState<ClinicalRecord>(() => createTemplateBaseline(DEFAULT_TEMPLATE_ID));
     const recordRef = useRef(record);
     const [lastLocalSave, setLastLocalSave] = useState<number | null>(null);
     const [versionHistory, setVersionHistory] = useState<VersionHistoryEntry[]>([]);

@@ -75,6 +75,22 @@ describe('useDocumentEffects', () => {
         expect(params.clearActiveEditTarget).toHaveBeenCalled();
     });
 
+    it('mantiene la edición si el click ocurre sobre la barra avanzada lateral', () => {
+        const params = createParams({
+            isEditing: true,
+        });
+
+        renderHook(() => useDocumentEffects(params));
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'sticky-toolbar-container';
+        document.body.appendChild(toolbar);
+        toolbar.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+        expect(params.setIsEditing).not.toHaveBeenCalled();
+        expect(params.clearActiveEditTarget).not.toHaveBeenCalled();
+    });
+
     it('reinicia edición estructural cuando isEditing pasa a false', () => {
         const params = createParams({
             isEditing: false,

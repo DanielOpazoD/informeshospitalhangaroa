@@ -120,8 +120,8 @@ const createProps = (): React.ComponentProps<typeof AppWorkspace> => ({
         onToolbarCommand: vi.fn(),
     },
     saveHeader: {
-        saveStatusLabel: 'Guardado',
-        lastSaveTime: '10:30',
+        saveStatusLabel: 'Guardado local',
+        lastSaveTime: 'Hace 1 min.',
         hasUnsavedChanges: true,
         canUndo: true,
         canRedo: true,

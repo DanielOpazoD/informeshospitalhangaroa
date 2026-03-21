@@ -19,8 +19,8 @@ describe('useEditorUiState', () => {
             hasUnsavedChanges: false,
         }));
 
-        expect(result.current.saveStatusLabel).toContain('Guardado');
-        expect(result.current.lastSaveTime).toBeTruthy();
+        expect(result.current.saveStatusLabel).toBe('Guardado local');
+        expect(result.current.lastSaveTime).toBe('Hace 5 min.');
         expect(result.current.sheetZoom).toBe(1);
         expect(result.current.aiPanelWidth).toBe(420);
     });
@@ -31,7 +31,8 @@ describe('useEditorUiState', () => {
             hasUnsavedChanges: true,
         }));
 
-        expect(result.current.saveStatusLabel).toBe('Cambios sin guardar');
+        expect(result.current.saveStatusLabel).toBe('Sin guardar');
+        expect(result.current.lastSaveTime).toBe('');
     });
 
     it('muestra estado vacío cuando nunca se ha guardado y permite cambiar flags UI', () => {
@@ -62,12 +63,12 @@ describe('useEditorUiState', () => {
             hasUnsavedChanges: false,
         }));
 
-        const initialLabel = result.current.saveStatusLabel;
+        const initialTime = result.current.lastSaveTime;
 
         act(() => {
             vi.advanceTimersByTime(60000);
         });
 
-        expect(result.current.saveStatusLabel).not.toBe(initialLabel);
+        expect(result.current.lastSaveTime).not.toBe(initialTime);
     });
 });

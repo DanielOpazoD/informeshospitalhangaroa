@@ -628,9 +628,9 @@ body[data-theme='dark'] .history-item-meta {
 
 .editor-toolbar {
     display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
     background: rgba(15, 23, 42, 0.08);
     border: 1px solid rgba(15, 23, 42, 0.18);
     border-radius: 12px;
@@ -639,31 +639,22 @@ body[data-theme='dark'] .history-item-meta {
     color: inherit;
     flex: 0 1 auto;
     max-width: 100%;
-    overflow-x: auto;
-    white-space: nowrap;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
+    min-width: 0;
 }
 
-.editor-toolbar::-webkit-scrollbar {
-    height: 4px;
-}
-
-.editor-toolbar::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.6);
-    border-radius: 999px;
-}
-
-.editor-toolbar::-webkit-scrollbar-track {
-    background: transparent;
+.editor-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
 }
 
 .editor-toolbar button {
     border: 1px solid rgba(15, 23, 42, 0.2);
     background: rgba(255, 255, 255, 0.92);
-    border-radius: 6px;
-    width: 22px;
-    height: 22px;
+    border-radius: 8px;
+    width: 28px;
+    height: 28px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -674,7 +665,7 @@ body[data-theme='dark'] .history-item-meta {
         box-shadow 0.2s ease;
     color: #0f172a;
     font-weight: 700;
-    font-size: 11px;
+    font-size: 12px;
     padding: 0;
     flex: 0 0 auto;
 }
@@ -706,7 +697,7 @@ body[data-theme='dark'] .history-item-meta {
 }
 
 .toolbar-icon {
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1;
     font-weight: 700;
     display: inline-flex;
@@ -915,8 +906,6 @@ body[data-theme='dark'] .clinical-update-meta {
 }
 
 .edit-panel {
-    position: sticky;
-    top: 16px;
     z-index: 5;
     background: #fff;
     border: 1px solid #d1d5db;
@@ -929,18 +918,15 @@ body[data-theme='dark'] .clinical-update-meta {
     min-width: 200px;
     flex: 0 0 auto;
     align-self: flex-start;
-    max-height: calc(100vh - 24px);
+    max-height: calc(100vh - var(--toolbar-top-offset, 24px) - 24px);
     overflow-y: auto;
 }
 
 .edit-panel.hidden {
-    visibility: hidden;
-    opacity: 0;
-    pointer-events: none;
+    display: none;
 }
 .edit-panel.visible {
-    visibility: visible;
-    opacity: 1;
+    display: flex;
 }
 
 .edit-panel > div:first-child {
@@ -997,18 +983,26 @@ body[data-theme='dark'] .clinical-update-meta {
     position: relative;
 }
 
-.sticky-toolbar-container {
+.workspace-side-rail {
     position: fixed;
-    left: 50%;
-    bottom: 24px;
-    transform: translateX(-50%);
-    width: max-content;
-    max-width: calc(100vw - 32px);
+    left: var(--side-rail-left, 16px);
+    top: var(--toolbar-top-offset, 16px);
     z-index: 140;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: var(--side-rail-width, 220px);
+    max-width: min(240px, calc(100vw - var(--side-rail-left, 16px) - 16px));
+}
+
+.sticky-toolbar-container {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
     background: rgba(255, 255, 255, 0.95);
-    border-radius: 18px;
-    padding: 10px 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    padding: 8px 10px;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.1);
     backdrop-filter: blur(8px);
 }
 
@@ -1022,8 +1016,8 @@ body[data-theme='dark'] .sticky-toolbar-container {
     background: transparent;
     box-shadow: none;
     padding: 0;
-    overflow-x: auto;
-    max-width: calc(100vw - 56px);
+    max-width: 100%;
+    width: 100%;
 }
 
 .sticky-toolbar-container .toolbar-divider {
@@ -1036,10 +1030,17 @@ body[data-theme='dark'] .sticky-toolbar-container {
     flex: 1 1 auto;
     display: flex;
     justify-content: center;
+    min-width: 0;
 }
 
 .sheet-shell .sheet {
     margin: 0;
+}
+
+.hhr-compact-bar {
+    position: sticky;
+    top: var(--topbar-height, 0px);
+    z-index: 9990;
 }
 
 .ai-drawer {
@@ -2044,6 +2045,7 @@ body[data-theme='dark'] .sticky-toolbar-container {
 @media print {
     .topbar,
     .edit-panel,
+    .workspace-side-rail,
     .modal-overlay,
     .hhr-panel {
         display: none !important;
@@ -2123,6 +2125,18 @@ body[data-theme='dark'] .sticky-toolbar-container {
     .workspace {
         flex-direction: column;
     }
+    .workspace-side-rail {
+        position: static;
+        left: auto !important;
+        top: auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 100% !important;
+        max-width: 100%;
+    }
+    .sticky-toolbar-container {
+        width: 100%;
+    }
     .ai-drawer,
     .ai-drawer.is-open {
         width: 100%;
@@ -2153,16 +2167,15 @@ body[data-theme='dark'] .sticky-toolbar-container {
 
 @media (max-width: 560px) {
     .sticky-toolbar-container {
-        bottom: 16px;
         padding: 8px 10px;
-        max-width: calc(100vw - 20px);
+        max-width: 100%;
     }
     .editor-toolbar {
         gap: 2px;
         padding: 6px 8px;
     }
     .editor-toolbar button {
-        width: 24px;
-        height: 24px;
+        width: 26px;
+        height: 26px;
     }
 }

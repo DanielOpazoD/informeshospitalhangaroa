@@ -143,10 +143,10 @@
 }
 
 .hhr-compact-btn {
-    min-height: 28px;
-    padding: 4px 10px;
-    font-size: 11px;
-    gap: 5px;
+    min-height: 26px;
+    padding: 3px 9px;
+    font-size: 10px;
+    gap: 4px;
 }
 
 .hhr-upload-btn {
@@ -154,27 +154,27 @@
     color: #f8fafc;
     border: none;
     box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
-    padding: 6px 16px;
+    padding: 5px 14px;
     font-weight: 600;
     letter-spacing: 0.3px;
     transition: all 0.2s ease;
 }
 
 .hhr-upload-btn.hhr-compact-btn {
-    padding-inline: 12px;
+    padding-inline: 11px;
 }
 
 .hhr-upload-btn svg,
 .hhr-logout-btn svg,
 .hhr-search-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
 }
 
 .hhr-search-btn svg {
-    width: 15px;
-    height: 15px;
+    width: 14px;
+    height: 14px;
 }
 
 .hhr-upload-btn:hover:not(.disabled):not(:disabled) {

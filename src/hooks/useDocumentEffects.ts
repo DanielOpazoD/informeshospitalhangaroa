@@ -81,6 +81,8 @@ export const useDocumentEffects = ({
             if (target.closest('.topbar')) return;
             if (target.closest('#sheet')) return;
             if (target.closest('#editPanel')) return;
+            if (target.closest('.sticky-toolbar-container')) return;
+            if (target.closest('.workspace-side-rail')) return;
 
             setIsEditing(false);
             clearActiveEditTarget();

@@ -11,7 +11,8 @@ import { formatDateDMY } from './dateUtils';
 import { buildInstitutionTitle } from '../institutionConfig';
 import { CURRENT_RECORD_VERSION } from '../domain/clinicalRecordVersion';
 
-export const DEFAULT_TEMPLATE_ID = '2';
+export const DEFAULT_TEMPLATE_ID = '3';
+const DATED_EVOLUTION_TEMPLATE_ID = '2';
 export const RECOMMENDED_GEMINI_MODEL = 'gemini-1.5-flash-latest';
 
 export const normalizePatientFields = (fields: PatientField[]): PatientField[] => {
@@ -59,7 +60,7 @@ export const getAutoTitleForTemplate = (templateId: string, reportDate: string):
         return 'Registro Clínico';
     }
 
-    if (template.id === DEFAULT_TEMPLATE_ID) {
+    if (template.id === DATED_EVOLUTION_TEMPLATE_ID) {
         const formattedDate = formatDateDMY(reportDate);
         const baseTitle = formattedDate ? `Evolución médica (${formattedDate})` : 'Evolución médica (____)';
         return buildInstitutionTitle(baseTitle);

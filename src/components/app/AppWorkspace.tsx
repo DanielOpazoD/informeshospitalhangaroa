@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { ClinicalRecord, ClinicalSectionData } from '../../types';
 import Header from '../Header';
 import PatientInfo from '../PatientInfo';
@@ -86,118 +86,180 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
     sheetZoom,
     aiAssistant,
     integrationPanel,
-}) => (
-    <div className="wrap">
-        <Header
-            templateId={templateId}
-            onTemplateChange={onTemplateChange}
-            onAddClinicalUpdateSection={onAddClinicalUpdateSection}
-            onPrint={onPrint}
-            onOpenSettings={onOpenSettings}
-            onRestoreTemplate={onRestoreTemplate}
-            onOpenCartolaApp={onOpenCartola}
-            auth={auth}
-            drive={driveHeader}
-            editing={editingHeader}
-            save={saveHeader}
-        />
-        {integrationPanel}
-        <div className="workspace">
-            <div className="sheet-shell">
-                <div
-                    id="sheet"
-                    className={`sheet ${isEditing ? 'edit-mode' : ''}`}
-                    style={{ '--sheet-zoom': sheetZoom } as React.CSSProperties}
-                >
-                    {logoUrls.left && (
-                        <img
-                            id="logoLeft"
-                            src={logoUrls.left}
-                            className="absolute top-2 left-2 w-12 h-auto opacity-60 print:block"
-                            alt="Logo Left"
-                        />
-                    )}
-                    {logoUrls.right && (
-                        <img
-                            id="logoRight"
-                            src={logoUrls.right}
-                            className="absolute top-2 right-2 w-12 h-auto opacity-60 print:block"
-                            alt="Logo Right"
-                        />
-                    )}
+}) => {
+    const headerHostRef = useRef<HTMLDivElement | null>(null);
+    const integrationPanelHostRef = useRef<HTMLDivElement | null>(null);
+    const sheetRef = useRef<HTMLDivElement | null>(null);
+    const [topbarHeight, setTopbarHeight] = useState(0);
+    const [integrationPanelHeight, setIntegrationPanelHeight] = useState(0);
+    const [sideRailLeft, setSideRailLeft] = useState(16);
+    const [sideRailWidth, setSideRailWidth] = useState(220);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const updateOffsets = () => {
+            setTopbarHeight(headerHostRef.current?.getBoundingClientRect().height ?? 0);
+            setIntegrationPanelHeight(integrationPanelHostRef.current?.getBoundingClientRect().height ?? 0);
+            if (sheetRef.current) {
+                const sheetRect = sheetRef.current.getBoundingClientRect();
+                const nextLeft = Math.max(16, Math.round(sheetRect.right + 18));
+                const availableWidth = Math.max(180, Math.floor(window.innerWidth - nextLeft - 16));
+                setSideRailLeft(nextLeft);
+                setSideRailWidth(Math.min(240, availableWidth));
+            }
+        };
+
+        updateOffsets();
+
+        const resizeObserver = typeof ResizeObserver !== 'undefined'
+            ? new ResizeObserver(() => updateOffsets())
+            : null;
+        if (resizeObserver && headerHostRef.current) resizeObserver.observe(headerHostRef.current);
+        if (resizeObserver && integrationPanelHostRef.current) resizeObserver.observe(integrationPanelHostRef.current);
+        if (resizeObserver && sheetRef.current) resizeObserver.observe(sheetRef.current);
+
+        window.addEventListener('resize', updateOffsets);
+        return () => {
+            resizeObserver?.disconnect();
+            window.removeEventListener('resize', updateOffsets);
+        };
+    }, [sheetZoom]);
+
+    const stickyLayoutStyle = useMemo(() => ({
+        '--topbar-height': `${topbarHeight}px`,
+        '--toolbar-top-offset': `${topbarHeight + integrationPanelHeight + 12}px`,
+    } as React.CSSProperties), [integrationPanelHeight, topbarHeight]);
+
+    const sideRailStyle = useMemo(() => ({
+        '--side-rail-left': `${sideRailLeft}px`,
+        '--side-rail-width': `${sideRailWidth}px`,
+    } as React.CSSProperties), [sideRailLeft, sideRailWidth]);
+
+    const showSideRail = editingHeader.isAdvancedEditing || isGlobalStructureEditing;
+
+    return (
+        <div className="wrap" style={stickyLayoutStyle}>
+            <div ref={headerHostRef}>
+                <Header
+                    templateId={templateId}
+                    onTemplateChange={onTemplateChange}
+                    onAddClinicalUpdateSection={onAddClinicalUpdateSection}
+                    onPrint={onPrint}
+                    onOpenSettings={onOpenSettings}
+                    onRestoreTemplate={onRestoreTemplate}
+                    onOpenCartolaApp={onOpenCartola}
+                    auth={auth}
+                    drive={driveHeader}
+                    editing={editingHeader}
+                    save={saveHeader}
+                />
+            </div>
+            <div ref={integrationPanelHostRef}>
+                {integrationPanel}
+            </div>
+            <div className="workspace">
+                <div className="sheet-shell">
                     <div
-                        className="title"
-                        contentEditable={
-                            record.templateId === '5' || (isEditing && activeEditTarget?.type === 'record-title')
-                        }
-                        suppressContentEditableWarning
-                        onDoubleClick={() => activateEditTarget({ type: 'record-title' })}
-                        onBlur={e => onRecordTitleChange(e.currentTarget.innerText)}
+                        id="sheet"
+                        ref={sheetRef}
+                        className={`sheet ${isEditing ? 'edit-mode' : ''}`}
+                        style={{ '--sheet-zoom': sheetZoom } as React.CSSProperties}
                     >
-                        {record.title}
-                    </div>
-                    <PatientInfo
-                        isEditing={isEditing}
-                        isGlobalStructureEditing={isGlobalStructureEditing}
-                        activeEditTarget={
-                            activeEditTarget?.type === 'patient-section-title' ||
-                            activeEditTarget?.type === 'patient-field-label'
-                                ? activeEditTarget
-                                : null
-                        }
-                        onActivateEdit={handleActivatePatientEdit}
-                        patientFields={record.patientFields}
-                        onPatientFieldChange={handlePatientFieldChange}
-                        onPatientLabelChange={handlePatientLabelChange}
-                        onRemovePatientField={handleRemovePatientField}
-                    />
-                    <div id="sectionsContainer">
-                        {record.sections.map((section, index) => (
-                            <ClinicalSection
-                                key={section.id}
-                                section={section}
-                                index={index}
-                                isEditing={isEditing}
-                                isAdvancedEditing={editingHeader.isAdvancedEditing}
-                                isGlobalStructureEditing={isGlobalStructureEditing}
-                                activeEditTarget={
-                                    activeEditTarget?.type === 'section-title' && activeEditTarget.index === index
-                                        ? activeEditTarget
-                                        : null
-                                }
-                                onActivateEdit={handleActivateSectionEdit}
-                                onSectionContentChange={handleSectionContentChange}
-                                onSectionTitleChange={handleSectionTitleChange}
-                                onRemoveSection={handleRemoveSection}
-                                onUpdateSectionMeta={handleUpdateSectionMeta}
+                        {logoUrls.left && (
+                            <img
+                                id="logoLeft"
+                                src={logoUrls.left}
+                                className="absolute top-2 left-2 w-12 h-auto opacity-60 print:block"
+                                alt="Logo Left"
                             />
-                        ))}
+                        )}
+                        {logoUrls.right && (
+                            <img
+                                id="logoRight"
+                                src={logoUrls.right}
+                                className="absolute top-2 right-2 w-12 h-auto opacity-60 print:block"
+                                alt="Logo Right"
+                            />
+                        )}
+                        <div
+                            className="title"
+                            contentEditable={
+                                record.templateId === '5' || (isEditing && activeEditTarget?.type === 'record-title')
+                            }
+                            suppressContentEditableWarning
+                            onDoubleClick={() => activateEditTarget({ type: 'record-title' })}
+                            onBlur={e => onRecordTitleChange(e.currentTarget.innerText)}
+                        >
+                            {record.title}
+                        </div>
+                        <PatientInfo
+                            isEditing={isEditing}
+                            isGlobalStructureEditing={isGlobalStructureEditing}
+                            activeEditTarget={
+                                activeEditTarget?.type === 'patient-section-title' ||
+                                activeEditTarget?.type === 'patient-field-label'
+                                    ? activeEditTarget
+                                    : null
+                            }
+                            onActivateEdit={handleActivatePatientEdit}
+                            patientFields={record.patientFields}
+                            onPatientFieldChange={handlePatientFieldChange}
+                            onPatientLabelChange={handlePatientLabelChange}
+                            onRemovePatientField={handleRemovePatientField}
+                        />
+                        <div id="sectionsContainer">
+                            {record.sections.map((section, index) => (
+                                <ClinicalSection
+                                    key={section.id}
+                                    section={section}
+                                    index={index}
+                                    isEditing={isEditing}
+                                    isAdvancedEditing={editingHeader.isAdvancedEditing}
+                                    isGlobalStructureEditing={isGlobalStructureEditing}
+                                    activeEditTarget={
+                                        activeEditTarget?.type === 'section-title' && activeEditTarget.index === index
+                                            ? activeEditTarget
+                                            : null
+                                    }
+                                    onActivateEdit={handleActivateSectionEdit}
+                                    onSectionContentChange={handleSectionContentChange}
+                                    onSectionTitleChange={handleSectionTitleChange}
+                                    onRemoveSection={handleRemoveSection}
+                                    onUpdateSectionMeta={handleUpdateSectionMeta}
+                                />
+                            ))}
+                        </div>
+                        <Footer
+                            medico={record.medico}
+                            especialidad={record.especialidad}
+                            onMedicoChange={handleMedicoChange}
+                            onEspecialidadChange={handleEspecialidadChange}
+                        />
                     </div>
-                    <Footer
-                        medico={record.medico}
-                        especialidad={record.especialidad}
-                        onMedicoChange={handleMedicoChange}
-                        onEspecialidadChange={handleEspecialidadChange}
-                    />
                 </div>
+                {showSideRail && (
+                    <div className="workspace-side-rail" style={sideRailStyle}>
+                        {editingHeader.isAdvancedEditing && (
+                            <div className="sticky-toolbar-container">
+                                <EditorToolbar onToolbarCommand={editingHeader.onToolbarCommand} />
+                            </div>
+                        )}
+                        <div id="editPanel" className={`edit-panel ${isGlobalStructureEditing ? 'visible' : 'hidden'}`}>
+                            <div>Edición</div>
+                            <button onClick={onAddPatientField} className="btn" type="button">
+                                Agregar campo
+                            </button>
+                            <button onClick={onAddSection} className="btn" type="button">
+                                Agregar nueva sección
+                            </button>
+                        </div>
+                    </div>
+                )}
+                <Suspense fallback={null}>{aiAssistant}</Suspense>
             </div>
-            <div id="editPanel" className={`edit-panel ${isGlobalStructureEditing ? 'visible' : 'hidden'}`}>
-                <div>Edición</div>
-                <button onClick={onAddPatientField} className="btn" type="button">
-                    Agregar campo
-                </button>
-                <button onClick={onAddSection} className="btn" type="button">
-                    Agregar nueva sección
-                </button>
-            </div>
-            <Suspense fallback={null}>{aiAssistant}</Suspense>
         </div>
-        {editingHeader.isAdvancedEditing && (
-            <div className="sticky-toolbar-container">
-                <EditorToolbar onToolbarCommand={editingHeader.onToolbarCommand} />
-            </div>
-        )}
-    </div>
-);
+    );
+};
 
 export default AppWorkspace;

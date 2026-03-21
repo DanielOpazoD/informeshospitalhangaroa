@@ -1,10 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
-import { formatTimeSince } from '../utils/validationUtils';
 
 interface UseEditorUiStateParams {
     lastLocalSave: number | null;
     hasUnsavedChanges: boolean;
 }
+
+const formatCompactSaveAge = (timestamp: number, reference = Date.now()): string => {
+    const diff = Math.max(0, reference - timestamp);
+    const minutes = Math.floor(diff / 60000);
+
+    if (minutes < 1) return 'Ahora';
+    if (minutes < 60) return `Hace ${minutes} min.`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `Hace ${hours} h.`;
+
+    const days = Math.floor(hours / 24);
+    return `Hace ${days} d.`;
+};
 
 export const useEditorUiState = ({ lastLocalSave, hasUnsavedChanges }: UseEditorUiStateParams) => {
     const [nowTick, setNowTick] = useState(Date.now());
@@ -20,14 +33,15 @@ export const useEditorUiState = ({ lastLocalSave, hasUnsavedChanges }: UseEditor
 
     const saveStatusLabel = useMemo(() => {
         if (!lastLocalSave) return 'Sin guardados aún';
-        if (hasUnsavedChanges) return 'Cambios sin guardar';
-        return `Guardado ${formatTimeSince(lastLocalSave, nowTick)}`;
+        if (hasUnsavedChanges) return 'Sin guardar';
+        return 'Guardado local';
     }, [hasUnsavedChanges, lastLocalSave, nowTick]);
 
     const lastSaveTime = useMemo(() => {
         if (!lastLocalSave) return '';
-        return new Date(lastLocalSave).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-    }, [lastLocalSave]);
+        if (hasUnsavedChanges) return '';
+        return formatCompactSaveAge(lastLocalSave, nowTick);
+    }, [hasUnsavedChanges, lastLocalSave, nowTick]);
 
     return {
         isAdvancedEditing,
