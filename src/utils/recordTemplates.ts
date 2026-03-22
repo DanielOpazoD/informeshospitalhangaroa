@@ -14,6 +14,60 @@ export const DEFAULT_TEMPLATE_ID = '3';
 const DATED_EVOLUTION_TEMPLATE_ID = '2';
 export const RECOMMENDED_GEMINI_MODEL = 'gemini-1.5-flash-latest';
 
+const normalizeDateInputValue = (value: string): string => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return '';
+    }
+
+    const isoDateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+    if (isoDateMatch) {
+        const [, year, month, day] = isoDateMatch;
+        return `${year}-${month}-${day}`;
+    }
+
+    const slashIsoMatch = trimmed.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+    if (slashIsoMatch) {
+        const [, year, month, day] = slashIsoMatch;
+        return `${year}-${month}-${day}`;
+    }
+
+    const localDateMatch = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (localDateMatch) {
+        const [, day, month, year] = localDateMatch;
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+
+    return trimmed;
+};
+
+const normalizeTimeInputValue = (value: string): string => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return '';
+    }
+
+    const timeMatch = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
+    if (!timeMatch) {
+        return trimmed;
+    }
+
+    const [, hours, minutes] = timeMatch;
+    return `${hours.padStart(2, '0')}:${minutes}`;
+};
+
+const normalizeNativeFieldValue = (field: PatientField): string => {
+    if (field.type === 'date') {
+        return normalizeDateInputValue(field.value);
+    }
+
+    if (field.type === 'time') {
+        return normalizeTimeInputValue(field.value);
+    }
+
+    return field.value;
+};
+
 export const normalizePatientFields = (
     fields: PatientField[],
     templateId?: string,
@@ -22,30 +76,23 @@ export const normalizePatientFields = (
     const templateDefaults = getDefaultPatientFieldsByTemplate(templateId || DEFAULT_TEMPLATE_ID);
     const defaultById = new Map(templateDefaults.map(field => [field.id, field]));
     const defaultByLabel = new Map(templateDefaults.map(field => [field.label, field]));
-    const seenDefaultIds = new Set<string>();
 
     const normalizedFields = filteredFields.map(field => {
         const matchingDefault = field.id ? defaultById.get(field.id) : defaultByLabel.get(field.label);
-        if (matchingDefault?.id) {
-            seenDefaultIds.add(matchingDefault.id);
-        }
         return matchingDefault
             ? {
                 ...matchingDefault,
                 ...field,
                 label: matchingDefault.label,
                 type: matchingDefault.type,
+                value: normalizeNativeFieldValue(field),
                 placeholder: field.placeholder ?? matchingDefault.placeholder,
                 readonly: field.readonly ?? matchingDefault.readonly,
             }
-            : { ...field };
+            : { ...field, value: normalizeNativeFieldValue(field) };
     });
 
-    const missingDefaults = templateDefaults
-        .filter(defaultField => defaultField.id && !seenDefaultIds.has(defaultField.id))
-        .map(defaultField => ({ ...defaultField }));
-
-    return [...normalizedFields, ...missingDefaults];
+    return normalizedFields;
 };
 
 export const remapPatientFieldsForTemplate = (

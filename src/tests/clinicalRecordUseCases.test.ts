@@ -86,6 +86,6 @@ describe('clinicalRecordUseCases', () => {
         }));
 
         expect(snapshot.sections[0]?.content).toBe('<p>Ok</p>');
-        expect(snapshot.patientFields.some(field => field.id === 'rut')).toBe(true);
+        expect(snapshot.patientFields.some(field => field.id === 'rut')).toBe(false);
     });
 });

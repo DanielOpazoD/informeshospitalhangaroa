@@ -1,5 +1,6 @@
 const ALLOWED_TAGS = new Set(['P', 'BR', 'STRONG', 'EM', 'UL', 'OL', 'LI', 'CODE', 'IMG']);
 const DROP_WITH_CONTENT_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'SVG']);
+const SILENT_UNWRAP_TAGS = new Set(['DIV', 'SPAN', 'FONT']);
 
 const htmlFallbackToPlainText = (html: string): string =>
     html
@@ -58,7 +59,9 @@ export const sanitizeClinicalHtml = (
         }
 
         if (!ALLOWED_TAGS.has(node.tagName)) {
-            warnings.add('Se removieron etiquetas HTML no permitidas.');
+            if (!SILENT_UNWRAP_TAGS.has(node.tagName)) {
+                warnings.add('Se removieron etiquetas HTML no permitidas.');
+            }
             if (DROP_WITH_CONTENT_TAGS.has(node.tagName)) {
                 node.remove();
                 return;

@@ -10,7 +10,7 @@ describe('recordTemplates', () => {
         ]);
 
         expect(normalized[0]).toEqual(expect.objectContaining({ id: 'nombre', value: 'Jane Roe' }));
-        expect(normalized.some(field => field.id === 'rut')).toBe(true);
+        expect(normalized.some(field => field.id === 'rut')).toBe(false);
         expect(normalized.some(field => field.label === 'Campo libre')).toBe(true);
     });
 
@@ -20,6 +20,18 @@ describe('recordTemplates', () => {
         ], '3');
 
         expect(normalized.find(field => field.id === 'finf')?.label).toBe('Fecha de alta');
+    });
+
+    it('normaliza fechas y horas al formato nativo del navegador', () => {
+        const normalized = normalizePatientFields([
+            { id: 'fing', label: 'Fecha de ingreso', value: '21/03/2026', type: 'date' },
+            { id: 'finf', label: 'Fecha del informe', value: '2026-03-21T15:45:00.000Z', type: 'date' },
+            { id: 'hinf', label: 'Hora del informe', value: '9:07:32', type: 'time' },
+        ]);
+
+        expect(normalized.find(field => field.id === 'fing')?.value).toBe('2026-03-21');
+        expect(normalized.find(field => field.id === 'finf')?.value).toBe('2026-03-21');
+        expect(normalized.find(field => field.id === 'hinf')?.value).toBe('09:07');
     });
 
     it('crea una baseline válida y usa plantilla por defecto si el id no existe', () => {
