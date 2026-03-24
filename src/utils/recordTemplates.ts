@@ -134,6 +134,77 @@ export const remapPatientFieldsForTemplate = (
     return [...mergedDefaults, ...customFields];
 };
 
+
+const normalizeSectionTitle = (title: string): string =>
+    title
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .trim()
+        .toLowerCase();
+
+export const remapSectionsForTemplate = (
+    currentSections: ClinicalSectionData[],
+    templateId: string,
+): ClinicalSectionData[] => {
+    const targetSections = getDefaultSectionsByTemplate(templateId);
+    if (!targetSections.length) {
+        return targetSections;
+    }
+
+    const assignedCurrentIndexes = new Set<number>();
+    const nextSections = targetSections.map(section => ({ ...section }));
+
+    nextSections.forEach((targetSection, targetIndex) => {
+        const matchingCurrentIndex = currentSections.findIndex((section, index) => {
+            if (assignedCurrentIndexes.has(index)) {
+                return false;
+            }
+            return normalizeSectionTitle(section.title) === normalizeSectionTitle(targetSection.title);
+        });
+
+        if (matchingCurrentIndex < 0) {
+            return;
+        }
+
+        assignedCurrentIndexes.add(matchingCurrentIndex);
+        const matchingCurrent = currentSections[matchingCurrentIndex];
+        nextSections[targetIndex] = {
+            ...targetSection,
+            content: matchingCurrent.content,
+        };
+    });
+
+    const remainingCurrentWithContent = currentSections.filter((section, index) => {
+        if (assignedCurrentIndexes.has(index)) {
+            return false;
+        }
+        return section.content.trim().length > 0;
+    });
+
+    for (const currentSection of remainingCurrentWithContent) {
+        const firstEmptyTargetIndex = nextSections.findIndex(section => section.content.trim().length === 0);
+        if (firstEmptyTargetIndex >= 0) {
+            nextSections[firstEmptyTargetIndex] = {
+                ...nextSections[firstEmptyTargetIndex],
+                content: currentSection.content,
+            };
+            continue;
+        }
+
+        const lastIndex = nextSections.length - 1;
+        nextSections[lastIndex] = {
+            ...nextSections[lastIndex],
+            content: nextSections[lastIndex].content
+                ? `${nextSections[lastIndex].content}
+
+${currentSection.content}`
+                : currentSection.content,
+        };
+    }
+
+    return nextSections;
+};
+
 export const createTemplateBaseline = (templateId: string): ClinicalRecord => {
     const selectedTemplateId = TEMPLATES[templateId] ? templateId : DEFAULT_TEMPLATE_ID;
     const title = getAutoTitleForTemplate(selectedTemplateId, '');

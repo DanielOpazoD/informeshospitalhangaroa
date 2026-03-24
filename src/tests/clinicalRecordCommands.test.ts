@@ -93,6 +93,33 @@ describe('clinicalRecordCommands', () => {
         }
     });
 
+
+    it('preserva el contenido de secciones al cambiar plantilla', () => {
+        const result = executeClinicalRecordCommand(buildRecord({
+            templateId: '3',
+            sections: [
+                { id: 's-1', title: 'Antecedentes', content: 'HTA' },
+                { id: 's-2', title: 'Historia y evolución clínica', content: 'Paciente estable' },
+                { id: 's-3', title: 'Diagnosticos de egreso', content: 'Neumonía' },
+                { id: 's-4', title: 'Indicaciones al alta', content: 'Control en 48h' },
+                { id: 's-5', title: 'Notas extra', content: 'Acompañante informado' },
+            ],
+        }), {
+            type: 'change_template',
+            templateId: '7',
+        });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.record.sections).toHaveLength(1);
+            expect(result.record.sections[0]?.content).toContain('HTA');
+            expect(result.record.sections[0]?.content).toContain('Paciente estable');
+            expect(result.record.sections[0]?.content).toContain('Neumonía');
+            expect(result.record.sections[0]?.content).toContain('Control en 48h');
+            expect(result.record.sections[0]?.content).toContain('Acompañante informado');
+        }
+    });
+
     it('marca como no-op los comandos válidos que no cambian el documento', () => {
         const current = normalizeClinicalRecordSnapshot(buildRecord()).record;
         const result = executeClinicalRecordCommand(current, {
