@@ -20,6 +20,7 @@ import {
     getReportDateValue,
     normalizePatientFields,
     remapPatientFieldsForTemplate,
+    remapSectionsForTemplate,
 } from '../utils/recordTemplates';
 
 export type ClinicalRecordCommand =
@@ -382,7 +383,7 @@ export const executeClinicalRecordCommand = (
                 title: shouldKeepCustomTitle ? record.title : baseline.title,
                 titleMode: shouldKeepCustomTitle ? 'custom' : baseline.titleMode,
                 patientFields: remapPatientFieldsForTemplate(record.patientFields, baseline.templateId),
-                sections: baseline.sections,
+                sections: remapSectionsForTemplate(record.sections, baseline.templateId),
             }, metadata, [{ type: 'reset_hhr_sync' }]);
         }
         case 'change_record_title':
