@@ -29,42 +29,39 @@ const AppShellRoute: React.FC<AppShellRouteProps & { onOpenCartola: () => void }
             auth={controller.auth}
             drive={controller.drive}
             recordState={controller.recordState}
-            toggleGlobalStructureEditing={controller.handlers.toggleGlobalStructureEditing}
-            handleTemplateChange={controller.handlers.handleTemplateChange}
-            handleAddClinicalUpdateSection={controller.handlers.handleAddClinicalUpdateSection}
-            handleRecordTitleChange={controller.handlers.handleRecordTitleChange}
-            handleAddPatientField={controller.handlers.handleAddPatientField}
-            handleAddSection={controller.handlers.handleAddSection}
-            handleRestoreAll={controller.handlers.handleRestoreAll}
-            handleToolbarCommand={controller.handlers.handleToolbarCommand}
-            onOpenCartola={onOpenCartola}
-            aiAssistantPanel={controller.editorUi.isAiAssistantVisible ? (
-                <AIAssistant
-                    sections={controller.aiAssistant.aiSections}
-                    apiKey={controller.aiAssistant.resolvedAiApiKey}
-                    projectId={controller.aiAssistant.resolvedAiProjectId}
-                    model={controller.aiAssistant.resolvedAiModel}
-                    allowModelAutoSelection={controller.aiAssistant.allowAiAutoSelection}
-                    onAutoModelSelected={controller.aiAssistant.handleAutoSelectAiModel}
-                    onApplySuggestion={controller.recordState.handleSectionContentChange}
-                    fullRecordContent={controller.aiAssistant.fullRecordContext}
-                    isOpen={controller.editorUi.isAiAssistantVisible}
-                    onClose={() => controller.editorUi.setIsAiAssistantVisible(false)}
-                    conversationKey={controller.aiAssistant.aiConversationKey}
-                    panelWidth={controller.editorUi.aiPanelWidth}
-                    onPanelWidthChange={controller.editorUi.setAiPanelWidth}
-                />
-            ) : null}
-            hhrPanel={(
-                <Suspense fallback={null}>
-                    <HhrIntegrationPanel {...controller.hhrController.hhrPanel} />
-                </Suspense>
-            )}
-            hhrModal={controller.hhrController.hhrModal.isOpen ? (
-                <Suspense fallback={null}>
-                    <HhrCensusModal {...controller.hhrController.hhrModal} />
-                </Suspense>
-            ) : null}
+            handlers={{
+                ...controller.handlers,
+                onOpenCartola,
+            }}
+            panels={{
+                aiAssistant: controller.editorUi.isAiAssistantVisible ? (
+                    <AIAssistant
+                        sections={controller.aiAssistant.aiSections}
+                        apiKey={controller.aiAssistant.resolvedAiApiKey}
+                        projectId={controller.aiAssistant.resolvedAiProjectId}
+                        model={controller.aiAssistant.resolvedAiModel}
+                        allowModelAutoSelection={controller.aiAssistant.allowAiAutoSelection}
+                        onAutoModelSelected={controller.aiAssistant.handleAutoSelectAiModel}
+                        onApplySuggestion={controller.recordState.handleSectionContentChange}
+                        fullRecordContent={controller.aiAssistant.fullRecordContext}
+                        isOpen={controller.editorUi.isAiAssistantVisible}
+                        onClose={() => controller.editorUi.setIsAiAssistantVisible(false)}
+                        conversationKey={controller.aiAssistant.aiConversationKey}
+                        panelWidth={controller.editorUi.aiPanelWidth}
+                        onPanelWidthChange={controller.editorUi.setAiPanelWidth}
+                    />
+                ) : null,
+                integrationPanel: (
+                    <Suspense fallback={null}>
+                        <HhrIntegrationPanel {...controller.hhrController.hhrPanel} />
+                    </Suspense>
+                ),
+                hhrModal: controller.hhrController.hhrModal.isOpen ? (
+                    <Suspense fallback={null}>
+                        <HhrCensusModal {...controller.hhrController.hhrModal} />
+                    </Suspense>
+                ) : null,
+            }}
         />
     );
 };

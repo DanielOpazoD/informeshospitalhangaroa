@@ -1,92 +1,19 @@
 import React, { Suspense } from 'react';
-import type { ClinicalRecord, ClinicalSectionData } from '../../types';
 import Header from '../Header';
 import PatientInfo from '../PatientInfo';
 import ClinicalSection from '../ClinicalSection';
 import EditorToolbar from '../EditorToolbar';
 import Footer from '../Footer';
 import { logoUrls } from '../../institutionConfig';
-import type { HeaderAuthProps, HeaderDriveProps, HeaderEditingProps, HeaderSaveProps } from '../Header';
 import { useWorkspaceSideRailLayout } from '../../hooks/useWorkspaceSideRailLayout';
-
-interface AppWorkspaceProps {
-    record: ClinicalRecord;
-    auth: HeaderAuthProps;
-    driveHeader: HeaderDriveProps;
-    editingHeader: HeaderEditingProps;
-    saveHeader: HeaderSaveProps;
-    templateId: string;
-    onTemplateChange: (id: string) => void;
-    onAddClinicalUpdateSection: () => void;
-    onPrint: () => void;
-    onOpenSettings: () => void;
-    onRestoreTemplate: () => void;
-    onOpenCartola: () => void;
-    isEditing: boolean;
-    isGlobalStructureEditing: boolean;
-    activeEditTarget:
-        | { type: 'patient-section-title' }
-        | { type: 'patient-field-label'; index: number }
-        | { type: 'section-title'; index: number }
-        | { type: 'record-title' }
-        | null;
-    activateEditTarget: (target: { type: 'record-title' }) => void;
-    handleActivatePatientEdit: (target: {
-        type: 'patient-section-title' | 'patient-field-label';
-        index?: number;
-    }) => void;
-    handleActivateSectionEdit: (target: { type: 'section-title'; index: number }) => void;
-    handlePatientFieldChange: (index: number, value: string) => void;
-    handlePatientLabelChange: (index: number, label: string) => void;
-    handleSectionContentChange: (index: number, content: string) => void;
-    handleSectionTitleChange: (index: number, title: string) => void;
-    handleUpdateSectionMeta: (index: number, meta: Partial<ClinicalSectionData>) => void;
-    handleRemoveSection: (index: number) => void;
-    handleRemovePatientField: (index: number) => void;
-    handleMedicoChange: (value: string) => void;
-    handleEspecialidadChange: (value: string) => void;
-    onRecordTitleChange: (title: string) => void;
-    onAddPatientField: () => void;
-    onAddSection: () => void;
-    sheetZoom: number;
-    aiAssistant: React.ReactNode;
-    integrationPanel: React.ReactNode;
-}
+import type { AppWorkspaceProps } from './appShellViewModel';
+import { getPatientEditTarget, getSectionEditTarget } from './appShellViewModel';
 
 const AppWorkspace: React.FC<AppWorkspaceProps> = ({
     record,
-    auth,
-    driveHeader,
-    editingHeader,
-    saveHeader,
-    templateId,
-    onTemplateChange,
-    onAddClinicalUpdateSection,
-    onPrint,
-    onOpenSettings,
-    onRestoreTemplate,
-    onOpenCartola,
-    isEditing,
-    isGlobalStructureEditing,
-    activeEditTarget,
-    activateEditTarget,
-    handleActivatePatientEdit,
-    handleActivateSectionEdit,
-    handlePatientFieldChange,
-    handlePatientLabelChange,
-    handleSectionContentChange,
-    handleSectionTitleChange,
-    handleUpdateSectionMeta,
-    handleRemoveSection,
-    handleRemovePatientField,
-    handleMedicoChange,
-    handleEspecialidadChange,
-    onRecordTitleChange,
-    onAddPatientField,
-    onAddSection,
-    sheetZoom,
-    aiAssistant,
-    integrationPanel,
+    header,
+    editor,
+    panels,
 }) => {
     const {
         headerHostRef,
@@ -94,36 +21,24 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
         sheetRef,
         stickyLayoutStyle,
         sideRailStyle,
-    } = useWorkspaceSideRailLayout(sheetZoom);
-    const showSideRail = editingHeader.isAdvancedEditing || isGlobalStructureEditing;
+    } = useWorkspaceSideRailLayout(editor.sheetZoom);
+    const showSideRail = header.editing.isAdvancedEditing || editor.isGlobalStructureEditing;
 
     return (
         <div className="wrap" style={stickyLayoutStyle}>
             <div ref={headerHostRef}>
-                <Header
-                    templateId={templateId}
-                    onTemplateChange={onTemplateChange}
-                    onAddClinicalUpdateSection={onAddClinicalUpdateSection}
-                    onPrint={onPrint}
-                    onOpenSettings={onOpenSettings}
-                    onRestoreTemplate={onRestoreTemplate}
-                    onOpenCartolaApp={onOpenCartola}
-                    auth={auth}
-                    drive={driveHeader}
-                    editing={editingHeader}
-                    save={saveHeader}
-                />
+                <Header {...header} />
             </div>
             <div ref={integrationPanelHostRef}>
-                {integrationPanel}
+                {panels.integrationPanel}
             </div>
             <div className="workspace">
                 <div className="sheet-shell">
                     <div
                         id="sheet"
                         ref={sheetRef}
-                        className={`sheet ${isEditing ? 'edit-mode' : ''}`}
-                        style={{ '--sheet-zoom': sheetZoom } as React.CSSProperties}
+                        className={`sheet ${editor.isEditing ? 'edit-mode' : ''}`}
+                        style={{ '--sheet-zoom': editor.sheetZoom } as React.CSSProperties}
                     >
                         {logoUrls.left && (
                             <img
@@ -144,28 +59,23 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
                         <div
                             className="title"
                             contentEditable={
-                                record.templateId === '5' || (isEditing && activeEditTarget?.type === 'record-title')
+                                record.templateId === '5' || (editor.isEditing && editor.activeEditTarget?.type === 'record-title')
                             }
                             suppressContentEditableWarning
-                            onDoubleClick={() => activateEditTarget({ type: 'record-title' })}
-                            onBlur={e => onRecordTitleChange(e.currentTarget.innerText)}
+                            onDoubleClick={() => editor.activateEditTarget({ type: 'record-title' })}
+                            onBlur={e => editor.onRecordTitleChange(e.currentTarget.innerText)}
                         >
                             {record.title}
                         </div>
                         <PatientInfo
-                            isEditing={isEditing}
-                            isGlobalStructureEditing={isGlobalStructureEditing}
-                            activeEditTarget={
-                                activeEditTarget?.type === 'patient-section-title' ||
-                                activeEditTarget?.type === 'patient-field-label'
-                                    ? activeEditTarget
-                                    : null
-                            }
-                            onActivateEdit={handleActivatePatientEdit}
+                            isEditing={editor.isEditing}
+                            isGlobalStructureEditing={editor.isGlobalStructureEditing}
+                            activeEditTarget={getPatientEditTarget(editor.activeEditTarget)}
+                            onActivateEdit={editor.handleActivatePatientEdit}
                             patientFields={record.patientFields}
-                            onPatientFieldChange={handlePatientFieldChange}
-                            onPatientLabelChange={handlePatientLabelChange}
-                            onRemovePatientField={handleRemovePatientField}
+                            onPatientFieldChange={editor.handlePatientFieldChange}
+                            onPatientLabelChange={editor.handlePatientLabelChange}
+                            onRemovePatientField={editor.handleRemovePatientField}
                         />
                         <div id="sectionsContainer">
                             {record.sections.map((section, index) => (
@@ -173,53 +83,52 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
                                     key={section.id}
                                     section={section}
                                     index={index}
-                                    isEditing={isEditing}
-                                    isAdvancedEditing={editingHeader.isAdvancedEditing}
-                                    isGlobalStructureEditing={isGlobalStructureEditing}
-                                    activeEditTarget={
-                                        activeEditTarget?.type === 'section-title' && activeEditTarget.index === index
-                                            ? activeEditTarget
-                                            : null
-                                    }
-                                    onActivateEdit={handleActivateSectionEdit}
-                                    onSectionContentChange={handleSectionContentChange}
-                                    onSectionTitleChange={handleSectionTitleChange}
-                                    onRemoveSection={handleRemoveSection}
-                                    onUpdateSectionMeta={handleUpdateSectionMeta}
+                                    isEditing={editor.isEditing}
+                                    isAdvancedEditing={header.editing.isAdvancedEditing}
+                                    isGlobalStructureEditing={editor.isGlobalStructureEditing}
+                                    activeEditTarget={getSectionEditTarget(editor.activeEditTarget, index)}
+                                    onActivateEdit={editor.handleActivateSectionEdit}
+                                    onSectionContentChange={editor.handleSectionContentChange}
+                                    onSectionTitleChange={editor.handleSectionTitleChange}
+                                    onRemoveSection={editor.handleRemoveSection}
+                                    onUpdateSectionMeta={editor.handleUpdateSectionMeta}
                                 />
                             ))}
                         </div>
                         <Footer
                             medico={record.medico}
                             especialidad={record.especialidad}
-                            onMedicoChange={handleMedicoChange}
-                            onEspecialidadChange={handleEspecialidadChange}
+                            onMedicoChange={editor.handleMedicoChange}
+                            onEspecialidadChange={editor.handleEspecialidadChange}
                         />
                     </div>
                 </div>
                 {showSideRail && (
                     <div className="workspace-side-rail" style={sideRailStyle}>
-                        {editingHeader.isAdvancedEditing && (
+                        {header.editing.isAdvancedEditing && (
                             <div className="sticky-toolbar-container">
                                 <div className="side-rail-card-label">Formato</div>
-                                <EditorToolbar onToolbarCommand={editingHeader.onToolbarCommand} />
+                                <EditorToolbar onToolbarCommand={header.editing.onToolbarCommand} />
                             </div>
                         )}
-                        <div id="editPanel" className={`edit-panel ${isGlobalStructureEditing ? 'visible' : 'hidden'}`}>
+                        <div
+                            id="editPanel"
+                            className={`edit-panel ${editor.isGlobalStructureEditing ? 'visible' : 'hidden'}`}
+                        >
                             <div>Estructura</div>
                             <div className="edit-panel-section">
                                 <div className="edit-panel-section-title">Insertar</div>
-                                <button onClick={onAddPatientField} className="btn" type="button">
+                                <button onClick={editor.onAddPatientField} className="btn" type="button">
                                     Agregar campo
                                 </button>
-                                <button onClick={onAddSection} className="btn" type="button">
+                                <button onClick={editor.onAddSection} className="btn" type="button">
                                     Agregar nueva sección
                                 </button>
                             </div>
                         </div>
                     </div>
                 )}
-                <Suspense fallback={null}>{aiAssistant}</Suspense>
+                <Suspense fallback={null}>{panels.aiAssistant}</Suspense>
             </div>
         </div>
     );

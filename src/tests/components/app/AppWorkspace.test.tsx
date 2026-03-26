@@ -92,72 +92,78 @@ const createProps = (): React.ComponentProps<typeof AppWorkspace> => ({
         medico: 'Dr. Test',
         especialidad: 'Medicina',
     },
-    auth: {
-        isSignedIn: true,
-        isGisReady: true,
-        isGapiReady: true,
-        isPickerApiReady: true,
-        tokenClient: null,
-        userProfile: null,
-        onSignIn: vi.fn(),
-        onSignOut: vi.fn(),
-        onChangeUser: vi.fn(),
+    header: {
+        templateId: '2',
+        onTemplateChange: vi.fn(),
+        onAddClinicalUpdateSection: vi.fn(),
+        onPrint: vi.fn(),
+        onOpenSettings: vi.fn(),
+        onRestoreTemplate: vi.fn(),
+        onOpenCartolaApp: vi.fn(),
+        auth: {
+            isSignedIn: true,
+            isGisReady: true,
+            isGapiReady: true,
+            isPickerApiReady: true,
+            tokenClient: null,
+            userProfile: null,
+            onSignIn: vi.fn(),
+            onSignOut: vi.fn(),
+            onChangeUser: vi.fn(),
+        },
+        drive: {
+            isSaving: false,
+            hasApiKey: true,
+            onSaveToDrive: vi.fn(),
+            onOpenFromDrive: vi.fn(),
+            onDownloadJson: vi.fn(),
+        },
+        editing: {
+            isEditing: true,
+            onToggleEdit: vi.fn(),
+            isAdvancedEditing: true,
+            onToggleAdvancedEditing: vi.fn(),
+            isAiAssistantVisible: true,
+            onToggleAiAssistant: vi.fn(),
+            onToolbarCommand: vi.fn(),
+        },
+        save: {
+            saveStatusLabel: 'Guardado local',
+            lastSaveTime: 'Hace 1 min.',
+            hasUnsavedChanges: true,
+            canUndo: true,
+            canRedo: true,
+            onQuickSave: vi.fn(),
+            onOpenHistory: vi.fn(),
+            onUndo: vi.fn(),
+            onRedo: vi.fn(),
+        },
     },
-    driveHeader: {
-        isSaving: false,
-        hasApiKey: true,
-        onSaveToDrive: vi.fn(),
-        onOpenFromDrive: vi.fn(),
-        onDownloadJson: vi.fn(),
-    },
-    editingHeader: {
+    editor: {
         isEditing: true,
-        onToggleEdit: vi.fn(),
-        isAdvancedEditing: true,
-        onToggleAdvancedEditing: vi.fn(),
-        isAiAssistantVisible: true,
-        onToggleAiAssistant: vi.fn(),
-        onToolbarCommand: vi.fn(),
+        isGlobalStructureEditing: true,
+        activeEditTarget: { type: 'section-title', index: 1 },
+        activateEditTarget: vi.fn(),
+        handleActivatePatientEdit: vi.fn(),
+        handleActivateSectionEdit: vi.fn(),
+        handlePatientFieldChange: vi.fn(),
+        handlePatientLabelChange: vi.fn(),
+        handleSectionContentChange: vi.fn(),
+        handleSectionTitleChange: vi.fn(),
+        handleUpdateSectionMeta: vi.fn(),
+        handleRemoveSection: vi.fn(),
+        handleRemovePatientField: vi.fn(),
+        handleMedicoChange: vi.fn(),
+        handleEspecialidadChange: vi.fn(),
+        onRecordTitleChange: vi.fn(),
+        onAddPatientField: vi.fn(),
+        onAddSection: vi.fn(),
+        sheetZoom: 1.25,
     },
-    saveHeader: {
-        saveStatusLabel: 'Guardado local',
-        lastSaveTime: 'Hace 1 min.',
-        hasUnsavedChanges: true,
-        canUndo: true,
-        canRedo: true,
-        onQuickSave: vi.fn(),
-        onOpenHistory: vi.fn(),
-        onUndo: vi.fn(),
-        onRedo: vi.fn(),
+    panels: {
+        aiAssistant: <div>assistant-panel</div>,
+        integrationPanel: <div>integration-panel</div>,
     },
-    templateId: '2',
-    onTemplateChange: vi.fn(),
-    onAddClinicalUpdateSection: vi.fn(),
-    onPrint: vi.fn(),
-    onOpenSettings: vi.fn(),
-    onRestoreTemplate: vi.fn(),
-    onOpenCartola: vi.fn(),
-    isEditing: true,
-    isGlobalStructureEditing: true,
-    activeEditTarget: { type: 'section-title', index: 1 },
-    activateEditTarget: vi.fn(),
-    handleActivatePatientEdit: vi.fn(),
-    handleActivateSectionEdit: vi.fn(),
-    handlePatientFieldChange: vi.fn(),
-    handlePatientLabelChange: vi.fn(),
-    handleSectionContentChange: vi.fn(),
-    handleSectionTitleChange: vi.fn(),
-    handleUpdateSectionMeta: vi.fn(),
-    handleRemoveSection: vi.fn(),
-    handleRemovePatientField: vi.fn(),
-    handleMedicoChange: vi.fn(),
-    handleEspecialidadChange: vi.fn(),
-    onRecordTitleChange: vi.fn(),
-    onAddPatientField: vi.fn(),
-    onAddSection: vi.fn(),
-    sheetZoom: 1.25,
-    aiAssistant: <div>assistant-panel</div>,
-    integrationPanel: <div>integration-panel</div>,
 });
 
 describe('AppWorkspace', () => {
@@ -195,23 +201,23 @@ describe('AppWorkspace', () => {
         fireEvent.click(screen.getByText('footer-medico'));
         fireEvent.click(screen.getByText('footer-especialidad'));
 
-        expect(props.onTemplateChange).toHaveBeenCalledWith('5');
-        expect(props.onAddClinicalUpdateSection).toHaveBeenCalled();
-        expect(props.onPrint).toHaveBeenCalled();
-        expect(props.onOpenSettings).toHaveBeenCalled();
-        expect(props.onRestoreTemplate).toHaveBeenCalled();
-        expect(props.onOpenCartola).toHaveBeenCalled();
-        expect(props.handleActivatePatientEdit).toHaveBeenCalledWith({ type: 'patient-field-label', index: 0 });
-        expect(props.handlePatientFieldChange).toHaveBeenCalledWith(0, 'Jane Roe');
-        expect(props.handlePatientLabelChange).toHaveBeenCalledWith(0, 'Nombre completo');
-        expect(props.handleRemovePatientField).toHaveBeenCalledWith(0);
-        expect(props.handleActivateSectionEdit).toHaveBeenCalledWith({ type: 'section-title', index: 0 });
-        expect(props.handleSectionContentChange).toHaveBeenCalledWith(0, 'contenido-0');
-        expect(props.handleSectionTitleChange).toHaveBeenCalledWith(1, 'titulo-1');
-        expect(props.handleRemoveSection).toHaveBeenCalledWith(1);
-        expect(props.handleUpdateSectionMeta).toHaveBeenCalledWith(1, { updateDate: '2026-03-20' });
-        expect(props.handleMedicoChange).toHaveBeenCalledWith('Dr. House');
-        expect(props.handleEspecialidadChange).toHaveBeenCalledWith('Urgencia');
+        expect(props.header.onTemplateChange).toHaveBeenCalledWith('5');
+        expect(props.header.onAddClinicalUpdateSection).toHaveBeenCalled();
+        expect(props.header.onPrint).toHaveBeenCalled();
+        expect(props.header.onOpenSettings).toHaveBeenCalled();
+        expect(props.header.onRestoreTemplate).toHaveBeenCalled();
+        expect(props.header.onOpenCartolaApp).toHaveBeenCalled();
+        expect(props.editor.handleActivatePatientEdit).toHaveBeenCalledWith({ type: 'patient-field-label', index: 0 });
+        expect(props.editor.handlePatientFieldChange).toHaveBeenCalledWith(0, 'Jane Roe');
+        expect(props.editor.handlePatientLabelChange).toHaveBeenCalledWith(0, 'Nombre completo');
+        expect(props.editor.handleRemovePatientField).toHaveBeenCalledWith(0);
+        expect(props.editor.handleActivateSectionEdit).toHaveBeenCalledWith({ type: 'section-title', index: 0 });
+        expect(props.editor.handleSectionContentChange).toHaveBeenCalledWith(0, 'contenido-0');
+        expect(props.editor.handleSectionTitleChange).toHaveBeenCalledWith(1, 'titulo-1');
+        expect(props.editor.handleRemoveSection).toHaveBeenCalledWith(1);
+        expect(props.editor.handleUpdateSectionMeta).toHaveBeenCalledWith(1, { updateDate: '2026-03-20' });
+        expect(props.editor.handleMedicoChange).toHaveBeenCalledWith('Dr. House');
+        expect(props.editor.handleEspecialidadChange).toHaveBeenCalledWith('Urgencia');
     });
 
     it('filtra activeEditTarget y actualiza el título al perder foco', () => {
@@ -229,10 +235,10 @@ describe('AppWorkspace', () => {
         fireEvent.click(screen.getByText('Agregar campo'));
         fireEvent.click(screen.getByText('Agregar nueva sección'));
 
-        expect(props.activateEditTarget).toHaveBeenCalledWith({ type: 'record-title' });
-        expect(props.onRecordTitleChange).toHaveBeenCalledWith('Nuevo informe');
-        expect(props.onAddPatientField).toHaveBeenCalled();
-        expect(props.onAddSection).toHaveBeenCalled();
+        expect(props.editor.activateEditTarget).toHaveBeenCalledWith({ type: 'record-title' });
+        expect(props.editor.onRecordTitleChange).toHaveBeenCalledWith('Nuevo informe');
+        expect(props.editor.onAddPatientField).toHaveBeenCalled();
+        expect(props.editor.onAddSection).toHaveBeenCalled();
         expect(patientInfoProps?.activeEditTarget).toBeNull();
         expect(clinicalSectionProps[0]?.activeEditTarget).toBeNull();
         expect(clinicalSectionProps[1]?.activeEditTarget).toEqual({ type: 'section-title', index: 1 });

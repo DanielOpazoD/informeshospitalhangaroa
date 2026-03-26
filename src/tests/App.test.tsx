@@ -226,7 +226,7 @@ vi.mock('../components/app/AppShellContent', () => ({
         mockState.appShellContentProps = props;
         return (
             <div>
-                <button onClick={props.onOpenCartola}>open-cartola-route</button>
+                <button onClick={props.handlers.onOpenCartola}>open-cartola-route</button>
                 <div>app-shell</div>
             </div>
         );

@@ -27,13 +27,13 @@ vi.mock('../../../components/app/AppWorkspace', () => ({
         appWorkspaceProps = props;
         return (
             <div>
-                <button onClick={props.onOpenSettings}>open-settings</button>
-                <button onClick={props.driveHeader.onOpenFromDrive}>open-drive</button>
-                <button onClick={props.driveHeader.onSaveToDrive}>save-drive</button>
-                <button onClick={props.saveHeader.onOpenHistory}>open-history</button>
-                <button onClick={props.saveHeader.onUndo}>undo</button>
-                <button onClick={props.saveHeader.onRedo}>redo</button>
-                <button onClick={() => props.editingHeader.onToolbarCommand('bold')}>toolbar-command</button>
+                <button onClick={props.header.onOpenSettings}>open-settings</button>
+                <button onClick={props.header.drive.onOpenFromDrive}>open-drive</button>
+                <button onClick={props.header.drive.onSaveToDrive}>save-drive</button>
+                <button onClick={props.header.save.onOpenHistory}>open-history</button>
+                <button onClick={props.header.save.onUndo}>undo</button>
+                <button onClick={props.header.save.onRedo}>redo</button>
+                <button onClick={() => props.header.editing.onToolbarCommand('bold')}>toolbar-command</button>
                 <div>workspace</div>
             </div>
         );
@@ -207,18 +207,22 @@ const createSpies = () => {
             handleMedicoChange: vi.fn(),
             handleEspecialidadChange: vi.fn(),
         },
-        toggleGlobalStructureEditing: vi.fn(),
-        handleTemplateChange: vi.fn(),
-        handleAddClinicalUpdateSection: vi.fn(),
-        handleRecordTitleChange: vi.fn(),
-        handleAddPatientField: vi.fn(),
-        handleAddSection: vi.fn(),
-        handleRestoreAll: vi.fn(),
-        handleToolbarCommand,
-        onOpenCartola: vi.fn(),
-        aiAssistantPanel: <div>assistant</div>,
-        hhrPanel: <div>hhr-panel</div>,
-        hhrModal: <div>hhr-modal</div>,
+        handlers: {
+            toggleGlobalStructureEditing: vi.fn(),
+            handleTemplateChange: vi.fn(),
+            handleAddClinicalUpdateSection: vi.fn(),
+            handleRecordTitleChange: vi.fn(),
+            handleAddPatientField: vi.fn(),
+            handleAddSection: vi.fn(),
+            handleRestoreAll: vi.fn(),
+            handleToolbarCommand,
+            onOpenCartola: vi.fn(),
+        },
+        panels: {
+            aiAssistant: <div>assistant</div>,
+            integrationPanel: <div>hhr-panel</div>,
+            hhrModal: <div>hhr-modal</div>,
+        },
     };
 
     return {
@@ -271,9 +275,9 @@ describe('AppShellContent', () => {
         const { props, spies } = createSpies();
         render(<AppShellContent {...props} />);
 
-        expect(appWorkspaceProps?.driveHeader.hasApiKey).toBe(true);
-        expect(appWorkspaceProps?.saveHeader.hasUnsavedChanges).toBe(true);
-        expect(appWorkspaceProps?.integrationPanel).toBeTruthy();
+        expect(appWorkspaceProps?.header.drive.hasApiKey).toBe(true);
+        expect(appWorkspaceProps?.header.save.hasUnsavedChanges).toBe(true);
+        expect(appWorkspaceProps?.panels.integrationPanel).toBeTruthy();
 
         fireEvent.click(screen.getByText('open-settings'));
         fireEvent.click(screen.getByText('open-drive'));
