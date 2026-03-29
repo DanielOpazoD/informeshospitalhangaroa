@@ -64,4 +64,25 @@ describe('ClinicalSection', () => {
         expect(props.onUpdateSectionMeta).toHaveBeenCalledWith(0, { updateTime: '11:45' });
         expect(props.onRemoveSection).toHaveBeenCalledWith(0);
     });
+
+    it('mantiene el contenido en edición activa aunque cambien las props', () => {
+        const props = createProps();
+        const { rerender } = render(<ClinicalSection {...props} />);
+
+        const editor = screen.getByLabelText('Contenido de Diagnóstico - actualización clínica') as HTMLDivElement;
+        fireEvent.focus(editor);
+        editor.innerHTML = '<p>Texto local</p>';
+
+        rerender(
+            <ClinicalSection
+                {...props}
+                section={{
+                    ...props.section,
+                    content: '<p>Contenido remoto</p>',
+                }}
+            />
+        );
+
+        expect(editor.innerHTML).toBe('<p>Texto local</p>');
+    });
 });
