@@ -59,6 +59,19 @@ export const sanitizeClinicalHtml = (
         }
 
         if (!ALLOWED_TAGS.has(node.tagName)) {
+            if (node.tagName === 'DIV') {
+                const paragraph = document.createElement('p');
+                while (node.firstChild) {
+                    paragraph.appendChild(node.firstChild);
+                }
+                if (!paragraph.childNodes.length) {
+                    paragraph.appendChild(document.createElement('br'));
+                }
+                node.replaceWith(paragraph);
+                sanitizeNode(paragraph);
+                return;
+            }
+
             if (!SILENT_UNWRAP_TAGS.has(node.tagName)) {
                 warnings.add('Se removieron etiquetas HTML no permitidas.');
             }
