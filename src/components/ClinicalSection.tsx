@@ -31,6 +31,7 @@ const ClinicalSection: React.FC<ClinicalSectionProps> = ({
 }) => {
     const noteRef = useRef<HTMLDivElement>(null);
     const [isFocused, setIsFocused] = useState(false);
+    const lastCommittedHtmlRef = useRef('');
     const isClinicalUpdate = section.kind === 'clinical-update';
     const dateInputId = useMemo(() => `clinical-update-date-${index}`, [index]);
     const timeInputId = useMemo(() => `clinical-update-time-${index}`, [index]);
@@ -43,18 +44,34 @@ const ClinicalSection: React.FC<ClinicalSectionProps> = ({
         if (node.innerHTML !== sanitized.html) {
             node.innerHTML = sanitized.html;
         }
+        lastCommittedHtmlRef.current = sanitized.html;
     }, [isFocused, section.content]);
 
     useEffect(() => {
         syncContent();
     }, [syncContent]);
 
+    const publishSanitizedContent = useCallback((html: string, mutateDom: boolean) => {
+        const node = noteRef.current;
+        const sanitized = sanitizeClinicalHtml(html);
+
+        if (node && mutateDom && node.innerHTML !== sanitized.html) {
+            node.innerHTML = sanitized.html;
+        }
+
+        if (lastCommittedHtmlRef.current !== sanitized.html) {
+            lastCommittedHtmlRef.current = sanitized.html;
+            onSectionContentChange(index, sanitized.html);
+        }
+
+        return sanitized;
+    }, [index, onSectionContentChange]);
+
     const handleInput = useCallback(() => {
         const node = noteRef.current;
         if (!node) return;
-        const sanitized = sanitizeClinicalHtml(node.innerHTML);
-        onSectionContentChange(index, sanitized.html);
-    }, [index, onSectionContentChange]);
+        publishSanitizedContent(node.innerHTML, false);
+    }, [publishSanitizedContent]);
 
     const placeCaretAfterNode = useCallback((node: Node) => {
         const selection = window.getSelection();
@@ -69,12 +86,8 @@ const ClinicalSection: React.FC<ClinicalSectionProps> = ({
     const persistEditorContent = useCallback(() => {
         const node = noteRef.current;
         if (!node) return;
-        const sanitized = sanitizeClinicalHtml(node.innerHTML);
-        if (node.innerHTML !== sanitized.html) {
-            node.innerHTML = sanitized.html;
-        }
-        onSectionContentChange(index, sanitized.html);
-    }, [index, onSectionContentChange]);
+        publishSanitizedContent(node.innerHTML, true);
+    }, [publishSanitizedContent]);
 
     const insertImageAtCursor = useCallback((dataUrl: string) => {
         const node = noteRef.current;
@@ -209,11 +222,7 @@ const ClinicalSection: React.FC<ClinicalSectionProps> = ({
                 onPaste={handlePaste}
                 onBlur={event => {
                     setIsFocused(false);
-                    const sanitized = sanitizeClinicalHtml(event.currentTarget.innerHTML);
-                    if (event.currentTarget.innerHTML !== sanitized.html) {
-                        event.currentTarget.innerHTML = sanitized.html;
-                    }
-                    onSectionContentChange(index, sanitized.html);
+                    publishSanitizedContent(event.currentTarget.innerHTML, true);
                 }}
                 onMouseUp={event => {
                     const target = event.target as HTMLElement;

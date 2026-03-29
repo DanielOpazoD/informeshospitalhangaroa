@@ -61,6 +61,39 @@ describe('useToolbarCommands', () => {
         expect(result.current.lastSelectionRef.current).not.toBeNull();
     });
 
+    it('aplica indent semántico con blockquote sin depender de execCommand para párrafos', () => {
+        const setSheetZoom = vi.fn();
+        const execCommand = vi.fn(() => true);
+        Object.defineProperty(document, 'execCommand', {
+            configurable: true,
+            value: execCommand,
+        });
+        const { result } = renderHook(() => useToolbarCommands({ setSheetZoom }));
+
+        const editable = document.createElement('div');
+        editable.className = 'note-area';
+        editable.setAttribute('contenteditable', 'true');
+        editable.innerHTML = '<p>Texto clínico</p>';
+        document.body.appendChild(editable);
+
+        const paragraph = editable.querySelector('p')!;
+        const range = document.createRange();
+        range.selectNodeContents(paragraph);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        result.current.lastEditableRef.current = editable;
+        result.current.lastSelectionRef.current = range.cloneRange();
+
+        act(() => {
+            result.current.handleToolbarCommand('indent');
+        });
+
+        expect(editable.innerHTML).toBe('<blockquote><p>Texto clínico</p></blockquote>');
+        expect(execCommand).not.toHaveBeenCalledWith('indent', false);
+    });
+
     it('ignora comandos enriquecidos si no encuentra un editable activo', () => {
         const setSheetZoom = vi.fn();
         const execCommand = vi.fn(() => true);

@@ -65,6 +65,28 @@ describe('ClinicalSection', () => {
         expect(props.onRemoveSection).toHaveBeenCalledWith(0);
     });
 
+
+    it('persiste sangría aplicada en edición al hacer blur', () => {
+        const props = createProps();
+        render(<ClinicalSection {...props} />);
+
+        const editor = screen.getByLabelText('Contenido de Diagnóstico - actualización clínica') as HTMLDivElement;
+        fireEvent.focus(editor);
+        editor.innerHTML = '<p style="margin-left: 64px">Plan terapéutico</p>';
+
+        fireEvent.input(editor);
+        expect(props.onSectionContentChange).toHaveBeenCalledWith(
+            0,
+            '<blockquote><blockquote><p>Plan terapéutico</p></blockquote></blockquote>'
+        );
+
+        fireEvent.blur(editor);
+        expect(props.onSectionContentChange).toHaveBeenLastCalledWith(
+            0,
+            '<blockquote><blockquote><p>Plan terapéutico</p></blockquote></blockquote>'
+        );
+    });
+
     it('mantiene el contenido en edición activa aunque cambien las props', () => {
         const props = createProps();
         const { rerender } = render(<ClinicalSection {...props} />);
