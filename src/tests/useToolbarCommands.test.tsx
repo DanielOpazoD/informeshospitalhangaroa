@@ -94,6 +94,39 @@ describe('useToolbarCommands', () => {
         expect(execCommand).not.toHaveBeenCalledWith('indent', false);
     });
 
+    it('aplica indent semántico cuando el bloque editable es un div interno', () => {
+        const setSheetZoom = vi.fn();
+        const execCommand = vi.fn(() => true);
+        Object.defineProperty(document, 'execCommand', {
+            configurable: true,
+            value: execCommand,
+        });
+        const { result } = renderHook(() => useToolbarCommands({ setSheetZoom }));
+
+        const editable = document.createElement('div');
+        editable.className = 'note-area';
+        editable.setAttribute('contenteditable', 'true');
+        editable.innerHTML = '<div>Texto en div</div>';
+        document.body.appendChild(editable);
+
+        const block = editable.querySelector('div')!;
+        const range = document.createRange();
+        range.selectNodeContents(block);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        result.current.lastEditableRef.current = editable;
+        result.current.lastSelectionRef.current = range.cloneRange();
+
+        act(() => {
+            result.current.handleToolbarCommand('indent');
+        });
+
+        expect(editable.innerHTML).toBe('<blockquote><div>Texto en div</div></blockquote>');
+        expect(execCommand).not.toHaveBeenCalledWith('indent', false);
+    });
+
     it('ignora comandos enriquecidos si no encuentra un editable activo', () => {
         const setSheetZoom = vi.fn();
         const execCommand = vi.fn(() => true);

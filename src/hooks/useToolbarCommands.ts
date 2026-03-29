@@ -15,8 +15,9 @@ const getClosestEditableBlock = (range: Range, editable: HTMLElement): HTMLEleme
     const startElement = startNode instanceof HTMLElement ? startNode : startNode.parentElement;
     if (!startElement) return null;
 
-    const block = startElement.closest('p,blockquote,li,ul,ol') as HTMLElement | null;
+    const block = startElement.closest('p,blockquote,li,ul,ol,div') as HTMLElement | null;
     if (!block || !editable.contains(block)) return null;
+    if (block === editable) return null;
     return block;
 };
 
@@ -119,7 +120,7 @@ export function useToolbarCommands({ setSheetZoom }: UseToolbarCommandsOptions) 
 
             if (block && block.tagName !== 'LI') {
                 if (command === 'indent') {
-                    const nested = block.tagName === 'BLOCKQUOTE' ? nestElementInBlockquote(block) : nestElementInBlockquote(block);
+                    const nested = nestElementInBlockquote(block);
                     updatedRange = updateSelectionAfterCommand(selection, nested);
                 } else if (block.tagName === 'BLOCKQUOTE') {
                     const unwrappedSibling = unwrapBlockquote(block);
