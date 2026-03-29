@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { HhrCensusPatient } from '../hhrTypes';
-import { subscribeToHospitalCensus } from '../services/hhrFirebaseService';
+import { subscribeToHospitalCensusSnapshot } from '../services/hhrFirebaseService';
 import { isHhrFirebaseConfigured } from '../infrastructure/hhr/hhrConfig';
 
 interface UseHospitalCensusOptions {
@@ -24,20 +24,56 @@ export const useHospitalCensus = ({ enabled, dateKey }: UseHospitalCensusOptions
         setIsLoading(true);
         setError(null);
 
-        const unsubscribe = subscribeToHospitalCensus(
-            dateKey,
-            nextPatients => {
-                setPatients(nextPatients);
-                setIsLoading(false);
-            },
-            nextError => {
-                setError(nextError.message || 'No fue posible leer el censo de HHR.');
+        const previousDate = new Date(`${dateKey}T00:00:00`);
+        previousDate.setDate(previousDate.getDate() - 1);
+        const previousDateKey = [
+            previousDate.getFullYear(),
+            String(previousDate.getMonth() + 1).padStart(2, '0'),
+            String(previousDate.getDate()).padStart(2, '0'),
+        ].join('-');
+
+        let todaySnapshot: { exists: boolean; patients: HhrCensusPatient[] } | null = null;
+        let previousSnapshot: { exists: boolean; patients: HhrCensusPatient[] } | null = null;
+
+        const resolvePatients = () => {
+            if (todaySnapshot?.exists) {
+                setPatients(todaySnapshot.patients);
+            } else if (previousSnapshot?.exists) {
+                setPatients(previousSnapshot.patients);
+            } else {
                 setPatients([]);
-                setIsLoading(false);
             }
+            setIsLoading(false);
+        };
+
+        const handleError = (nextError: Error) => {
+            setError(nextError.message || 'No fue posible leer el censo de HHR.');
+            setPatients([]);
+            setIsLoading(false);
+        };
+
+        const unsubscribeToday = subscribeToHospitalCensusSnapshot(
+            dateKey,
+            snapshot => {
+                todaySnapshot = { exists: snapshot.exists, patients: snapshot.patients };
+                resolvePatients();
+            },
+            handleError,
         );
 
-        return unsubscribe;
+        const unsubscribePrevious = subscribeToHospitalCensusSnapshot(
+            previousDateKey,
+            snapshot => {
+                previousSnapshot = { exists: snapshot.exists, patients: snapshot.patients };
+                resolvePatients();
+            },
+            handleError,
+        );
+
+        return () => {
+            unsubscribeToday();
+            unsubscribePrevious();
+        };
     }, [dateKey, enabled]);
 
     return {
