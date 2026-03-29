@@ -38,11 +38,12 @@ const ClinicalSection: React.FC<ClinicalSectionProps> = ({
     const syncContent = useCallback(() => {
         const node = noteRef.current;
         if (!node) return;
+        if (isFocused) return;
         const sanitized = sanitizeClinicalHtml(section.content || '');
         if (node.innerHTML !== sanitized.html) {
             node.innerHTML = sanitized.html;
         }
-    }, [section.content]);
+    }, [isFocused, section.content]);
 
     useEffect(() => {
         syncContent();
@@ -52,9 +53,6 @@ const ClinicalSection: React.FC<ClinicalSectionProps> = ({
         const node = noteRef.current;
         if (!node) return;
         const sanitized = sanitizeClinicalHtml(node.innerHTML);
-        if (node.innerHTML !== sanitized.html) {
-            node.innerHTML = sanitized.html;
-        }
         onSectionContentChange(index, sanitized.html);
     }, [index, onSectionContentChange]);
 
