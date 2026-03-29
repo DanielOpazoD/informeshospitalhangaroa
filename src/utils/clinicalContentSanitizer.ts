@@ -2,6 +2,8 @@ const ALLOWED_TAGS = new Set(['P', 'BR', 'STRONG', 'EM', 'UL', 'OL', 'LI', 'CODE
 const DROP_WITH_CONTENT_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'SVG']);
 const SILENT_UNWRAP_TAGS = new Set(['DIV', 'SPAN', 'FONT']);
 
+const INDENT_STYLE_NAMES = new Set(['margin-left', 'padding-left', 'text-indent']);
+
 const htmlFallbackToPlainText = (html: string): string =>
     html
         .replace(/<br\s*\/?>/gi, '\n')
@@ -28,6 +30,124 @@ const normalizePlainTextToHtml = (text: string): string =>
         .map(paragraph => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br />')}</p>`)
         .join('');
 
+const parseCssLengthToPx = (value: string): number => {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return 0;
+
+    const match = normalized.match(/^(-?\d+(?:\.\d+)?)(px|em|rem|%)?$/);
+    if (!match) return 0;
+
+    const amount = Number.parseFloat(match[1]);
+    const unit = match[2] || 'px';
+    if (!Number.isFinite(amount) || amount <= 0) return 0;
+
+    switch (unit) {
+        case 'px':
+            return amount;
+        case 'em':
+        case 'rem':
+            return amount * 16;
+        case '%':
+            return (amount / 100) * 16;
+        default:
+            return 0;
+    }
+};
+
+const getIndentLevelFromStyle = (styleValue: string): number => {
+    const declarations = styleValue
+        .split(';')
+        .map(chunk => chunk.trim())
+        .filter(Boolean);
+
+    let maxIndentPx = 0;
+    declarations.forEach(declaration => {
+        const [rawName, rawValue = ''] = declaration.split(':');
+        if (!rawName) return;
+        const name = rawName.trim().toLowerCase();
+        if (!INDENT_STYLE_NAMES.has(name)) return;
+        const px = parseCssLengthToPx(rawValue);
+        if (px > maxIndentPx) {
+            maxIndentPx = px;
+        }
+    });
+
+    return Math.min(6, Math.floor(maxIndentPx / 32));
+};
+
+const isTopLevelListItem = (node: HTMLElement): boolean => node.tagName === 'LI' && node.parentElement?.tagName !== 'UL' && node.parentElement?.tagName !== 'OL';
+
+const wrapWithIndentBlockquotes = (node: HTMLElement, levels: number): HTMLElement => {
+    let wrapped = node;
+    for (let i = 0; i < levels; i += 1) {
+        const blockquote = document.createElement('blockquote');
+        wrapped.replaceWith(blockquote);
+        blockquote.appendChild(wrapped);
+        wrapped = blockquote;
+    }
+    return wrapped;
+};
+
+const normalizeIndentationMarkup = (container: HTMLElement): void => {
+    const nodesWithStyle = Array.from(container.querySelectorAll<HTMLElement>('[style]'));
+
+    nodesWithStyle.forEach(node => {
+        const styleAttribute = node.getAttribute('style') || '';
+        const indentLevels = getIndentLevelFromStyle(styleAttribute);
+        if (indentLevels === 0) return;
+
+        if (node.tagName === 'LI') {
+            return;
+        }
+
+        if (node.tagName === 'DIV') {
+            const paragraph = document.createElement('p');
+            while (node.firstChild) {
+                paragraph.appendChild(node.firstChild);
+            }
+            if (!paragraph.childNodes.length) {
+                paragraph.appendChild(document.createElement('br'));
+            }
+            node.replaceWith(paragraph);
+            wrapWithIndentBlockquotes(paragraph, indentLevels);
+            return;
+        }
+
+        if (!isTopLevelListItem(node)) {
+            wrapWithIndentBlockquotes(node, indentLevels);
+        }
+    });
+};
+
+const sanitizeStyleAttribute = (node: HTMLElement, styleValue: string): string | null => {
+    const declarations = styleValue
+        .split(';')
+        .map(chunk => chunk.trim())
+        .filter(Boolean);
+
+    if (declarations.length === 0) return null;
+
+    const safeDeclarations: string[] = [];
+
+    declarations.forEach(declaration => {
+        const [rawName, rawValue = ''] = declaration.split(':');
+        if (!rawName) return;
+        const name = rawName.trim().toLowerCase();
+        const value = rawValue.trim();
+        if (!INDENT_STYLE_NAMES.has(name)) return;
+
+        const px = parseCssLengthToPx(value);
+        if (px <= 0) return;
+
+        if (node.tagName === 'LI') {
+            safeDeclarations.push(`${name}: ${Math.min(px, 192)}px`);
+        }
+    });
+
+    if (!safeDeclarations.length) return null;
+    return safeDeclarations.join('; ');
+};
+
 export const sanitizeClinicalHtml = (
     html: string,
 ): { html: string; warnings: string[] } => {
@@ -46,6 +166,8 @@ export const sanitizeClinicalHtml = (
     const container = document.createElement('div');
     container.innerHTML = html;
     const warnings = new Set<string>();
+
+    normalizeIndentationMarkup(container);
 
     const sanitizeNode = (node: Node): void => {
         if (node.nodeType === Node.TEXT_NODE) {
@@ -106,6 +228,17 @@ export const sanitizeClinicalHtml = (
                 if (!attributeValue.startsWith('data:image/')) {
                     node.remove();
                     warnings.add('Se eliminaron imágenes externas no permitidas.');
+                }
+                return;
+            }
+
+            if (attributeName === 'style') {
+                const safeStyle = sanitizeStyleAttribute(node, attributeValue);
+                if (safeStyle) {
+                    node.setAttribute('style', safeStyle);
+                } else {
+                    node.removeAttribute('style');
+                    warnings.add('Se eliminaron estilos no permitidos del contenido clínico.');
                 }
                 return;
             }
