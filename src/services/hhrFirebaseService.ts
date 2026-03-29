@@ -29,6 +29,12 @@ interface HhrFirebaseServices {
     db: Firestore;
 }
 
+export interface HhrHospitalCensusSnapshot {
+    dateKey: string;
+    exists: boolean;
+    patients: HhrCensusPatient[];
+}
+
 let cachedServices: HhrFirebaseServices | null = null;
 
 const normalizeEmail = (value: string | null | undefined): string => (value || '').trim().toLowerCase();
@@ -111,6 +117,18 @@ export const subscribeToHospitalCensus = (
     onPatientsChange: (patients: HhrCensusPatient[]) => void,
     onError?: (error: Error) => void
 ): (() => void) => {
+    return subscribeToHospitalCensusSnapshot(
+        dateKey,
+        snapshot => onPatientsChange(snapshot.exists ? snapshot.patients : []),
+        onError,
+    );
+};
+
+export const subscribeToHospitalCensusSnapshot = (
+    dateKey: string,
+    onSnapshotChange: (snapshot: HhrHospitalCensusSnapshot) => void,
+    onError?: (error: Error) => void
+): (() => void) => {
     const { db } = getHhrFirebaseServices();
     const snapshotRef = doc(db, 'hospitals', getHhrHospitalId(), 'dailyRecords', dateKey);
 
@@ -118,11 +136,19 @@ export const subscribeToHospitalCensus = (
         snapshotRef,
         snapshot => {
             if (!snapshot.exists()) {
-                onPatientsChange([]);
+                onSnapshotChange({
+                    dateKey,
+                    exists: false,
+                    patients: [],
+                });
                 return;
             }
 
-            onPatientsChange(mapHospitalCensusPatients(snapshot.data(), dateKey));
+            onSnapshotChange({
+                dateKey,
+                exists: true,
+                patients: mapHospitalCensusPatients(snapshot.data(), dateKey),
+            });
         },
         error => onError?.(error instanceof Error ? error : new Error(String(error)))
     );
