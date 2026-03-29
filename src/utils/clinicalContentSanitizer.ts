@@ -1,4 +1,4 @@
-const ALLOWED_TAGS = new Set(['P', 'BR', 'STRONG', 'EM', 'UL', 'OL', 'LI', 'CODE', 'IMG']);
+const ALLOWED_TAGS = new Set(['P', 'BR', 'STRONG', 'EM', 'UL', 'OL', 'LI', 'CODE', 'IMG', 'BLOCKQUOTE']);
 const DROP_WITH_CONTENT_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'SVG']);
 const SILENT_UNWRAP_TAGS = new Set(['DIV', 'SPAN', 'FONT']);
 
