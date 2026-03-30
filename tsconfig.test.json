@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": ".test-dist",
+    "noEmit": false,
+    "types": ["node"],
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": false
+  },
+  "include": [
+    "src/utils/**/*.ts",
+    "src/types.ts",
+    "src/tests/**/*.ts",
+    "src/tests/**/*.tsx"
+  ],
+  "exclude": ["node_modules"]
+}

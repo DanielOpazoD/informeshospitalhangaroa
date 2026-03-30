@@ -1,0 +1,76 @@
+
+import type { PatientField, ClinicalSectionData, Template } from './types';
+import { buildInstitutionTitle } from './institutionConfig';
+import { FIELD_IDS } from './appConstants';
+
+/** Generates a short unique ID for stable React keys in dynamic lists */
+export const generateSectionId = (): string =>
+    `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
+export const TEMPLATES: Record<string, Template> = Object.freeze({
+  '1': { id: '1', name: 'Informe médico de traslado', title: buildInstitutionTitle('Informe médico de traslado') },
+  '2': { id: '2', name: 'Evolución médica', title: buildInstitutionTitle('Evolución médica (____)') },
+  '3': { id: '3', name: 'Epicrisis médica', title: 'Epicrisis médica' },
+  '4': { id: '4', name: 'Epicrisis médica de traslado', title: 'Epicrisis médica de traslado' },
+  '5': { id: '5', name: 'Otro (personalizado)', title: '' },
+  '6': { id: '6', name: 'Informe médico', title: buildInstitutionTitle('Informe médico') },
+  '7': { id: '7', name: 'Informe médico MEDIF/LATAM', title: 'INFORME MÉDICO MEDIF/LATAM' },
+});
+
+export const TEMPLATE_SELECTOR_ORDER = Object.freeze(['3', '4', '6', '1', '7', '2', '5']);
+
+export const DEFAULT_PATIENT_FIELDS: PatientField[] = [
+    { id: FIELD_IDS.nombre, label: 'Nombre', value: '', type: 'text', placeholder: 'Nombre Apellido' },
+    { id: FIELD_IDS.rut, label: 'Rut', value: '', type: 'text' },
+    { id: FIELD_IDS.edad, label: 'Edad', value: '', type: 'text', placeholder: 'años', readonly: true },
+    { id: FIELD_IDS.fecnac, label: 'Fecha de nacimiento', value: '', type: 'date' },
+    { id: FIELD_IDS.fing, label: 'Fecha de ingreso', value: '', type: 'date' },
+    { id: FIELD_IDS.finf, label: 'Fecha del informe', value: '', type: 'date' },
+    { id: FIELD_IDS.hinf, label: 'Hora del informe', value: '', type: 'time' },
+];
+
+export const DEFAULT_SECTIONS: ClinicalSectionData[] = [
+    { id: generateSectionId(), title: 'Antecedentes', content: '' },
+    { id: generateSectionId(), title: 'Historia y evolución clínica', content: '' },
+    { id: generateSectionId(), title: 'Exámenes complementarios', content: '' },
+    { id: generateSectionId(), title: 'Diagnósticos', content: '' },
+    { id: generateSectionId(), title: 'Plan', content: '' },
+];
+
+export const getDefaultPatientFieldsByTemplate = (templateId: string): PatientField[] => {
+    const fields = structuredClone(DEFAULT_PATIENT_FIELDS);
+    if (templateId === '3' || templateId === '4') {
+        return fields.map(field =>
+            field.id === FIELD_IDS.finf
+                ? { ...field, label: 'Fecha de alta' }
+                : field
+        );
+    }
+    return fields;
+};
+
+export const getDefaultSectionsByTemplate = (templateId: string): ClinicalSectionData[] => {
+    if (templateId === '7') {
+        return [
+            {
+                id: generateSectionId(),
+                title: '',
+                content: 'Diagnosticos de traslado\n(...)\nPaciente se encuentra en condiciones clínicas compatibles de volar en avión comercial con personal de salud, sin requerimientos adicionales',
+            },
+        ];
+    }
+
+    const sections = structuredClone(DEFAULT_SECTIONS).map(s => ({ ...s, id: generateSectionId() }));
+    if (templateId === '3' || templateId === '4') {
+        return sections.map(section => {
+            if (section.title === 'Diagnósticos') {
+                return { ...section, title: 'Diagnosticos de egreso' };
+            }
+            if (section.title === 'Plan') {
+                return { ...section, title: 'Indicaciones al alta' };
+            }
+            return section;
+        });
+    }
+    return sections;
+};

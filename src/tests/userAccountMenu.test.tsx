@@ -1,0 +1,97 @@
+import { describe, it, expect, vi } from 'vitest';
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import UserAccountMenu from '../components/UserAccountMenu';
+
+const mockProfile = {
+    name: 'Dr. Juan Pérez',
+    email: 'juan@hospital.cl',
+    picture: 'https://example.com/avatar.jpg',
+};
+
+function renderMenu(overrides = {}) {
+    const defaults = {
+        isSignedIn: true,
+        userProfile: mockProfile,
+        onSignOut: vi.fn(),
+        onChangeUser: vi.fn(),
+    };
+    return render(React.createElement(UserAccountMenu, { ...defaults, ...overrides }));
+}
+
+describe('UserAccountMenu', () => {
+    describe('when signed out', () => {
+        it('does not render account actions', () => {
+            renderMenu({ isSignedIn: false });
+            expect(screen.queryByRole('button')).toBeNull();
+        });
+    });
+
+    describe('when signed in', () => {
+        it('renders user avatar', () => {
+            renderMenu();
+            const img = screen.getByAltText('Dr. Juan Pérez');
+            expect(img).toBeDefined();
+            expect((img as HTMLImageElement).src).toBe('https://example.com/avatar.jpg');
+        });
+
+        it('renders fallback avatar letter when no picture', () => {
+            renderMenu({ userProfile: { ...mockProfile, picture: '' } });
+            expect(screen.getByText('J')).toBeDefined();
+        });
+
+        it('opens dropdown menu on avatar click', () => {
+            renderMenu();
+            const avatarButton = screen.getByTitle('juan@hospital.cl');
+            fireEvent.click(avatarButton);
+            expect(screen.getByText('Ir a Google Drive')).toBeDefined();
+            expect(screen.getByText('Abrir Gmail')).toBeDefined();
+            expect(screen.getByText('Cambiar de usuario')).toBeDefined();
+            expect(screen.getByText('Cerrar sesión')).toBeDefined();
+        });
+
+        it('calls onSignOut when sign-out option is clicked', () => {
+            const onSignOut = vi.fn();
+            renderMenu({ onSignOut });
+            fireEvent.click(screen.getByTitle('juan@hospital.cl'));
+            fireEvent.click(screen.getByText('Cerrar sesión'));
+            expect(onSignOut).toHaveBeenCalledOnce();
+        });
+
+        it('calls onChangeUser when change-user option is clicked', () => {
+            const onChangeUser = vi.fn();
+            renderMenu({ onChangeUser });
+            fireEvent.click(screen.getByTitle('juan@hospital.cl'));
+            fireEvent.click(screen.getByText('Cambiar de usuario'));
+            expect(onChangeUser).toHaveBeenCalledOnce();
+        });
+
+        it('displays user name and email in dropdown', () => {
+            renderMenu();
+            fireEvent.click(screen.getByTitle('juan@hospital.cl'));
+            expect(screen.getByText('Dr. Juan Pérez')).toBeDefined();
+            expect(screen.getByText('juan@hospital.cl')).toBeDefined();
+        });
+
+        it('closes the dropdown on outside click', () => {
+            renderMenu();
+            fireEvent.click(screen.getByTitle('juan@hospital.cl'));
+            expect(screen.getByText('Ir a Google Drive')).toBeDefined();
+
+            fireEvent.mouseDown(document.body);
+
+            expect(screen.queryByText('Ir a Google Drive')).toBeNull();
+        });
+
+        it('opens external links from the account menu', () => {
+            const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+            renderMenu();
+
+            fireEvent.click(screen.getByTitle('juan@hospital.cl'));
+            fireEvent.click(screen.getByText('Ir a Google Drive'));
+
+            expect(openSpy).toHaveBeenCalledWith('https://drive.google.com', '_blank', 'noopener,noreferrer');
+            openSpy.mockRestore();
+        });
+    });
+});

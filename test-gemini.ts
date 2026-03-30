@@ -1,0 +1,91 @@
+import {
+    probeGeminiModelVersion,
+    GeminiModelUnavailableError,
+    suggestGeminiFallbackModel,
+} from './utils/geminiClient';
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY;
+const GEMINI_PROJECT_ID =
+    process.env.GEMINI_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.PROJECT_NUMBER;
+const rawModel = process.env.GEMINI_MODEL || process.env.VITE_GEMINI_MODEL || 'gemini-1.5-flash-latest';
+
+if (!GEMINI_API_KEY) {
+    console.error('❌ Debes definir la variable de entorno GEMINI_API_KEY antes de ejecutar este script.');
+    process.exit(1);
+}
+
+async function testGemini() {
+    console.log('🔍 Probando conexión a Gemini API...\n');
+
+    try {
+        let modelToProbe = rawModel;
+        let modelId: string | null = null;
+        let apiVersion: string | null = null;
+
+        while (!modelId) {
+            try {
+                const result = await probeGeminiModelVersion({
+                    apiKey: GEMINI_API_KEY,
+                    model: modelToProbe,
+                    projectId: GEMINI_PROJECT_ID,
+                });
+                modelId = result.modelId;
+                apiVersion = result.apiVersion;
+            } catch (error) {
+                if (error instanceof GeminiModelUnavailableError) {
+                    const fallback = suggestGeminiFallbackModel(error.availableModels);
+                    if (fallback) {
+                        modelToProbe = `${fallback.modelId}@${fallback.version}`;
+                        console.log(
+                            `ℹ️  El modelo ${error.requestedModelId} no está disponible. Probando automáticamente con ${modelToProbe}...`,
+                        );
+                        continue;
+                    }
+                }
+                throw error;
+            }
+        }
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (GEMINI_PROJECT_ID) {
+            headers['X-Goog-User-Project'] = GEMINI_PROJECT_ID;
+            console.log(`➡️  Usando cabecera X-Goog-User-Project: ${GEMINI_PROJECT_ID}`);
+        }
+
+        console.log(`➡️  Solicitando modelo: ${modelId} (API ${apiVersion})`);
+
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelId}:generateContent?key=${GEMINI_API_KEY}`,
+            {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    contents: [
+                        {
+                            parts: [
+                                {
+                                    text: "Di 'Hola, funciono correctamente' en español",
+                                },
+                            ],
+                        },
+                    ],
+                }),
+            },
+        );
+
+        console.log('📡 Status:', response.status, response.statusText);
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error('❌ Error:', JSON.stringify(data, null, 2));
+            return;
+        }
+
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        console.log('✅ Respuesta exitosa:');
+        console.log(text || '(sin texto en la respuesta)');
+    } catch (error) {
+        console.error('❌ Error de red:', error);
+    }
+}
+
+void testGemini();
