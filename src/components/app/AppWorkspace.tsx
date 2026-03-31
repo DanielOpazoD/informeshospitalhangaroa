@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import Header from '../Header';
 import PatientInfo from '../PatientInfo';
 import ClinicalSection from '../ClinicalSection';
+import PlanSection from '../PlanSection';
 import FloatingFormatBar from '../FloatingFormatBar';
 import Footer from '../Footer';
 import { ErrorBoundary } from '../ErrorBoundary';
@@ -10,6 +11,7 @@ import { useWorkspaceSideRailLayout } from '../../hooks/useWorkspaceSideRailLayo
 import type { AppWorkspaceProps } from './appShellViewModel';
 import { getPatientEditTarget, getSectionEditTarget } from './appShellViewModel';
 import { CUSTOM_TEMPLATE_ID } from '../../utils/recordTemplates';
+import { isPlanSection } from '../../utils/planSectionUtils';
 
 /**
  * Fallback silencioso para el panel de IA: si el asistente falla al
@@ -90,22 +92,38 @@ const AppWorkspace: React.FC<AppWorkspaceProps> = ({
                             onRemovePatientField={editor.handleRemovePatientField}
                         />
                         <div id="sectionsContainer">
-                            {record.sections.map((section, index) => (
-                                <ClinicalSection
-                                    key={section.id}
-                                    section={section}
-                                    index={index}
-                                    isEditing={editor.isEditing}
-                                    isAdvancedEditing={header.editing.isAdvancedEditing}
-                                    isGlobalStructureEditing={editor.isGlobalStructureEditing}
-                                    activeEditTarget={getSectionEditTarget(editor.activeEditTarget, index)}
-                                    onActivateEdit={editor.handleActivateSectionEdit}
-                                    onSectionContentChange={editor.handleSectionContentChange}
-                                    onSectionTitleChange={editor.handleSectionTitleChange}
-                                    onRemoveSection={editor.handleRemoveSection}
-                                    onUpdateSectionMeta={editor.handleUpdateSectionMeta}
-                                />
-                            ))}
+                            {record.sections.map((section, index) =>
+                                isPlanSection(section.title) ? (
+                                    <PlanSection
+                                        key={section.id}
+                                        section={section}
+                                        index={index}
+                                        isEditing={editor.isEditing}
+                                        isAdvancedEditing={header.editing.isAdvancedEditing}
+                                        isGlobalStructureEditing={editor.isGlobalStructureEditing}
+                                        activeEditTarget={getSectionEditTarget(editor.activeEditTarget, index)}
+                                        onActivateEdit={editor.handleActivateSectionEdit}
+                                        onSectionContentChange={editor.handleSectionContentChange}
+                                        onSectionTitleChange={editor.handleSectionTitleChange}
+                                        onRemoveSection={editor.handleRemoveSection}
+                                    />
+                                ) : (
+                                    <ClinicalSection
+                                        key={section.id}
+                                        section={section}
+                                        index={index}
+                                        isEditing={editor.isEditing}
+                                        isAdvancedEditing={header.editing.isAdvancedEditing}
+                                        isGlobalStructureEditing={editor.isGlobalStructureEditing}
+                                        activeEditTarget={getSectionEditTarget(editor.activeEditTarget, index)}
+                                        onActivateEdit={editor.handleActivateSectionEdit}
+                                        onSectionContentChange={editor.handleSectionContentChange}
+                                        onSectionTitleChange={editor.handleSectionTitleChange}
+                                        onRemoveSection={editor.handleRemoveSection}
+                                        onUpdateSectionMeta={editor.handleUpdateSectionMeta}
+                                    />
+                                ),
+                            )}
                         </div>
                                 <FloatingFormatBar
                             onToolbarCommand={header.editing.onToolbarCommand}

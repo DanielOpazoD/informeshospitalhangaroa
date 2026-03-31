@@ -1,0 +1,36 @@
+/* ── Plan Section — Indicaciones al alta ─────────────────────────────────── */
+
+/* Contenedor de las 3 subsecciones apiladas */
+.plan-subsections {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+/* Cada subsección: etiqueta + editor */
+.plan-subsection {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Etiqueta de la subsección */
+.plan-subsection-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0 1px;
+}
+
+/* Editor de la subsección */
+.plan-subsection-editor {
+    min-height: 56px;
+}
+
+/* Dark theme */
+body[data-theme='dark'] .plan-subsection-label {
+    color: #94a3b8;
+}
